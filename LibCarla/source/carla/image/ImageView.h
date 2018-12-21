@@ -23,6 +23,19 @@ namespace image {
     template <typename SrcViewT>
     using GrayPixelLayout = boost::gil::pixel<typename boost::gil::channel_type<SrcViewT>::type, boost::gil::gray_layout_t>;
 
+    template <typename DstPixelT, typename ByteT>
+    static auto MakeViewFromBuffer(
+        ByteT *buffer,
+        size_t width,
+        size_t height) {
+      using namespace boost::gil;
+      return interleaved_view(
+          width,
+          height,
+          reinterpret_cast<DstPixelT*>(buffer),
+          sizeof(DstPixelT) * width); // row length in bytes.
+    }
+
     template <typename DstPixelT, typename ImageT>
     static auto MakeViewFromSensorImage(ImageT &image) {
       using namespace boost::gil;
@@ -33,11 +46,7 @@ namespace image {
       static_assert(
           sizeof(sd::Color) == sizeof(DstPixelT),
           "Invalid pixel size");
-      return interleaved_view(
-          image.GetWidth(),
-          image.GetHeight(),
-          reinterpret_cast<DstPixelT*>(image.data()),
-          sizeof(sd::Color) * image.GetWidth()); // row length in bytes.
+      return MakeViewFromBuffer<DstPixelT>(image.data(), image.GetWidth(), image.GetHeight());
     }
 
   public:

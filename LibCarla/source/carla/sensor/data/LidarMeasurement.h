@@ -10,6 +10,7 @@
 #include "carla/rpc/Location.h"
 #include "carla/sensor/data/Array.h"
 #include "carla/sensor/s11n/LidarSerializer.h"
+#include "carla/sensor/s11n/GPULidarSerializer.h"
 
 namespace carla {
 namespace sensor {
@@ -23,8 +24,11 @@ namespace data {
   protected:
 
     using Serializer = s11n::LidarSerializer;
+    using GPULidarSerializer = s11n::GPULidarSerializer;
 
     friend Serializer;
+    friend GPULidarSerializer;
+
 
     explicit LidarMeasurement(RawData data)
       : Super(std::move(data)) {

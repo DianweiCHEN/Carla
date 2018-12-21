@@ -301,7 +301,7 @@ void UActorBlueprintFunctionLibrary::MakeLidarDefinition(
   FActorVariation Channels;
   Channels.Id = TEXT("channels");
   Channels.Type = EActorAttributeType::Int;
-  Channels.RecommendedValues = { TEXT("32") };
+  Channels.RecommendedValues = { TEXT("16"), TEXT("32"), TEXT("64"), TEXT("128") };
   // Range.
   FActorVariation Range;
   Range.Id = TEXT("range");
