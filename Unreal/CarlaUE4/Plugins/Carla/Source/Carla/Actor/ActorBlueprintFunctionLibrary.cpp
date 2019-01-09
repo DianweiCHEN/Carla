@@ -572,7 +572,7 @@ void UActorBlueprintFunctionLibrary::SetLidar(
   Lidar.Channels =
       RetrieveActorAttributeToInt("channels", Description.Variations, Lidar.Channels);
   Lidar.Range =
-      RetrieveActorAttributeToFloat("range", Description.Variations, Lidar.Range);
+      RetrieveActorAttributeToFloat("range", Description.Variations, Lidar.Range) * 100.0;
   Lidar.PointsPerSecond =
       RetrieveActorAttributeToInt("points_per_second", Description.Variations, Lidar.PointsPerSecond);
   Lidar.RotationFrequency =
