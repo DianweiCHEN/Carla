@@ -11,11 +11,20 @@
 #include "carla/image/ImageView.h"
 #include "carla/sensor/data/LidarMeasurement.h"
 
+#include <string>
+
 #include <cmath>
 
 namespace carla {
 namespace sensor {
 namespace s11n {
+
+  /// Helper function to fill a buffer
+  template <typename T>
+  static size_t AddToBuffer(void *it, const T *data) {
+    std::memcpy(it, data, sizeof(T));
+    return sizeof(T);
+  }
 
   static geom::Location convert_2d_to_3d(
       const float fov,
@@ -26,49 +35,87 @@ namespace s11n {
       const float y,
       const float norm_depth) {
 
-    // K matrix:
-    // { {f,   0.0, width  / 2},
-    //   {0.0, f,   height / 2},
-    //   {0.0, 0.0, 1.0       } }
+    // Intrinsic Matrix            |  Inverse Of K
+    //        {{   f, 0.0, w/2 },  |         {{ 1/f, 0.0, -(w/2)/f },
+    // K =     { 0.0,   f, h/2 },  |  K^-1 =  { 0.0, 1/f, -(h/2)/f },
+    //         { 0.0, 0.0, 1.0 }}  |          { 0.0, 0.0,      1.0 }}
 
-    // invert K and dot product it by
-    // { {x},
-    //   {y},
-    //   {1} }
-
-    // compute f
     const float f = width / (2.0f * std::tan(
         fov * carla::geom::Math::pi() / 360.0f));
 
-    const geom::Location point_3d(
-      (x - (width  / 2.f)) / f,
-      (y - (height / 2.f)) / f,
-      1.0f);
+    //                   {{   x },   {{ (x-(w/2))/f },
+    // pixel_3d = K^-1 ·  {   y }, =  { (y-(h/2))/f },
+    //                    { 1.0 }}    {         1.0 }}
 
-    return point_3d * far * norm_depth;
+    const geom::Location pixel_3d(
+        (x - (width  / 2.f)) / f,
+        (y - (height / 2.f)) / f,
+        1.0f);
+
+    // 3d coord = pixel 3d * max render distance * normalized depth
+    return pixel_3d * far * norm_depth;
   }
 
-  /// Helper function to fill a buffer
-  template <typename T>
-  size_t AddToBuffer(void *it, const T *data) {
-    std::memcpy(it, data, sizeof(T));
-    return sizeof(T);
+  static geom::Location rotate_location(
+      const geom::Location &loc,
+      const geom::Rotation &rot) {
+
+    const double cy = std::cos(geom::Math::to_radians(rot.yaw));
+    const double sy = std::sin(geom::Math::to_radians(rot.yaw));
+    const double cr = std::cos(geom::Math::to_radians(rot.roll));
+    const double sr = std::sin(geom::Math::to_radians(rot.roll));
+    const double cp = std::cos(geom::Math::to_radians(rot.pitch));
+    const double sp = std::sin(geom::Math::to_radians(rot.pitch));
+
+    geom::Location out_point;
+
+    out_point.x = loc.x * (cp * cy) +
+        loc.y * (cy * sp * sr - sy * cr) +
+        loc.z * (-cy * sp * cr - sy * sr);
+
+    out_point.y = loc.x * (cp * sy) +
+        loc.y * (sy * sp * sr + cy * cr) +
+        loc.z * (-sy * sp * cr + cy * sr);
+
+    out_point.z = loc.x * (sp) +
+        loc.y * (-cp * sr) +
+        loc.z * (cp * cr);
+
+    return out_point;
+  }
+
+  static void screen_to_sensor_coordinates(geom::Location &loc) {
+    // screen to sensor local coordinates:
+    //     z               z
+    //    /                |  x
+    //   /______ x   -->   | /
+    //   |                 |/_____ y
+    //   |
+    //   y
+
+    loc.x = -loc.x;
+    loc = rotate_location(loc, geom::Rotation(0.0f, 90.0f, 90.0f));
   }
 
   SharedPtr<SensorData> GPULidarSerializer::Deserialize(RawData data) {
-    const auto &sensor_header = data.GetHeader();
+    auto sensor_header = data.GetHeader();
     using SensorHeaderType = std::remove_reference_t<decltype(sensor_header)>;
     const auto &lidar_header = DeserializeHeader(data);
 
-    /// convert to 3d points
-
-    /// get the depth image size
+    /// depth image size attributes
+    const float fov = lidar_header.fov;
     const uint32_t width = lidar_header.max_horizontal_points;
     const uint32_t height = lidar_header.channels;
 
-    const float fov = lidar_header.fov;
+    // other lidar attributes
+    const float horizontal_angle = lidar_header.horizontal_angle;
+
     // total points to convert this frame
     // const uint32_t frame_width = lidar_header.current_horizontal_points;
+
+    // while we are rotating the sensor itself, we must rectify the rotation to
+    // keep the transform straight as it should be
+    sensor_header.sensor_transform.rotation.yaw -= horizontal_angle;
 
     /// create a buffer with the same format as LidarMeasurement does.
     /// define the buffer size
@@ -76,18 +123,18 @@ namespace s11n {
         sizeof(SensorHeaderType) +
         sizeof(float) + // horizontal angle
         sizeof(uint32_t) + // channel count
-        sizeof(uint32_t) * lidar_header.channels + // number of points per channel
-        sizeof(geom::Location) * width * lidar_header.channels); // points
+        sizeof(uint32_t) * height + // number of points per channel
+        sizeof(geom::Location) * width * height); // points
 
     /// copy data...
     auto it = buf.begin();
     it += AddToBuffer<SensorHeaderType>(it, &sensor_header); // header
-    it += AddToBuffer<float>(it, &lidar_header.horizontal_angle); // horizontal angle
-    it += AddToBuffer<uint32_t>(it, &lidar_header.channels); // num of channels
+    it += AddToBuffer<float>(it, &horizontal_angle); // horizontal angle
+    it += AddToBuffer<uint32_t>(it, &height); // num of channels
 
     // for channel in channels
-    for (uint32_t i = 0; i < lidar_header.channels; ++i) {
-      // num of points per channel #n (in our case, is always
+    for (uint32_t i = 0; i < height; ++i) {
+      // num of points per channel (in our case, is always
       // current_horizontal_points)
       it += AddToBuffer<uint32_t>(it, &width);
     }
@@ -100,28 +147,29 @@ namespace s11n {
         width,
         height);
 
-    auto float_view = image::ImageView::MakeColorConvertedView<decltype(bgra_view), boost::gil::gray32f_pixel_t>(
+    auto float_view = image::ImageView::MakeColorConvertedView<decltype(bgra_view),
+        boost::gil::gray32f_pixel_t>(
         bgra_view,
         image::ColorConverter::Depth());
 
-    // convert to 3d
-    for(size_t y = 0u; y < height; ++y) {
-      for(size_t x = 0u; x < width; ++x) { // change to frame_width
-        using namespace boost::gil;
-        const float depth =
-             get_color(bgra_view(x, y), red_t()) +
-            (get_color(bgra_view(x, y), green_t()) * 256) +
-            (get_color(bgra_view(x, y), blue_t())  * 256 * 256);
-        const float normalized = depth / static_cast<float>(256 * 256 * 256 - 1);
-
+    // convert pixels to 3d
+    for (size_t y = 0u; y < height; ++y) {
+      for (size_t x = 0u; x < width; ++x) { /// todo: change to frame_width
         geom::Location point_3d = convert_2d_to_3d(
             fov,
-            100000.f, // maximum depth harcoded in shader
+            1000.f, // maximum depth harcoded in shader
             width,
             height,
             x,
             y,
-            normalized); // normalized depth on pixel (x,y)
+            float_view(x, y)[0]); // normalized depth on pixel (x,y)
+
+        screen_to_sensor_coordinates(point_3d);
+
+        // rotate to the actual horizontal lidar angle (yaw)
+        point_3d = rotate_location(
+            point_3d,
+            geom::Rotation(0.0f, horizontal_angle, 0.0f));
 
         it += AddToBuffer<geom::Location>(it, &point_3d); // location #n
       }
@@ -131,8 +179,6 @@ namespace s11n {
 
     return SharedPtr<data::LidarMeasurement>(
         new data::LidarMeasurement(RawData(std::move(buf))));
-
-    // return im;
   }
 
 } // namespace s11n

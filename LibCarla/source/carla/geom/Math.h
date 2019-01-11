@@ -30,11 +30,11 @@ namespace geom {
     }
 
     static constexpr auto to_degrees(double rad) {
-      return rad * (180.0 / pi());
+      return rad * 180.0 / pi();
     }
 
     static constexpr auto to_radians(double deg) {
-      return deg * (pi() / 180.0);
+      return deg * pi() / 180.0;
     }
 
     template <typename T>

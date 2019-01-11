@@ -40,20 +40,30 @@ namespace s11n {
     }
 
     template <typename Sensor>
-    static Buffer Serialize(const Sensor &sensor, Buffer bitmap);
+    static Buffer Serialize(
+        const Sensor &sensor,
+        Buffer bitmap,
+        uint32_t current_horizontal_points,
+        float horizontal_angle);
 
     static SharedPtr<SensorData> Deserialize(RawData data);
+
   };
 
   template <typename Sensor>
-  inline Buffer GPULidarSerializer::Serialize(const Sensor &sensor, Buffer bitmap) {
+  inline Buffer GPULidarSerializer::Serialize(
+      const Sensor &sensor,
+      Buffer bitmap,
+      uint32_t current_horizontal_points,
+      float horizontal_angle) {
+
     DEBUG_ASSERT(bitmap.size() > sizeof(GPULidarHeader));
     GPULidarHeader header = {
       sensor.GetMaxHorizontalPoints(),
       sensor.GetChannels(),
-      sensor.GetCurrentHorizontalPoints(),
+      current_horizontal_points,
       sensor.GetFov(),
-      sensor.GetHorizontalAngle()
+      horizontal_angle,
     };
     std::memcpy(bitmap.data(), reinterpret_cast<const void *>(&header), sizeof(header));
     return bitmap;

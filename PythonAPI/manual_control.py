@@ -104,6 +104,7 @@ try:
     from pygame.locals import K_r
     from pygame.locals import K_s
     from pygame.locals import K_w
+    from pygame.locals import MOUSEBUTTONDOWN
 except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
@@ -221,6 +222,11 @@ class KeyboardControl(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return True
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 4: # wheel up
+                    world.camera_manager.zoom_in()
+                elif event.button == 5: # wheel down
+                    world.camera_manager.zoom_out()
             elif event.type == pygame.KEYUP:
                 if self._is_quit_shortcut(event.key):
                     return True
@@ -544,6 +550,7 @@ class CameraManager(object):
         self._parent = parent_actor
         self._hud = hud
         self._recording = False
+        self._lidar_zoom = 100.0
         self._camera_transforms = [
             carla.Transform(carla.Location(x=-5.5, z=2.8), carla.Rotation(pitch=-15)),
             carla.Transform(carla.Location(x=1.6, z=1.7))]
@@ -555,7 +562,8 @@ class CameraManager(object):
             ['sensor.camera.depth', cc.LogarithmicDepth, 'Camera Depth (Logarithmic Gray Scale)'],
             ['sensor.camera.semantic_segmentation', cc.Raw, 'Camera Semantic Segmentation (Raw)'],
             ['sensor.camera.semantic_segmentation', cc.CityScapesPalette, 'Camera Semantic Segmentation (CityScapes Palette)'],
-            ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)']]
+            ['sensor.lidar.ray_cast', None, 'Lidar (Ray-Cast)'],
+            ['sensor.lidar.gpu', None, 'Lidar (GPU)']]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
         for item in self._sensors:
@@ -565,8 +573,17 @@ class CameraManager(object):
                 bp.set_attribute('image_size_y', str(hud.dim[1]))
             elif item[0].startswith('sensor.lidar'):
                 bp.set_attribute('range', '5000')
+                bp.set_attribute('rotation_frequency', '0.2')
+                bp.set_attribute('channels', '32')
+
             item.append(bp)
         self._index = None
+
+    def zoom_in(self):
+        self._lidar_zoom = max(1.0, self._lidar_zoom - self._lidar_zoom * 0.2)
+
+    def zoom_out(self):
+        self._lidar_zoom += self._lidar_zoom * 0.2
 
     def toggle_camera(self):
         self._transform_index = (self._transform_index + 1) % len(self._camera_transforms)
@@ -612,13 +629,20 @@ class CameraManager(object):
             points = np.frombuffer(image.raw_data, dtype=np.dtype('f4'))
             points = np.reshape(points, (int(points.shape[0]/3), 3))
             lidar_data = np.array(points[:, :2])
-            lidar_data *= min(self._hud.dim) / 100.0
+            lidar_data *= min(self._hud.dim) / self._lidar_zoom
             lidar_data += (0.5 * self._hud.dim[0], 0.5 * self._hud.dim[1])
-            lidar_data = np.fabs(lidar_data)
             lidar_data = lidar_data.astype(np.int32)
             lidar_data = np.reshape(lidar_data, (-1, 2))
             lidar_img_size = (self._hud.dim[0], self._hud.dim[1], 3)
             lidar_img = np.zeros(lidar_img_size)
+
+            # remove the points outside of the canvas
+            lidar_data = lidar_data[np.all(lidar_data > 0, axis=1)]
+            lidar_data = lidar_data[lidar_data[:,0] < self._hud.dim[0]]
+            lidar_data = lidar_data[lidar_data[:,1] < self._hud.dim[1]]
+
+            # lidar_data[:,0] = self._hud.dim[0] - lidar_data[:,0]
+
             lidar_img[tuple(lidar_data.T)] = (255, 255, 255)
             self._surface = pygame.surfarray.make_surface(lidar_img)
         else:

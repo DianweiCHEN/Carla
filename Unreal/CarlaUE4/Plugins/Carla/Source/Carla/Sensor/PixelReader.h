@@ -56,16 +56,16 @@ public:
   /// allocated in front of the buffer.
   ///
   /// @pre To be called from game-thread.
-  template <typename TSensor>
-  static void SendPixelsInRenderThread(TSensor &Sensor);
+  template <typename TSensor, typename... TArgs>
+  static void SendPixelsInRenderThread(TSensor &Sensor, TArgs... Args);
 };
 
 // =============================================================================
 // -- FPixelReader::SendPixelsInRenderThread -----------------------------------
 // =============================================================================
 
-template <typename TSensor>
-void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
+template <typename TSensor, typename... TArgs>
+void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, TArgs... Args)
 {
   check(Sensor.CaptureRenderTarget != nullptr);
 
@@ -78,7 +78,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
   // Then we enqueue commands in the render-thread that will write the image
   // buffer to the data stream.
 
-  auto WriteAndSend = [&Sensor, Hdr=std::move(HeaderPtr)](auto &InRHICmdList) mutable {
+  auto WriteAndSend = [&Sensor, Hdr=std::move(HeaderPtr), Args...](auto &InRHICmdList) mutable {
     auto &Stream = Sensor.GetDataStream();
     auto Buffer = Stream.PopBufferFromPool();
     WritePixelsToBuffer(
@@ -86,7 +86,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
         Buffer,
         carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
         InRHICmdList);
-    Stream.Send_Async(std::move(*Hdr), Sensor, std::move(Buffer));
+    Stream.Send_Async(std::move(*Hdr), Sensor, std::move(Buffer), std::move(Args)...);
   };
 
   ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
