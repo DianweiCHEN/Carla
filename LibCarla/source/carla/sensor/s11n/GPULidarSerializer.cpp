@@ -7,7 +7,7 @@
 #include "carla/sensor/s11n/GPULidarSerializer.h"
 
 #include "carla/geom/Math.h"
-#include "carla/geom/Location.h"
+#include "carla/geom/Transform.h"
 #include "carla/image/ImageView.h"
 #include "carla/sensor/data/LidarMeasurement.h"
 
@@ -56,34 +56,6 @@ namespace s11n {
     return pixel_3d * far * norm_depth;
   }
 
-  static geom::Location rotate_location(
-      const geom::Location &loc,
-      const geom::Rotation &rot) {
-
-    const double cy = std::cos(geom::Math::to_radians(rot.yaw));
-    const double sy = std::sin(geom::Math::to_radians(rot.yaw));
-    const double cr = std::cos(geom::Math::to_radians(rot.roll));
-    const double sr = std::sin(geom::Math::to_radians(rot.roll));
-    const double cp = std::cos(geom::Math::to_radians(rot.pitch));
-    const double sp = std::sin(geom::Math::to_radians(rot.pitch));
-
-    geom::Location out_point;
-
-    out_point.x = loc.x * (cp * cy) +
-        loc.y * (cy * sp * sr - sy * cr) +
-        loc.z * (-cy * sp * cr - sy * sr);
-
-    out_point.y = loc.x * (cp * sy) +
-        loc.y * (sy * sp * sr + cy * cr) +
-        loc.z * (-sy * sp * cr + cy * sr);
-
-    out_point.z = loc.x * (sp) +
-        loc.y * (-cp * sr) +
-        loc.z * (cp * cr);
-
-    return out_point;
-  }
-
   static void screen_to_sensor_coordinates(geom::Location &loc) {
     // screen to sensor local coordinates:
     //     z               z
@@ -94,7 +66,12 @@ namespace s11n {
     //   y
 
     loc.x = -loc.x;
-    loc = rotate_location(loc, geom::Rotation(0.0f, 90.0f, 90.0f));
+    geom::Transform(
+        geom::Location(0.0f,0.0f,0.0f),
+        geom::Rotation(
+            0.0f,
+            90.0f,
+            90.0f)).TransformPoint(loc);
   }
 
   SharedPtr<SensorData> GPULidarSerializer::Deserialize(RawData data) {
@@ -167,11 +144,14 @@ namespace s11n {
         screen_to_sensor_coordinates(point_3d);
 
         // rotate to the actual horizontal lidar angle (yaw)
-        point_3d = rotate_location(
-            point_3d,
-            geom::Rotation(0.0f, horizontal_angle, 0.0f));
+        geom::Transform(
+            geom::Location(0.0f, 0.0f, 0.0f),
+            geom::Rotation(
+                0.0f,
+                horizontal_angle,
+                0.0f)).TransformPoint(point_3d);
 
-        it += AddToBuffer<geom::Location>(it, &point_3d); // location #n
+        it += AddToBuffer<geom::Location>(it, &point_3d);
       }
     }
 

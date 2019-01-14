@@ -49,11 +49,13 @@ namespace geom {
       double sp = sin(Math::to_radians(rotation.pitch));
 
       Vector3D out_point;
+
       out_point.x = in_point.x * (cp * cy) +
-          in_point.y * (cy * sp * sr - sy * cr) +
+          in_point.y * ( cy * sp * sr - sy * cr) +
           in_point.z * (-cy * sp * cr - sy * sr);
+
       out_point.y = in_point.x * (cp * sy) +
-          in_point.y * (sy * sp * sr + cy * cr) +
+          in_point.y * ( sy * sp * sr + cy * cr) +
           in_point.z * (-sy * sp * cr + cy * sr);
 
       out_point.z = in_point.x *  (sp) +
