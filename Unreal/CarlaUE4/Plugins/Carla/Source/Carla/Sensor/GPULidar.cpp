@@ -18,6 +18,7 @@
 
 #include "DrawDebugHelpers.h"
 #include "Engine/CollisionProfile.h"
+#include "Misc/CommandLine.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
 #include "Carla/Sensor/SceneCaptureCamera.h"
 #include "Runtime/Core/Public/GenericPlatform/GenericPlatformMath.h"
@@ -68,21 +69,54 @@ void AGPULidar::Set(const FActorDescription &ActorDescription)
       ActorDescription.Variations,
       LowerFovLimit);
 
-  MaxHorizontalPoints = 600;
-  // int(float(PointsPerSecond / RotationFrequency) / float(360.f / ImageFOV));
-
   const float VerticalFovRad = carla::geom::Math::to_radians(
       UpperFovLimit - LowerFovLimit);
 
-  /// Horizontal FOV
-  ImageFOV = 90.f; /*carla::geom::Math::to_degrees(2.f *
-                      FGenericPlatformMath::Atan(
-                      FGenericPlatformMath::Tan(VerticalFovRad / 2.f) *
-                      (MaxHorizontalPoints / float(Channels))));*/
+  float StaticFPS = 0.0f;
+  static bool FixedFrameRate = FParse::Param(FCommandLine::Get(), TEXT("benchmark"));
 
-  SetImageSize(MaxHorizontalPoints, Channels); // fix this with the correct
-                                               // MaxHorizontalPoints
-  SetFOVAngle(ImageFOV); // fix this with the correct FOV
+  // Horizontal FOV that will be used to select wich pixels we will sended to client for
+  // each game tick. That's because we are using the vertical FOV as a Lidar parameter
+  float VirtualHorizontalFov = 0.0f;
+
+  if (FixedFrameRate)
+  {
+    // the lidar must must have more and fixed HFov based on the VFov
+    // and send the needed information...
+    UE_LOG(LogCarla, Warning, TEXT(" ------ GPU Lidar is fixed frame rate ------ "));
+
+    FParse::Value(FCommandLine::Get(), TEXT("-fps="), StaticFPS);
+    UE_LOG(LogCarla, Warning, TEXT(" - FPS: %f "), StaticFPS);
+
+    VirtualHorizontalFov = 360.0 / (StaticFPS / RotationFrequency);
+    UE_LOG(LogCarla, Warning, TEXT(" - VirtualHorizontalFov: %f "), VirtualHorizontalFov);
+
+    MaxHorizontalPoints =
+        (std::tan(carla::geom::Math::to_radians(VirtualHorizontalFov) / 2.0f) /
+        std::tan(VerticalFovRad / 2.0f)) * Channels;
+  }
+  else
+  {
+    UE_LOG(LogCarla, Warning, TEXT(" ---- GPU Lidar is NOT fixed frame rate ---- "));
+    MaxHorizontalPoints = ImageFOV / 0.09f;
+  }
+
+  /// Horizontal FOV
+  ImageFOV = carla::geom::Math::to_degrees(
+      2.0f * FGenericPlatformMath::Atan(
+          FGenericPlatformMath::Tan(VerticalFovRad / 2.0f) *
+          (MaxHorizontalPoints / float(Channels))));
+
+  // MaxHorizontalPoints = int(float(PointsPerSecond / RotationFrequency) / float(360.f / ImageFOV));
+
+  UE_LOG(LogCarla, Warning, TEXT(" - Channels: %d"), Channels);
+  UE_LOG(LogCarla, Warning, TEXT(" - MaxHorizontalPoints: %d"), MaxHorizontalPoints);
+  UE_LOG(LogCarla, Warning, TEXT(" - Horizontal FOV: %f"), ImageFOV);
+  UE_LOG(LogCarla, Warning, TEXT(" - Vertical FOV: %f"), UpperFovLimit - LowerFovLimit);
+
+  RotateSceneCaptureComponent2D(FRotator((UpperFovLimit + LowerFovLimit) / 2.0f, 0.0f, 0.0f));
+  SetImageSize(MaxHorizontalPoints, Channels);
+  SetFOVAngle(ImageFOV);
 }
 
 uint32_t AGPULidar::GetMaxHorizontalPoints() const
@@ -170,14 +204,16 @@ void AGPULidar::RenderDebugLidar()
   // location and rotation
   FVector loc = GetActorLocation();
   FRotator rot = GetActorRotation();
+  float Fov = ImageFOV / 2.0f;
+  float CameraPitch = (UpperFovLimit + LowerFovLimit) / 2.0f;
 
   FVector rays_rot[rays] = {
-    rot.RotateVector(FRotator(UpperFovLimit,  5.f, 0.f).Vector()),
-    rot.RotateVector(FRotator(UpperFovLimit, -5.f, 0.f).Vector()),
-    rot.RotateVector(FRotator(LowerFovLimit,  5.f, 0.f).Vector()),
-    rot.RotateVector(FRotator(LowerFovLimit, -5.f, 0.f).Vector()),
-    rot.RotateVector(FRotator(          0.f,  5.f, 0.f).Vector()),
-    rot.RotateVector(FRotator(          0.f, -5.f, 0.f).Vector())
+    rot.RotateVector(FRotator(UpperFovLimit,  Fov/2.0f, 0.f).Vector()),
+    rot.RotateVector(FRotator(UpperFovLimit, -Fov/2.0f, 0.f).Vector()),
+    rot.RotateVector(FRotator(LowerFovLimit,  Fov/2.0f, 0.f).Vector()),
+    rot.RotateVector(FRotator(LowerFovLimit, -Fov/2.0f, 0.f).Vector()),
+    rot.RotateVector(FRotator(  CameraPitch,  Fov/2.0f, 0.f).Vector()),
+    rot.RotateVector(FRotator(  CameraPitch, -Fov/2.0f, 0.f).Vector())
   };
 
   // draw camera
@@ -190,4 +226,8 @@ void AGPULidar::RenderDebugLidar()
         GetWorld(), loc, loc + (rays_rot[i] * Range),
         (i < 4) ? FColor::Red : FColor::Purple, false, -1.f, 0.f, (i < 4) ? 2.f : 1.f);
   }
+
+  DrawDebugLine(
+        GetWorld(), loc, loc + (rot.RotateVector(GetSceneCaptureComponent2DRotator().Vector()) * Range),
+        FColor::Cyan, false, -1.f, 0.f, 2.f);
 }

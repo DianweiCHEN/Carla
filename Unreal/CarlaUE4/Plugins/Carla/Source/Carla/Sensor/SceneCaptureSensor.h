@@ -93,6 +93,10 @@ protected:
 
   virtual void SetUpSceneCaptureComponent(USceneCaptureComponent2D &SceneCapture) {}
 
+  void RotateSceneCaptureComponent2D(const FRotator &rotation);
+
+  FRotator GetSceneCaptureComponent2DRotator() const;
+
 private:
 
   /// Used to synchronize the DrawFrustumComponent with the

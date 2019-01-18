@@ -67,11 +67,11 @@ namespace s11n {
 
     loc.x = -loc.x;
     geom::Transform(
-        geom::Location(0.0f,0.0f,0.0f),
+        geom::Location(0.0f, 0.0f, 0.0f),
         geom::Rotation(
-            0.0f,
-            90.0f,
-            90.0f)).TransformPoint(loc);
+        0.0f,
+        90.0f,
+        90.0f)).TransformPoint(loc);
   }
 
   SharedPtr<SensorData> GPULidarSerializer::Deserialize(RawData data) {
@@ -79,7 +79,7 @@ namespace s11n {
     using SensorHeaderType = std::remove_reference_t<decltype(sensor_header)>;
     const auto &lidar_header = DeserializeHeader(data);
 
-    /// depth image size attributes
+    // depth image size attributes
     const float fov = lidar_header.fov;
     const uint32_t width = lidar_header.max_horizontal_points;
     const uint32_t height = lidar_header.channels;
@@ -94,8 +94,8 @@ namespace s11n {
     // keep the transform straight as it should be
     sensor_header.sensor_transform.rotation.yaw -= horizontal_angle;
 
-    /// create a buffer with the same format as LidarMeasurement does.
-    /// define the buffer size
+    // create a buffer with the same format as LidarMeasurement does.
+    // define the buffer size
     Buffer buf(
         sizeof(SensorHeaderType) +
         sizeof(float) + // horizontal angle
@@ -103,10 +103,14 @@ namespace s11n {
         sizeof(uint32_t) * height + // number of points per channel
         sizeof(geom::Location) * width * height); // points
 
-    /// copy data...
+    // the horizontal angle that client have, must be the angle
+    // in the latest column of points
+    const auto corrected_horizontal_angle = horizontal_angle + fov / 2.0f;
+
+    // copy data to the buffer that will be used by the client
     auto it = buf.begin();
     it += AddToBuffer<SensorHeaderType>(it, &sensor_header); // header
-    it += AddToBuffer<float>(it, &horizontal_angle); // horizontal angle
+    it += AddToBuffer<float>(it, &corrected_horizontal_angle); // horizontal angle
     it += AddToBuffer<uint32_t>(it, &height); // num of channels
 
     // for channel in channels
@@ -131,7 +135,7 @@ namespace s11n {
 
     // convert pixels to 3d
     for (size_t y = 0u; y < height; ++y) {
-      for (size_t x = 0u; x < width; ++x) { /// todo: change to frame_width
+      for (size_t x = 0u; x < width; ++x) { /// @todo: change to frame_width
         geom::Location point_3d = convert_2d_to_3d(
             fov,
             1000.f, // maximum depth harcoded in shader
@@ -147,9 +151,9 @@ namespace s11n {
         geom::Transform(
             geom::Location(0.0f, 0.0f, 0.0f),
             geom::Rotation(
-                0.0f,
-                horizontal_angle,
-                0.0f)).TransformPoint(point_3d);
+            0.0f,
+            horizontal_angle,
+            0.0f)).TransformPoint(point_3d);
 
         it += AddToBuffer<geom::Location>(it, &point_3d);
       }
