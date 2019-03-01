@@ -109,6 +109,7 @@ try:
     from pygame.locals import K_r
     from pygame.locals import K_s
     from pygame.locals import K_w
+    from pygame.locals import K_l
     from pygame.locals import K_MINUS
     from pygame.locals import K_EQUALS
 except ImportError:
@@ -228,8 +229,10 @@ class World(object):
 
 
 class KeyboardControl(object):
-    def __init__(self, world, start_in_autopilot):
+    def __init__(self, world, start_in_autopilot, speed):
         self._autopilot_enabled = start_in_autopilot
+        self.constant_speed_enabled = False
+        self.constant_speed = speed
         if isinstance(world.player, carla.Vehicle):
             self._control = carla.VehicleControl()
             world.player.set_autopilot(self._autopilot_enabled)
@@ -302,6 +305,18 @@ class KeyboardControl(object):
                     else:
                         world.recording_start += 1
                     world.hud.notification("Recording start time is %d" % (world.recording_start))
+                elif event.key == K_l:
+                    self._control.throttle = 1
+                    
+                    # Reduce damping rate during throttle
+                    physics_control = world.player.get_physics_control()
+                    physics_control.damping_rate_full_throttle = 0
+                    physics_control.damping_rate_zero_throttle_clutch_engaged = 0
+                    physics_control.damping_rate_zero_throttle_clutch_disengaged = 0
+                    world.player.apply_physics_control(physics_control)
+                    
+                    self.constant_speed_enabled = True
+
                 if isinstance(self._control, carla.VehicleControl):
                     if event.key == K_q:
                         self._control.gear = 1 if self._control.reverse else -1
@@ -319,14 +334,13 @@ class KeyboardControl(object):
                         world.hud.notification('Autopilot %s' % ('On' if self._autopilot_enabled else 'Off'))
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
-                self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
+                self._parse_vehicle_keys(pygame.key.get_pressed(), world, clock.get_time())
                 self._control.reverse = self._control.gear < 0
             elif isinstance(self._control, carla.WalkerControl):
                 self._parse_walker_keys(pygame.key.get_pressed(), clock.get_time())
             world.player.apply_control(self._control)
 
-    def _parse_vehicle_keys(self, keys, milliseconds):
-        self._control.throttle = 1.0 if keys[K_UP] or keys[K_w] else 0.0
+    def _parse_vehicle_keys(self, keys, world, milliseconds):
         steer_increment = 5e-4 * milliseconds
         if keys[K_LEFT] or keys[K_a]:
             self._steer_cache -= steer_increment
@@ -334,10 +348,22 @@ class KeyboardControl(object):
             self._steer_cache += steer_increment
         else:
             self._steer_cache = 0.0
+        self._control.throttle = 1.0 if keys[K_UP] or keys[K_w] else 0.0
         self._steer_cache = min(0.7, max(-0.7, self._steer_cache))
         self._control.steer = round(self._steer_cache, 1)
         self._control.brake = 1.0 if keys[K_DOWN] or keys[K_s] else 0.0
         self._control.hand_brake = keys[K_SPACE]
+
+        if self.constant_speed_enabled:
+          self._control.throttle = 0.75
+          
+          # Increment Throttle if speed is below constant value
+          v = world.player.get_velocity()
+          current_speed = (3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
+          if (current_speed > float(self.constant_speed)):
+            self._control.throttle = 0.0
+            self._control.brake = 0.1
+          
 
     def _parse_walker_keys(self, keys, milliseconds):
         self._control.speed = 0.0
@@ -766,7 +792,7 @@ def game_loop(args):
 
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args.filter)
-        controller = KeyboardControl(world, args.autopilot)
+        controller = KeyboardControl(world, args.autopilot, args.speed)
 
         clock = pygame.time.Clock()
         while True:
@@ -821,6 +847,11 @@ def main():
         metavar='WIDTHxHEIGHT',
         default='1280x720',
         help='window resolution (default: 1280x720)')
+    argparser.add_argument(
+        '--speed',
+        metavar='WIDTHxHEIGHT',
+        default='0',
+        help='constant speed (default: 0)')
     argparser.add_argument(
         '--filter',
         metavar='PATTERN',
