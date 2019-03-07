@@ -114,6 +114,9 @@ private:
   UPROPERTY()
   bool bOverrideMaterials;
 
+  UPROPERTY()
+  bool bOnlyUpdateMap;
+
   //UProperties are necesary or else the GC will eat everything up
   UPROPERTY()
   FString MapName;

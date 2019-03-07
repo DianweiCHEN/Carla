@@ -43,6 +43,8 @@ bool UMapProcessCommandlet::ParseParams(const FString& InParams)
 
   bOverrideMaterials = Params.Contains(TEXT("use-carla-materials"));
 
+
+
 	return bEnoughParams;
 }
 
@@ -180,27 +182,33 @@ void UMapProcessCommandlet::AddMeshesToWorld(
         initialRotator);
     MeshActor->GetStaticMeshComponent()->SetStaticMesh(CastChecked<UStaticMesh>(MeshAsset));
 
-    if (bMaterialWorkaround)
+    FString AssetName;
+    MapAsset.AssetName.ToString(AssetName);
+    if (AssetName.Contains("MarkingNode"))
     {
-      FString AssetName;
-      MapAsset.AssetName.ToString(AssetName);
-      if (AssetName.Contains("MarkingNode"))
+      MeshActor->SetFolderPath("RoadRunner/MarkingNode");
+      if (bMaterialWorkaround)
       {
-        MeshActor->GetStaticMeshComponent()->SetMaterial(0, MarkingNodeMaterial);
-        MeshActor->GetStaticMeshComponent()->SetMaterial(1, MarkingNodeMaterialAux);
+          MeshActor->GetStaticMeshComponent()->SetMaterial(0, MarkingNodeMaterial);
+          MeshActor->GetStaticMeshComponent()->SetMaterial(1, MarkingNodeMaterialAux);
       }
-      else if (AssetName.Contains("RoadNode"))
+    }
+    else if (AssetName.Contains("RoadNode"))
+    {
+      MeshActor->SetFolderPath("RoadRunner/RoadNode");
+      if (bMaterialWorkaround)
       {
         MeshActor->GetStaticMeshComponent()->SetMaterial(0, RoadNodeMaterial);
-      } else if (AssetName.Contains("Terrain"))
-      {
+      }
+    } else if (AssetName.Contains("Terrain"))
+    {
+      MeshActor->SetFolderPath("RoadRunner/TerrainNode");
+      if(bMaterialWorkaround) {
         MeshActor->GetStaticMeshComponent()->SetMaterial(0, TerrainNodeMaterial);
       }
-
     }
   }
   World->MarkPackageDirty();
-
 }
 
 bool UMapProcessCommandlet::SaveWorld(FAssetData &AssetData, FString &DestPath, FString &WorldName)
@@ -221,6 +229,7 @@ bool UMapProcessCommandlet::SaveWorld(FAssetData &AssetData, FString &DestPath, 
   // Filling the map stuff
   AOpenDriveActor *OpenWorldActor =
       CastChecked<AOpenDriveActor>(World->SpawnActor(AOpenDriveActor::StaticClass(), new FVector(), NULL));
+  OpenWorldActor->SetFolderPath("OpenDrive");
   OpenWorldActor->BuildRoutes(WorldName);
   OpenWorldActor->AddSpawners();
 

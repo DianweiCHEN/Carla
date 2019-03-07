@@ -265,6 +265,7 @@ void AOpenDriveActor::BuildRoutes(FString MapName)
         if (RoutePlanner == nullptr)
         {
           RoutePlanner = GetWorld()->SpawnActor<ARoutePlanner>();
+          RoutePlanner->SetFolderPath("OpenDrive/RoutePlanner");
           RoutePlanner->bIsIntersection = std::any_of(Successors.begin(), Successors.end(), [](auto w) {
             return w.IsIntersection();
           });
@@ -292,6 +293,7 @@ void AOpenDriveActor::BuildRoutes(FString MapName)
         FVector(0, 0, 0),
         FRotator(0, 0, 0),
         SpawnParams);
+    SpawnedTrafficGroup->SetFolderPath("OpenDrive/TrafficLightGroup");
     FString SetTrafficTimesCommand = FString::Printf(TEXT("SetTrafficTimes %f %f %f"),
             RedTime, YellowTime, GreenTime);
     SpawnedTrafficGroup->CallFunctionByNameWithArguments(*SetTrafficTimesCommand, ar, NULL, true);
@@ -306,6 +308,7 @@ void AOpenDriveActor::BuildRoutes(FString MapName)
           TLPos,
           TLRot,
           SpawnParams);
+      SpawnedTrafficLight->SetFolderPath("OpenDrive/TrafficLight");
       FString AddTrafficLightCommand = FString::Printf(TEXT("AddTrafficLightPole %s"),
             *SpawnedTrafficLight->GetName());
       SpawnedTrafficGroup->CallFunctionByNameWithArguments(*AddTrafficLightCommand, ar, NULL, true);
@@ -368,10 +371,15 @@ for (TrafficSign CurrentTrafficSign : TrafficSigns) {
         SpawnParams);
         break;
     default:
+      SignActor = GetWorld()->SpawnActor<AActor>(TrafficSign100BlueprintClass,
+        TSLoc,
+        TSRot,
+        SpawnParams);
       FString errorMessage = "Traffic Sign not found. Posibilities: 30, 60, 90, 100";
       UE_LOG(LogCarla, Warning, TEXT("%s"), *errorMessage);
     break;
   }
+  SignActor->SetFolderPath("OpenDrive/SpeedSign");
   PersistentTrafficSigns.Push(SignActor);
   for (TrafficBoxComponent TfBoxComponent : CurrentTrafficSign.box_areas)
     {
@@ -455,6 +463,7 @@ void AOpenDriveActor::AddSpawners()
       {
         FTransform Trans = RoutePlanners[i]->GetActorTransform();
         AVehicleSpawnPoint *Spawner = GetWorld()->SpawnActor<AVehicleSpawnPoint>();
+        Spawner->SetFolderPath("OpenDrive/VehicleSpawnPoint");
         Spawner->SetActorRotation(Trans.GetRotation());
         Spawner->SetActorLocation(Trans.GetTranslation() + FVector(0.f, 0.f, SpawnersHeight));
         VehicleSpawners.Add(Spawner);
