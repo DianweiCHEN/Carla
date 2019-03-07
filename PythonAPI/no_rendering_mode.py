@@ -161,9 +161,9 @@ def get_actor_display_name(actor, truncate=250):
 class Util(object):
 
     @staticmethod
-    def blits(destination_surface, source_surfaces, rect=None, blend_mode=0):
+    def blits(destination_surface, source_surfaces):
         for surface in source_surfaces:
-            destination_surface.blit(surface[0], surface[1], rect, blend_mode)
+            destination_surface.blit(surface[0], surface[1])
 
     @staticmethod
     def length (v):
@@ -301,30 +301,6 @@ class ModuleHUD (object):
 
     def add_info(self, module_name, info):
         self._info_text[module_name] = info
-
-    def render_vehicles_ids(self, vehicle_id_surface, list_actors, world_to_pixel, hero_actor, hero_transform):
-        vehicle_id_surface.fill(COLOR_BLACK)
-        if self.show_actor_ids:
-            vehicle_id_surface.set_alpha(150)
-            for actor in list_actors:
-                x, y = world_to_pixel(actor[1].location)
-
-                angle = 0
-                if hero_actor is not None:
-                    angle = -hero_transform.rotation.yaw - 90
-
-                color = COLOR_SKY_BLUE_0
-                if int(actor[0].attributes['number_of_wheels']) == 2:
-                    color = COLOR_CHOCOLATE_0
-                if actor[0].attributes['role_name'] == 'hero':
-                    color = COLOR_CHAMELEON_0
-
-                font_surface = self._header_font.render(str(actor[0].id), True, color)
-                rotated_font_surface = pygame.transform.rotate(font_surface, angle)
-                rect = rotated_font_surface.get_rect(center=(x, y))
-                vehicle_id_surface.blit(rotated_font_surface, rect)
-
-        return vehicle_id_surface
 
     def render(self, display):
         if self.show_info:
@@ -832,7 +808,7 @@ class ModuleWorld(object):
         for tl in list_tl:
             world_pos = tl.get_location()
             pos = world_to_pixel(world_pos)
-            if self.hero_actor is not None and hasattr(tl, 'trigger_volume'):
+            if self.hero_actor is not None:
                 corners = self.get_bounding_box(tl)
                 corners = [world_to_pixel(p) for p in corners]
                 tl_t = tl.get_transform()
@@ -954,6 +930,28 @@ class ModuleWorld(object):
         # Scale performed
         self.map_image.scale_map(scale_factor)
 
+    def render_vehicles_ids(self, vehicle_id_surface, vehicles):
+        vehicle_id_surface.fill(COLOR_BLACK)
+        if self.module_hud.show_actor_ids:
+            vehicle_id_surface.set_alpha(150)
+            for vehicle in vehicles:
+                x, y = self.map_image.world_to_pixel(vehicle[1].location)
+
+                angle = 0
+                if self.hero_actor is not None:
+                    angle = -self.hero_transform.rotation.yaw - 90
+
+                color = COLOR_SKY_BLUE_0
+                if int(vehicle[0].attributes['number_of_wheels']) == 2:
+                    color = COLOR_CHOCOLATE_0
+                if vehicle[0].attributes['role_name'] == 'hero':
+                    color = COLOR_CHAMELEON_0
+
+                font_surface = self.module_hud._header_font.render(str(vehicle[0].id), True, color)
+                rotated_font_surface = pygame.transform.rotate(font_surface, angle)
+                rect = rotated_font_surface.get_rect(center=(x, y))
+                vehicle_id_surface.blit(rotated_font_surface, rect)
+
     def render(self, display):
         if self.actors_with_transforms is None:
             return
@@ -976,8 +974,7 @@ class ModuleWorld(object):
             walkers)
 
         # Render Ids
-        self.module_hud.render_vehicles_ids(self.vehicle_id_surface, vehicles,
-                                            self.map_image.world_to_pixel, self.hero_actor, self.hero_transform)
+        self.render_vehicles_ids(self.vehicle_id_surface, vehicles)
 
         # Blit surfaces
         surfaces = ((self.map_image.surface, (0, 0)),
@@ -1002,16 +999,16 @@ class ModuleWorld(object):
                                         self.hero_surface.get_width(),
                                         self.hero_surface.get_height())
             self.clip_surfaces(clipping_rect)
+            self.border_round_surface.set_clip(clipping_rect)
 
             Util.blits(self.result_surface, surfaces)
 
-            self.border_round_surface.set_clip(clipping_rect)
 
             self.hero_surface.fill(COLOR_ALUMINIUM_4)
             self.hero_surface.blit(self.result_surface, (-translation_offset[0],
                                                          -translation_offset[1]))
 
-            rotated_result_surface = pygame.transform.rotozoom(self.hero_surface, angle, 0.9).convert()
+            rotated_result_surface = pygame.transform.rotozoom(self.hero_surface, angle, 0.9)
 
             center = (display.get_width() / 2, display.get_height() / 2)
             rotation_pivot = rotated_result_surface.get_rect(center=center)
