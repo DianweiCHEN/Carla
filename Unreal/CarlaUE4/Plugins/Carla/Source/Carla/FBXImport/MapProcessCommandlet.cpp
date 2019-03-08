@@ -98,6 +98,18 @@ void UMapProcessCommandlet::MoveMeshes(const FString &SrcPath, const TArray<FStr
         {
           ChosenIndex = TERRAIN_INDEX;
         }
+        else if (AssetName.Contains("DefaultNode"))
+        {
+          ChosenIndex = DEFAULT_INDEX;
+        }
+        else if (AssetName.Contains("Gutter"))
+        {
+          ChosenIndex = GUTTER_INDEX;
+        }
+        else if (AssetName.Contains("Sidewalk"))
+        {
+          ChosenIndex = SIDEWALK_INDEX;
+        }
 
         const int32 ShortPackageNameLen = FPackageName::GetLongPackageAssetName(CurrentPackageName).Len();
         const int32 RelativePathLen = CurrentPackageName.Len() - ShortPackageNameLen - SrcPath.Len() - 1;   //
@@ -330,11 +342,17 @@ int32 UMapProcessCommandlet::Main(const FString &Params)
   FString RoadsPath = TEXT("/Game/Carla/Static/Road/") + MapName;
   FString MarkingLinePath = TEXT("/Game/Carla/Static/RoadLines/") + MapName;
   FString TerrainPath = TEXT("/Game/Carla/Static/Terrain/") + MapName;
+  FString DefaultPath = TEXT("/Game/Carla/Static/Default/") + MapName;
+  FString GutterPath = TEXT("/Game/Carla/Static/Gutter/") + MapName;
+  FString SidewalkPath = TEXT("/Game/Carla/Static/Sidewalk/") + MapName;
 
   TArray<FString> DataPath;
   DataPath.Add(RoadsPath);
   DataPath.Add(MarkingLinePath);
   DataPath.Add(TerrainPath);
+  DataPath.Add(DefaultPath);
+  DataPath.Add(GutterPath);
+  DataPath.Add(SidewalkPath);
 
   FAssetData AssetData;
   MoveMeshes(SrcPath, DataPath);

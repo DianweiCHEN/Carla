@@ -117,12 +117,27 @@ private:
    * Index in which everything related to the terrain will be stored in inclass arrays
    */
   static const int TERRAIN_INDEX = 2;
+  /**
+   * Index in which everything related to the terrain will be stored in inclass arrays
+   */
+  static const int DEFAULT_INDEX = 3;
+  /**
+   * Index in which everything related to the terrain will be stored in inclass arrays
+   */
+  static const int GUTTER_INDEX = 4;
+  /**
+   * Index in which everything related to the terrain will be stored in inclass arrays
+   */
+  static const int SIDEWALK_INDEX = 5;
 
   UPROPERTY()
   bool bOverrideMaterials;
 
   UPROPERTY()
   bool bOnlyUpdateMap;
+
+  UPROPERTY()
+  FString FallbackMapPath;
 
   //UProperties are necesary or else the GC will eat everything up
   UPROPERTY()

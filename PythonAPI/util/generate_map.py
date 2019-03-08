@@ -22,7 +22,7 @@ elif os.name == 'posix':
 
 
 def main():
-    if(args.force or args.update):
+    if(args.force):
         generate_all_maps_but_list([])
     else:
         maps = get_map_names()
@@ -49,11 +49,22 @@ def generate_all_maps_but_list(existent_maps):
                 print("Found map in fbx folder: %s" % map_name)
                 import_assets_commandlet(map_name)
                 print("Generating map asset for %s" % map_name)
-                generate_map(map_name)
+                generate_map(map_name, False)
                 print("Cleaning up directories")
                 cleanup_assets(map_name)
                 print("Finished %s" % map_name)
-            else:
+            elif args.update:
+                print("Cleanup before importing")
+                cleanup_assets_for_update(map_name)
+                invoke_commandlet("ResavePackages", "-FixupRedirects -ResaveDirectRefsAndDeps -IgnoreChangelist -VerifyContent -PROJECTONLY -NODEV")
+                print("Found map in fbx folder: %s" % map_name)
+                import_assets_commandlet(map_name)
+                print("Generating map asset for %s" % map_name)
+                generate_map(map_name, True)
+                print("Cleaning up directories")
+                cleanup_assets(map_name)
+                invoke_commandlet("ResavePackages", "-FixupRedirects -ResaveDirectRefsAndDeps -IgnoreChangelist -PROJECTONLY -NODEV")
+            elif not args.force:
                 print("WARNING: Found %s map in Content folder, skipping. Use \"--force\" to override\n" % map_name)
 
 def parse_arguments():
@@ -88,6 +99,28 @@ def cleanup_assets(map_name):
             removal_path = os.path.join(origin_folder, filename)
             os.remove(removal_path)
 
+def cleanup_assets_for_update(map_name):
+    dirname = os.getcwd()
+    content_folder = os.path.join(dirname, "..", "..", "Unreal", "CarlaUE4" , "Content", "Carla")
+    marking_dir = os.path.join(content_folder, "Static", "RoadLines", "%s" % map_name)
+    road_dir = os.path.join(content_folder, "Static", "Road", "%s" % map_name)
+    terrain_dir = os.path.join(content_folder, "Static", "Terrain", "%s" % map_name)
+    default_dir = os.path.join(content_folder, "Static", "Default", "%s" % map_name)
+    sidewalk_dir = os.path.join(content_folder, "Static", "Sidewalk", "%s" % map_name)
+    gutter_dir = os.path.join(content_folder, "Static", "Gutter", "%s" % map_name)
+    if os.path.isdir(marking_dir) :
+        shutil.rmtree(marking_dir)
+    if os.path.isdir(road_dir) :
+        shutil.rmtree(road_dir)
+    if os.path.isdir(terrain_dir) :
+        shutil.rmtree(terrain_dir)
+    if os.path.isdir(default_dir) :
+        shutil.rmtree(default_dir)
+    if os.path.isdir(sidewalk_dir) :
+        shutil.rmtree(sidewalk_dir)
+    if os.path.isdir(gutter_dir) :
+        shutil.rmtree(gutter_dir)
+
 
 def import_assets_commandlet(map_name):
     generate_json(map_name, "importsetting.json")
@@ -104,12 +137,12 @@ def import_assets_commandlet(map_name):
     #Clean up
     os.remove("importsetting.json")
 
-def generate_map(map_name):
+def generate_map(map_name, valid_update):
     commandlet_name = "MapProcess"
     commandlet_arguments = "-mapname=\"%s\"" % map_name
     if args.usecarlamats:
         commandlet_arguments += " -use-carla-materials"
-    if args.update:
+    if args.update and valid_update:
         commandlet_arguments += " -only-update"
     invoke_commandlet(commandlet_name, commandlet_arguments)
 
@@ -123,6 +156,8 @@ def move_uassets(map_name):
     marking_dir = os.path.join(content_folder, "Static", "RoadLines", "%sLaneMarking" % map_name)
     road_dir = os.path.join(content_folder, "Static", "Road", "Roads%s" % map_name)
     terrain_dir = os.path.join(content_folder, "Static", "Terrain", "%sTerrain" % map_name)
+    default_dir = os.path.join(content_folder, "Static", "Default", "%sDefault" % map_name)
+    sidewalk_dir = os.path.join(content_folder, "Static", "Sidewalk", "%sSidewalk" % map_name)
     if not os.path.exists(marking_dir):
         os.makedirs(marking_dir)
     if not os.path.exists(road_dir):
