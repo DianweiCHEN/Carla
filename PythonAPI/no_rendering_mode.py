@@ -148,6 +148,92 @@ HERO_DEFAULT_SCALE = 1.0
 
 PIXELS_AHEAD_VEHICLE = 150
 
+
+
+# ==============================================================================
+# -- MapData -------------------------------------------------------------------
+# ==============================================================================
+class MapData(object):
+  def __init__(self):
+      # Static Data
+      self.map = []
+      self.stop_signals = []
+
+      # Dynamic Data  
+      self.hero_vehicle = []
+      self.vehicles = []
+      self.traffic_lights = []
+      self.speed_limits = []
+      self.walkers = []
+
+  # Static data update functions
+  def set_map(self):
+      pass
+
+  def set_stop_signals(self, stop_signals):
+      del map_data.stop_signals[:]
+      for stop_signal in stop_signals:
+          st = stop_signal.get_transform()
+          stop_signal_dict = {
+              "id" : stop_signal.id,
+              "position": [st.location.x, st.location.y, st.location.z],
+              "trigger_volume": [ [v.x,v.y,v.z] for v in Util.get_trigger_volume(stop_signal)]
+          }
+          map_data.stop_signals.append(stop_signal_dict)
+    
+  # Dynamic data update functions
+  def update_hero_vehicle(self, carla_map, hero, hero_transform):
+      hero_waypoint = carla_map.get_waypoint(hero_transform.location)
+      hero_vehicle_dict = {
+          "id": hero.id,
+          "road_id": hero_waypoint.road_id,
+          "lane_id": hero_waypoint.lane_id
+      }
+      self.hero_vehicle = hero_vehicle_dict
+  
+  def update_vehicles(self, vehicles):
+      del map_data.vehicles[:]
+      for vehicle in vehicles:
+          vehicle_dict = {
+              "id" : vehicle[0].id,
+              "position": [vehicle[1].location.x, vehicle[1].location.y, vehicle[1].location.z],
+              "orientation": [vehicle[1].rotation.yaw, vehicle[1].rotation.pitch, vehicle[1].rotation.roll],
+              "bounding_box": [ [v.x,v.y,v.z] for v in Util.get_bounding_box(vehicle[0], vehicle[1])]
+          }
+          map_data.vehicles.append(vehicle_dict)
+  
+  def update_traffic_lights(self, traffic_lights):
+      del map_data.traffic_lights[:]
+      for traffic_light in traffic_lights:
+          traffic_light_dict = {
+              "id" : traffic_light[0].id,
+              "position": [traffic_light[1].location.x, traffic_light[1].location.y, traffic_light[1].location.z],
+              "state": traffic_light[0].state,
+              "trigger_volume": [ [v.x,v.y,v.z] for v in Util.get_trigger_volume(traffic_light[0])]
+          }
+          map_data.traffic_lights.append(traffic_light_dict)
+
+  def update_speed_limits(self, speed_limits):
+      del map_data.speed_limits[:]
+      for speed_limit in speed_limits:
+          speed_limit_dict = {
+              "id" : speed_limit[0].id,
+              "position": [speed_limit[1].location.x, speed_limit[1].location.y, speed_limit[1].location.z],
+              "speed": int(speed_limit[0].type_id.split('.')[2])
+          }
+          map_data.speed_limits.append(speed_limit_dict)
+  
+  def update_walkers(self, walkers):
+      del map_data.walkers[:]
+      for walker in walkers:
+          walker_dict = {
+              "id" : walker[0].id,
+              "position": [walker[1].location.x, walker[1].location.y, walker[1].location.z],
+              "orientation": [walker[1].rotation.yaw, walker[1].rotation.pitch, walker[1].rotation.roll],
+              "bounding_box": [ [v.x,v.y,v.z] for v in Util.get_bounding_box(walker[0], walker[1])]
+          }
+          map_data.walkers.append(walker_dict)
+
 # ==============================================================================
 # -- Util -----------------------------------------------------------
 # ==============================================================================
@@ -168,6 +254,32 @@ class Util(object):
     @staticmethod
     def length (v):
         return math.sqrt(v.x**2 + v.y**2 + v.z**2)
+
+    @staticmethod
+    def get_bounding_box(actor, actor_transform):
+        bb = actor.bounding_box.extent
+        corners = [
+            carla.Location(x=-bb.x, y=-bb.y),
+            carla.Location(x=bb.x, y=-bb.y),
+            carla.Location(x=bb.x, y=bb.y),
+            carla.Location(x=-bb.x, y=bb.y)]
+
+        actor_transform.transform(corners)
+        return corners
+
+    @staticmethod
+    def get_trigger_volume(actor):
+        bb = actor.trigger_volume.extent
+        corners = [carla.Location(x=-bb.x, y=-bb.y),
+                  carla.Location(x=bb.x, y=-bb.y),
+                  carla.Location(x=bb.x, y=bb.y),
+                  carla.Location(x=-bb.x, y=bb.y),
+                  carla.Location(x=-bb.x, y=-bb.y)]
+        corners = [x + actor.trigger_volume.location for x in corners]
+        t = actor.get_transform()
+        t.transform(corners)
+        return corners
+
 # ==============================================================================
 # -- ModuleManager -------------------------------------------------------------
 # ==============================================================================
@@ -201,6 +313,13 @@ class ModuleManager(object):
     def start_modules(self):
         for module in self.modules:
             module.start()
+
+
+# ==============================================================================
+# -- Global Objects ------------------------------------------------------------
+# ==============================================================================
+module_manager = ModuleManager()
+map_data = MapData()
 
 
 # ==============================================================================
@@ -540,17 +659,18 @@ class MapImage(object):
                         draw_arrow(map_surface, wp.transform)
         
         actors = carla_world.get_actors()
-        stops_transform = [actor.get_transform() for actor in actors if 'stop' in actor.type_id]
+        stops = [actor for actor in actors if 'stop' in actor.type_id]
         font_size = world_to_pixel_width(1)            
         font = pygame.font.SysFont('Arial', font_size, True)
         font_surface = font.render("STOP", False, COLOR_ALUMINIUM_2)
         font_surface = pygame.transform.scale(font_surface, (font_surface.get_width(),font_surface.get_height() * 2))
-        for stop in stops_transform:
-            draw_stop(map_surface,font_surface, stop)
+        for stop in stops:
+            draw_stop(map_surface,font_surface, stop.get_transform())
 
         # Draw Crosswalks
         # draw_crosswalk(map_surface)
-
+        
+        map_data.set_stop_signals(stops)
 
     def world_to_pixel(self, location, offset=(0, 0)):
         x = self.scale * self._pixels_per_meter * (location.x - self._world_offset[0])
@@ -696,6 +816,7 @@ class ModuleWorld(object):
 
     def tick(self, clock):
         actors = self.world.get_actors()
+        # Use Data for rendering
         self.actors_with_transforms = [(actor, actor.get_transform()) for actor in actors]
         if self.hero_actor is not None:
             self.hero_transform = self.hero_actor.get_transform()
@@ -755,6 +876,16 @@ class ModuleWorld(object):
         self.server_fps = self.server_clock.get_fps()
         self.simulation_time = timestamp.elapsed_seconds
 
+        vehicles, traffic_lights, speed_limits, walkers = self._split_actors()
+
+        # Update MapData
+        map_data.update_hero_vehicle(self.town_map, self.hero_actor, self.hero_transform)
+        map_data.update_vehicles(vehicles)
+        map_data.update_traffic_lights(traffic_lights)
+        map_data.update_speed_limits(speed_limits)
+        map_data.update_walkers(walkers)
+        
+
     def _split_actors(self):
         vehicles = []
         traffic_lights = []
@@ -789,19 +920,6 @@ class ModuleWorld(object):
 
         return (vehicles, traffic_lights, speed_limits, walkers)
 
-
-    def get_bounding_box(self, actor):
-        bb = actor.trigger_volume.extent
-        corners = [carla.Location(x=-bb.x, y=-bb.y),
-                  carla.Location(x=bb.x, y=-bb.y),
-                  carla.Location(x=bb.x, y=bb.y),
-                  carla.Location(x=-bb.x, y=bb.y),
-                  carla.Location(x=-bb.x, y=-bb.y)]
-        corners = [x + actor.trigger_volume.location for x in corners]
-        t = actor.get_transform()
-        t.transform(corners)
-        return corners
-
     def _render_traffic_lights(self, surface, list_tl, world_to_pixel):
         self.affected_traffic_light = None
 
@@ -809,7 +927,7 @@ class ModuleWorld(object):
             world_pos = tl.get_location()
             pos = world_to_pixel(world_pos)
             if self.hero_actor is not None:
-                corners = self.get_bounding_box(tl)
+                corners = Util.get_trigger_volume(tl)
                 corners = [world_to_pixel(p) for p in corners]
                 tl_t = tl.get_transform()
 
@@ -859,16 +977,7 @@ class ModuleWorld(object):
     def _render_walkers(self, surface, list_w, world_to_pixel):
         for w in list_w:
             color = COLOR_PLUM_0
-
-            # Compute bounding box points
-            bb = w[0].bounding_box.extent
-            corners = [
-                carla.Location(x=-bb.x, y=-bb.y),
-                carla.Location(x=bb.x, y=-bb.y),
-                carla.Location(x=bb.x, y=bb.y),
-                carla.Location(x=-bb.x, y=bb.y)]
-
-            w[1].transform(corners)
+            corners = Util.get_bounding_box(w[0], w[1])
             corners = [world_to_pixel(p) for p in corners]
             pygame.draw.polygon(surface, color, corners)
 
@@ -956,7 +1065,6 @@ class ModuleWorld(object):
         if self.actors_with_transforms is None:
             return
         self.result_surface.fill(COLOR_BLACK)
-        vehicles, traffic_lights, speed_limits, walkers = self._split_actors()
 
         scale_factor = self.module_input.wheel_offset
         self.scaled_size = int(self.map_image.width * scale_factor)
@@ -964,6 +1072,7 @@ class ModuleWorld(object):
             self._compute_scale(scale_factor)
 
         # Render Actors
+        vehicles, traffic_lights, speed_limits, walkers = self._split_actors()
 
         self.actors_surface.fill(COLOR_BLACK)
         self.render_actors(
@@ -1156,12 +1265,6 @@ class ModuleInput(object):
     @staticmethod
     def _is_quit_shortcut(key):
         return (key == K_ESCAPE) or (key == K_q and pygame.key.get_mods() & KMOD_CTRL)
-
-
-# ==============================================================================
-# -- Global Objects ------------------------------------------------------------
-# ==============================================================================
-module_manager = ModuleManager()
 
 
 # ==============================================================================
