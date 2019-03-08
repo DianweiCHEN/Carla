@@ -35,7 +35,7 @@ hard-clean:
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildLibCarla.sh --clean
 	@echo "To force recompiling dependencies run: rm -Rf ${CARLA_BUILD_FOLDER}"
 
-export-maps:
+export-maps: CarlaUE4Editor LibCarla
 	@${CARLA_BUILD_TOOLS_FOLDER}/ExportMaps.sh ${ARGS}
 
 check: LibCarla PythonAPI
