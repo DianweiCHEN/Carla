@@ -265,7 +265,9 @@ void AOpenDriveActor::BuildRoutes(FString MapName)
         if (RoutePlanner == nullptr)
         {
           RoutePlanner = GetWorld()->SpawnActor<ARoutePlanner>();
+          #if WITH_EDITORONLY_DATA
           RoutePlanner->SetFolderPath("OpenDrive/RoutePlanner");
+          #endif
           RoutePlanner->bIsIntersection = std::any_of(Successors.begin(), Successors.end(), [](auto w) {
             return w.IsIntersection();
           });
@@ -293,7 +295,9 @@ void AOpenDriveActor::BuildRoutes(FString MapName)
         FVector(0, 0, 0),
         FRotator(0, 0, 0),
         SpawnParams);
+    #if WITH_EDITORONLY_DATA
     SpawnedTrafficGroup->SetFolderPath("OpenDrive/TrafficLightGroup");
+    #endif
     FString SetTrafficTimesCommand = FString::Printf(TEXT("SetTrafficTimes %f %f %f"),
             RedTime, YellowTime, GreenTime);
     SpawnedTrafficGroup->CallFunctionByNameWithArguments(*SetTrafficTimesCommand, ar, NULL, true);
@@ -308,7 +312,9 @@ void AOpenDriveActor::BuildRoutes(FString MapName)
           TLPos,
           TLRot,
           SpawnParams);
+      #if WITH_EDITORONLY_DATA
       SpawnedTrafficLight->SetFolderPath("OpenDrive/TrafficLight");
+      #endif
       FString AddTrafficLightCommand = FString::Printf(TEXT("AddTrafficLightPole %s"),
             *SpawnedTrafficLight->GetName());
       SpawnedTrafficGroup->CallFunctionByNameWithArguments(*AddTrafficLightCommand, ar, NULL, true);
@@ -379,7 +385,9 @@ for (TrafficSign CurrentTrafficSign : TrafficSigns) {
       UE_LOG(LogCarla, Warning, TEXT("%s"), *errorMessage);
     break;
   }
+  #if WITH_EDITORONLY_DATA
   SignActor->SetFolderPath("OpenDrive/SpeedSign");
+  #endif
   PersistentTrafficSigns.Push(SignActor);
   for (TrafficBoxComponent TfBoxComponent : CurrentTrafficSign.box_areas)
     {
@@ -463,7 +471,9 @@ void AOpenDriveActor::AddSpawners()
       {
         FTransform Trans = RoutePlanners[i]->GetActorTransform();
         AVehicleSpawnPoint *Spawner = GetWorld()->SpawnActor<AVehicleSpawnPoint>();
+        #if WITH_EDITORONLY_DATA
         Spawner->SetFolderPath("OpenDrive/VehicleSpawnPoint");
+        #endif
         Spawner->SetActorRotation(Trans.GetRotation());
         Spawner->SetActorLocation(Trans.GetTranslation() + FVector(0.f, 0.f, SpawnersHeight));
         VehicleSpawners.Add(Spawner);

@@ -1,10 +1,9 @@
 // Copyright 1998-2017 Epic Games, Inc. All Rights Reserved.
 
-
 #include "MapProcessCommandlet.h"
 #include "GameFramework/WorldSettings.h"
 #include "UObject/MetaData.h"
-//#include "CommandletPluginPrivate.h"
+// #include "CommandletPluginPrivate.h"
 
 UMapProcessCommandlet::UMapProcessCommandlet()
 {
@@ -12,7 +11,7 @@ UMapProcessCommandlet::UMapProcessCommandlet()
   IsEditor = false;
   IsServer = false;
   LogToConsole = true;
-  #if WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
   static ConstructorHelpers::FObjectFinder<UMaterial> MarkingNode(TEXT(
       "Material'/Game/Carla/Static/GenericMaterials/LaneMarking/M_MarkingLane_W.M_MarkingLane_W'"));
   static ConstructorHelpers::FObjectFinder<UMaterial> RoadNode(TEXT(
@@ -25,27 +24,27 @@ UMapProcessCommandlet::UMapProcessCommandlet()
   MarkingNodeMaterial = (UMaterial *) MarkingNode.Object;
   RoadNodeMaterial = (UMaterial *) RoadNode.Object;
   MarkingNodeMaterialAux = (UMaterial *) RoadNodeAux.Object;
-  #endif
+#endif
 }
 #if WITH_EDITORONLY_DATA
 
-bool UMapProcessCommandlet::ParseParams(const FString& InParams)
+bool UMapProcessCommandlet::ParseParams(const FString &InParams)
 {
-	TArray<FString> Tokens;
-	TArray<FString> Params;
-	TMap<FString, FString> ParamVals;
+  TArray<FString> Tokens;
+  TArray<FString> Params;
+  TMap<FString, FString> ParamVals;
 
-	ParseCommandLine(*InParams, Tokens, Params, ParamVals);
+  ParseCommandLine(*InParams, Tokens, Params, ParamVals);
 
-	const bool bEnoughParams = ParamVals.Num() > 1;
+  const bool bEnoughParams = ParamVals.Num() > 1;
 
-	MapName = ParamVals.FindRef(TEXT("mapname"));
+  MapName = ParamVals.FindRef(TEXT("mapname"));
 
   bOverrideMaterials = Params.Contains(TEXT("use-carla-materials"));
 
   bOnlyUpdateMap = Params.Contains(TEXT("only-update"));
 
-	return bEnoughParams;
+  return bEnoughParams;
 }
 
 void UMapProcessCommandlet::MoveMeshes(const FString &SrcPath, const TArray<FString> &DestPath)
@@ -76,11 +75,10 @@ void UMapProcessCommandlet::MoveMeshes(const FString &SrcPath, const TArray<FStr
 
       MapAsset.AssetName.ToString(AssetName);
 
-
       if (SrcPath.Len())
       {
         const FString CurrentPackageName = MeshAsset->GetOutermost()->GetName();
-        //UE_LOG(LogTemp, Display, TEXT("DANIEL: %s"), *CurrentPackageName);
+        // UE_LOG(LogTemp, Display, TEXT("DANIEL: %s"), *CurrentPackageName);
 
         // This is a relative operation
         if (!ensure(CurrentPackageName.StartsWith(SrcPath)))
@@ -90,22 +88,30 @@ void UMapProcessCommandlet::MoveMeshes(const FString &SrcPath, const TArray<FStr
 
         if (AssetName.Contains("MarkingNode"))
         {
-          ChosenIndex=MARKINGLINE_INDEX;
+          ChosenIndex = MARKINGLINE_INDEX;
         }
         else if (AssetName.Contains("RoadNode"))
         {
-          ChosenIndex=ROAD_INDEX;
-        } else if (AssetName.Contains("Terrain")) {
-          ChosenIndex=TERRAIN_INDEX;
+          ChosenIndex = ROAD_INDEX;
+        }
+        else if (AssetName.Contains("Terrain"))
+        {
+          ChosenIndex = TERRAIN_INDEX;
         }
 
         const int32 ShortPackageNameLen = FPackageName::GetLongPackageAssetName(CurrentPackageName).Len();
         const int32 RelativePathLen = CurrentPackageName.Len() - ShortPackageNameLen - SrcPath.Len() - 1;   //
+                                                                                                            //
                                                                                                             // -1
+                                                                                                            //
                                                                                                             // to
+                                                                                                            //
                                                                                                             // exclude
+                                                                                                            //
                                                                                                             // the
+                                                                                                            //
                                                                                                             // trailing
+                                                                                                            //
                                                                                                             // "/"
         const FString RelativeDestPath = CurrentPackageName.Mid(SrcPath.Len(), RelativePathLen);
 
@@ -116,7 +122,6 @@ void UMapProcessCommandlet::MoveMeshes(const FString &SrcPath, const TArray<FStr
         // Only a DestPath was supplied, use it
         PackagePath = DestPath[ChosenIndex];
       }
-
 
       MeshAsset->AddToRoot();
       FString NewPackageName = PackagePath + "/" + ObjectName;
@@ -149,15 +154,20 @@ void UMapProcessCommandlet::LoadWorld(const FString &SrcPath, FAssetData &AssetD
 
   if (AssetDatas.Num() > 0)
   {
-    if(bOnlyUpdateMap) {
-      for(FAssetData CurrentData : AssetDatas) {
+    if (bOnlyUpdateMap)
+    {
+      for (FAssetData CurrentData : AssetDatas)
+      {
         FString AssetName;
         CurrentData.AssetName.ToString(AssetName);
-        if(AssetName.Contains(*MapName)) {
+        if (AssetName.Contains(*MapName))
+        {
           AssetData = CurrentData;
         }
       }
-    } else {
+    }
+    else
+    {
       AssetData = AssetDatas.Pop();
     }
   }
@@ -195,45 +205,53 @@ void UMapProcessCommandlet::AddMeshesToWorld(
     MapAsset.AssetName.ToString(AssetName);
     if (AssetName.Contains("MarkingNode"))
     {
-      #if WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
       MeshActor->SetFolderPath("RoadRunner/MarkingNode");
-      #endif
+#endif
       if (bMaterialWorkaround)
       {
-          MeshActor->GetStaticMeshComponent()->SetMaterial(0, MarkingNodeMaterial);
-          MeshActor->GetStaticMeshComponent()->SetMaterial(1, MarkingNodeMaterialAux);
+        MeshActor->GetStaticMeshComponent()->SetMaterial(0, MarkingNodeMaterial);
+        MeshActor->GetStaticMeshComponent()->SetMaterial(1, MarkingNodeMaterialAux);
       }
     }
     else if (AssetName.Contains("RoadNode"))
     {
-      #if WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
       MeshActor->SetFolderPath("RoadRunner/RoadNode");
-      #endif
+#endif
       if (bMaterialWorkaround)
       {
         MeshActor->GetStaticMeshComponent()->SetMaterial(0, RoadNodeMaterial);
       }
-    } else if (AssetName.Contains("Terrain"))
+    }
+    else if (AssetName.Contains("Terrain"))
     {
-      #if WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
       MeshActor->SetFolderPath("RoadRunner/TerrainNode");
-      #endif
-      if(bMaterialWorkaround) {
+#endif
+      if (bMaterialWorkaround)
+      {
         MeshActor->GetStaticMeshComponent()->SetMaterial(0, TerrainNodeMaterial);
       }
     }
-    #if WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
     else if (AssetName.Contains("GutterNode"))
     {
       MeshActor->SetFolderPath("RoadRunner/Gutter");
-    } else if (AssetName.Contains("DefaultNode")) {
+    }
+    else if (AssetName.Contains("DefaultNode"))
+    {
       MeshActor->SetFolderPath("RoadRunner/DefaultNode");
-    } else if (AssetName.Contains("Sidewalk")) {
+    }
+    else if (AssetName.Contains("Sidewalk"))
+    {
       MeshActor->SetFolderPath("RoadRunner/Sidewalk");
-    } else if (AssetName.Contains("CurbNode")) {
+    }
+    else if (AssetName.Contains("CurbNode"))
+    {
       MeshActor->SetFolderPath("RoadRunner/CurbNode");
     }
-    #endif
+#endif
 
   }
   World->MarkPackageDirty();
@@ -258,9 +276,9 @@ bool UMapProcessCommandlet::SaveWorld(FAssetData &AssetData, FString &DestPath, 
   AOpenDriveActor *OpenWorldActor =
       CastChecked<AOpenDriveActor>(World->SpawnActor(AOpenDriveActor::StaticClass(), new FVector(), NULL));
   OpenWorldActor->RemoveRoutes();
-  #if WITH_EDITORONLY_DATA
+#if WITH_EDITORONLY_DATA
   OpenWorldActor->SetFolderPath("OpenDrive");
-  #endif
+#endif
   OpenWorldActor->BuildRoutes(WorldName);
   OpenWorldActor->AddSpawners();
 
@@ -271,27 +289,31 @@ bool UMapProcessCommandlet::SaveWorld(FAssetData &AssetData, FString &DestPath, 
       *PackageFileName, GError, nullptr, true, true, SAVE_NoError);
 }
 
-void UMapProcessCommandlet::RemoveAllRoadRunnerFiles() {
-  for(TObjectIterator<AStaticMeshActor> Itr; Itr; ++Itr)
+void UMapProcessCommandlet::RemoveAllRoadRunnerFiles()
+{
+  for (TObjectIterator<AStaticMeshActor> Itr; Itr; ++Itr)
   {
-    //World Check
-    if(Itr->GetWorld() != World)
+    // World Check
+    if (Itr->GetWorld() != World)
     {
-        continue;
+      continue;
     }
     AActor *CurrentActor = *Itr;
-    if(CurrentActor->GetFolderPath().ToString().Contains("RoadRunner")) {
+    if (CurrentActor->GetFolderPath().ToString().Contains("RoadRunner"))
+    {
       CurrentActor->Destroy();
     }
   }
 
-  for(TObjectIterator<AActor> Itr; Itr; ++Itr) {
-    if(Itr->GetWorld() != World)
+  for (TObjectIterator<AActor> Itr; Itr; ++Itr)
+  {
+    if (Itr->GetWorld() != World)
     {
-        continue;
+      continue;
     }
     AActor *CurrentActor = *Itr;
-    if(CurrentActor->GetFolderPath().ToString().Contains("OpenDrive")) {
+    if (CurrentActor->GetFolderPath().ToString().Contains("OpenDrive"))
+    {
       CurrentActor->Destroy();
     }
   }
@@ -318,7 +340,10 @@ int32 UMapProcessCommandlet::Main(const FString &Params)
   MoveMeshes(SrcPath, DataPath);
   LoadWorld(*BaseMap, AssetData);
   World = CastChecked<UWorld>(AssetData.GetAsset());
-  if(bOnlyUpdateMap) RemoveAllRoadRunnerFiles();
+  if (bOnlyUpdateMap)
+  {
+    RemoveAllRoadRunnerFiles();
+  }
   AddMeshesToWorld(DataPath, bOverrideMaterials);
   SaveWorld(AssetData, WorldDestPath, MapName);
 
