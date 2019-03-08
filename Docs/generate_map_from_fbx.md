@@ -54,12 +54,14 @@ folder obtained from RoadRunner and rename it with the name of the map to be imp
 It have to match the <b>.fbx</b>
 and <b>.xodr</b> files.
 
-Now, simply go into the PythonAPI/util folder and run <b>generate_map.py</b>
+Now, simply go into the PythonAPI/util folder and run <b>generate_map.py</b>.
 
 !!! important
     The script, by default, checks the <i>/Unreal/CarlaUE4/Content/Carla/ExportedMaps</i> for matching names.
     If a map with the same name as a to-be-imported map is found, it will notify the user and won't do anything.
-    To override this, <b>generate_map.py</b> can be invoked with the <b>--force</b> flag.
+    To override this, <b>generate_map.py</b> can be invoked with the <b>--force</b> flag. Also, if instead of
+    overriding a map, the user wants to update the RoadRunner resources <b>--update</b> will try to do so, but
+    this will only work if the user has respected the world outliner provided by the script.
 
 After the script finishes, all a map with the same name of the folder and files will be located under
 <i>/Unreal/CarlaUE4/Content/Carla/Maps</i> with all the static meshes and placed, textures, waypoints and routes

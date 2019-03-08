@@ -12,6 +12,7 @@
 #include <Developer/AssetTools/Public/IAssetTools.h>
 #include <Developer/AssetTools/Public/AssetToolsModule.h>
 #include <AssetRegistry/Public/AssetRegistryModule.h>
+#include "EngineUtils.h"
 #endif //WITH_EDITORONLY_DATA
 #include <Runtime/Engine/Classes/Engine/StaticMeshActor.h>
 #include "MapProcessCommandlet.generated.h"
@@ -56,6 +57,12 @@ public:
    * in RoadRunner.
    */
   void AddMeshesToWorld(const TArray<FString> &SrcPath, bool bMaterialWorkaround);
+
+  /**
+   * Remove all the RoadRunner related files from the world. Those object are represented in the world
+   * outliner under the "RoadRunner" folder.
+   */
+  void RemoveAllRoadRunnerFiles();
 
   /**
    * Save a given Asset containing a World into a given path with a given name.

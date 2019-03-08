@@ -22,7 +22,7 @@ elif os.name == 'posix':
 
 
 def main():
-    if(args.force):
+    if(args.force or args.update):
         generate_all_maps_but_list([])
     else:
         maps = get_map_names()
@@ -48,7 +48,6 @@ def generate_all_maps_but_list(existent_maps):
             if not any(ext in "%s.umap" % map_name for ext in existent_maps):
                 print("Found map in fbx folder: %s" % map_name)
                 import_assets_commandlet(map_name)
-                #move_uassets(map_name)
                 print("Generating map asset for %s" % map_name)
                 generate_map(map_name)
                 print("Cleaning up directories")
@@ -73,6 +72,10 @@ def parse_arguments():
         '--usecarlamats',
         action='store_true',
         help='Avoid using RoadRunner materials. Use materials provided by Carla instead')
+    argparser.add_argument(
+        '--update',
+        action='store_true',
+        help='Won\'t override the maps, only update the RoadRunner files inside the project')
     return argparser.parse_args()
 
 
@@ -106,6 +109,8 @@ def generate_map(map_name):
     commandlet_arguments = "-mapname=\"%s\"" % map_name
     if args.usecarlamats:
         commandlet_arguments += " -use-carla-materials"
+    if args.update:
+        commandlet_arguments += " -only-update"
     invoke_commandlet(commandlet_name, commandlet_arguments)
 
 #This line might be needed if Epic tells us anything about the current way of doing the movement. It shouldn't but just in case...
