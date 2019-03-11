@@ -158,6 +158,7 @@ def move_uassets(map_name):
     terrain_dir = os.path.join(content_folder, "Static", "Terrain", "%sTerrain" % map_name)
     default_dir = os.path.join(content_folder, "Static", "Default", "%sDefault" % map_name)
     sidewalk_dir = os.path.join(content_folder, "Static", "Sidewalk", "%sSidewalk" % map_name)
+    gutter_dir = os.path.join(content_folder, "Static", "Gutter", "%sGutter" % map_name)
     if not os.path.exists(marking_dir):
         os.makedirs(marking_dir)
     if not os.path.exists(road_dir):
@@ -171,6 +172,12 @@ def move_uassets(map_name):
             dest_path = os.path.join(road_dir, filename)
         if "TerrainNode" in filename:
             dest_path = os.path.join(terrain_dir, filename)
+        if "Sidewalk" in filename:
+            dest_path = os.path.join(sidewalk_dir, filename)
+        if "DefaultNode" in filename:
+            dest_path = os.path.join(default_dir, filename)
+        if "Gutter" in filename:
+            dest_path = os.path.join(gutter_dir, filename)
         src_path = os.path.join(content_folder, "Static", map_name, filename)
         os.rename(src_path, dest_path)
 
