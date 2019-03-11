@@ -620,6 +620,7 @@ class ModuleWorld(object):
 
         settings = self.world.get_settings()
         settings.no_rendering_mode = self.no_rendering
+        settings.synchronous_mode = True
         self.world.apply_settings(settings)
 
         # Create Surfaces
