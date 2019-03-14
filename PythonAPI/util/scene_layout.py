@@ -218,13 +218,13 @@ def get_dynamic_objects(world,map):
         ]
 
     def get_traffic_lights(traffic_lights):
-        return {
+        return [{
             "id": 99,
             "state": 0,  # Red yellow grean
             "position": [0, 0, 0],  # x,y,z
             "trigger_volume": [[], []]  # Set of points
 
-        }
+        }]
 
     def get_vehicles(vehicles):
 
@@ -239,27 +239,26 @@ def get_dynamic_objects(world,map):
 
     def get_walkers(walkers):
 
-        return {
+        return [{
             "id": 99,
             "position": [0, 0, 0],  # x,y,z
             "orientation": [0, 0, 0],  # roll pitch yaw
             "bounding_box": [[]]  # set of points
-        }
+        }]
 
     def get_speed_limits(speed_limits):
 
 
 
-        return {
-            {
+        return  [{
                 "id": 99,
                 "position": [0, 0, 0],  # x,y,z
                 "speed": 90  # Set of points
 
-            }
+            }]
 
 
-        }
+
 
     return {
         'vehicles': get_vehicles(None),  # add the appropriate values baserd on world
