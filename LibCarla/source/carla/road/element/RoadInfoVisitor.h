@@ -21,6 +21,12 @@ namespace element {
   class RoadInfoLaneWidth;
   class RoadInfoMarkRecord;
   class RoadInfoLaneOffset;
+  class RoadInfoLaneBorder;
+  class RoadInfoLaneMaterial;
+  class RoadInfoLaneVisibility;
+  class RoadInfoLaneAccess;
+  class RoadInfoLaneHeight;
+  class RoadInfoLaneRule;
 
   class RoadInfoVisitor {
   public:
@@ -38,6 +44,18 @@ namespace element {
     virtual void Visit(RoadInfoMarkRecord &) {}
 
     virtual void Visit(RoadInfoLaneOffset &) {}
+
+    virtual void Visit(RoadInfoLaneBorder &) {}
+
+    virtual void Visit(RoadInfoLaneMaterial &) {}
+
+    virtual void Visit(RoadInfoLaneVisibility &) {}
+
+    virtual void Visit(RoadInfoLaneAccess &) {}
+
+    virtual void Visit(RoadInfoLaneHeight &) {}
+
+    virtual void Visit(RoadInfoLaneRule &) {}
   };
 
   template <typename T, typename IT>

@@ -45,7 +45,7 @@ namespace element {
         _height(0.0) {}
 
     RoadInfoMarkRecord(
-        double d,
+        double s,
         std::string type,
         std::string weight,
         std::string color,
@@ -53,7 +53,7 @@ namespace element {
         double width,
         LaneChange lane_change,
         double height)
-      : RoadInfo(d),
+      : RoadInfo(s),
         _type(type),
         _weight(weight),
         _color(color),

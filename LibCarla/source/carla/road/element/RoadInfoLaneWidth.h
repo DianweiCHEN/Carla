@@ -26,7 +26,7 @@ namespace element {
     }
 
     RoadInfoLaneWidth(
-        double s,
+        double s, // start position relative to the position of the preceding lane section
         double a,
         double b,
         double c,

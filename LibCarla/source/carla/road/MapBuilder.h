@@ -10,6 +10,7 @@
 #include "carla/road/Map.h"
 
 #include <map>
+#include <string>
 
 namespace carla {
 namespace road {
@@ -18,6 +19,38 @@ namespace road {
   public:
 
     SharedPtr<Map> Build();
+
+    void CreateLaneAccess(int road_id, int lane_id, double s, std::string restriction);
+
+    void CreateLaneBorder(int road_id, int lane_id, double s, double a, double b, double c, double d);
+
+    void CreateLaneHeight(int road_id, int lane_id, double s, double inner, double outer);
+
+    void CreateLaneMaterial(int road_id, int lane_id, double s, std::string surface, double friction, double roughness);
+
+    void CreateLaneOffset(int road_id, int lane_id, double s, double a, double b, double c, double d);
+
+    void CreateLaneRule(int road_id, int lane_id, double s, std::string value);
+
+    void CreateLaneVisibility(int road_id, int lane_id, double s, double forward, double back, double left, double right);
+
+    void CreateLaneWidth(int road_id, int lane_id, double s, double a, double b, double c, double d);
+
+    void CreateLaneMark(
+        int road_id,
+        int lane_id,
+        double s,
+        std::string type,
+        std::string weight,
+        std::string color,
+        std::string material,
+        double width,
+        std::string lane_change,
+        double height);
+
+    void CreateLaneSpeed(int road_id, int lane_id, double s, double max, std::string unit);
+
+    void CreateRoadElevationInfo(int road_id, double s, double a, double b, double c, double d);
 
   private:
 
@@ -28,6 +61,7 @@ namespace road {
     void CreatePointersBetweenRoadSegments();
 
     MapData _map_data;
+
   };
 
 } // namespace road
