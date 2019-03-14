@@ -163,7 +163,7 @@ class MapData(object):
 map_data = MapData()
 
 
-def get_scene_layout(world):
+def get_scene_layout(world,map):
 
     """
     Function to extract the full scene layout to be used as a full scene description to be
@@ -203,7 +203,7 @@ def get_scene_layout(world):
     }
 
 
-def get_dynamic_objects(world):
+def get_dynamic_objects(world,map):
 
 
     def get_stop_signals(stopsignals):
