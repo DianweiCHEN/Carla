@@ -33,6 +33,7 @@ def get_map_names():
     maps = []
     dirname = os.getcwd()
     map_place = os.path.join(dirname, "..", "..", "Unreal", "CarlaUE4", "Content", "Carla", "ExportedMaps")
+    os.mkdir(map_place)
     for filename in os.listdir(map_place):
         if filename.endswith('.umap'):
             maps.append(filename)
@@ -190,7 +191,7 @@ def invoke_commandlet(name, arguments):
     uproject_path = os.path.join(dirname, "..", "..", "Unreal", "CarlaUE4", "CarlaUE4.uproject")
     full_command = "%s %s -run=%s %s" % (editor_path, uproject_path, name, arguments)
     subprocess.Popen([full_command], shell=True).wait()
-
+    #print(full_command)
 
 def generate_json(map_name, json_file):
     with open(json_file, "a+") as fh:
