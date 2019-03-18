@@ -189,7 +189,7 @@ def invoke_commandlet(name, arguments):
     editor_path = "%s/Engine/Binaries/%s/UE4Editor" % (ue4_path, sys_name)
     uproject_path = os.path.join(dirname, "..", "..", "Unreal", "CarlaUE4", "CarlaUE4.uproject")
     full_command = "%s %s -run=%s %s" % (editor_path, uproject_path, name, arguments)
-    subprocess.check_call([full_command], shell=True)
+    subprocess.Popen([full_command], shell=True).wait()
 
 
 def generate_json(map_name, json_file):
