@@ -1,5 +1,6 @@
 ## Latest
 
+  * Add build variant with AD RSS library integration with RSS sensor and result visualisation
   * Add access to vehicle transmission details
   * Add access to vehicle physics brake values
   * Enabled texture streaming for scene captures

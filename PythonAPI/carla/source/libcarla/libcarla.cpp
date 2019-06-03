@@ -182,6 +182,10 @@ static auto MakeCallback(boost::python::object callback) {
 #include "World.cpp"
 #include "Commands.cpp"
 
+#ifdef LIBCARLA_RSS_ENABLED
+#include "AdRss.cpp"
+#endif
+
 BOOST_PYTHON_MODULE(libcarla) {
   using namespace boost::python;
   PyEval_InitThreads();
@@ -199,4 +203,8 @@ BOOST_PYTHON_MODULE(libcarla) {
   export_client();
   export_exception();
   export_commands();
+
+  #ifdef LIBCARLA_RSS_ENABLED
+  export_ad_rss();
+  #endif
 }
