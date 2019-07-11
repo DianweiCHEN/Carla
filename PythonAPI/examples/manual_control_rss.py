@@ -338,24 +338,18 @@ class KeyboardControl(object):
                 self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
                 self._control.reverse = self._control.gear < 0
                 vehicle_control = self._control
+                world.hud.original_vehicle_control = vehicle_control
+                world.hud.restricted_vehicle_control = vehicle_control
                 if self._restrictor:
                     rss_restriction = self._world.rss_sensor.acceleration_restriction if self._world.rss_sensor and self._world.rss_sensor.response_valid else None
                     if rss_restriction:
-                        world.hud.original_vehicle_control = vehicle_control
                         rss_ego_velocity = self._world.rss_sensor.ego_velocity
-                        #velocity = world.player.get_velocity()
-                        #acceleration = world.player.get_acceleration()
                         vehicle_physics = world.player.get_physics_control()
 
-                        #print("Timestamp: %f" % self._world.rss_sensor.timestamp)
                         if not (pygame.key.get_mods() & KMOD_CTRL):
                             vehicle_control = self._restrictor.restrictVehicleControl(vehicle_control, rss_restriction, rss_ego_velocity, vehicle_physics)
-                        #yaw = np.deg2rad(t.rotation.yaw)
-                        #lon_acceleration = np.cos(yaw) * acceleration.x + np.sin(yaw)*acceleration.y
-                        #print("Throttle: %f, Brake: %f" % (vehicle_control.throttle, vehicle_control.brake))
-                        #print("Accel: X=%f, Y=%f, Z=%f, YAW=%f" % (acceleration.x, acceleration.y, acceleration.z, yaw))
-                        #print("LonAccel: %f" % lon_acceleration)
                         world.hud.restricted_vehicle_control = vehicle_control
+
                 world.player.apply_control(vehicle_control)
 
             elif isinstance(self._control, carla.WalkerControl):
