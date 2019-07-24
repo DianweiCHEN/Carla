@@ -70,6 +70,8 @@ void ACarlaWheeledVehicle::BeginPlay()
     UVehicleWheel *Wheel = WheelSetup.WheelClass.GetDefaultObject();
     check(Wheel != nullptr);
 
+    Wheel->TireConfig->ConditionalBeginDestroy();
+
     // Assigning new tire config
     Wheel->TireConfig = NewObject<UTireConfig>();
 
