@@ -13,6 +13,8 @@
 #include "Engine/CollisionProfile.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
 
+#include <chrono>
+
 FActorDefinition ARayCastLidar::GetSensorDefinition()
 {
   return UActorBlueprintFunctionLibrary::MakeLidarDefinition(TEXT("ray_cast"));
@@ -83,82 +85,103 @@ void ARayCastLidar::ReadPoints(const float DeltaTime)
   }
 
   check(ChannelCount == LaserAngles.Num());
-
   const float CurrentHorizontalAngle = LidarMeasurement.GetHorizontalAngle();
   const float AngleDistanceOfTick = Description.RotationFrequency * 360.0f * DeltaTime;
   const float AngleDistanceOfLaserMeasure = AngleDistanceOfTick / PointsToScanWithOneLaser;
 
   LidarMeasurement.Reset(ChannelCount * PointsToScanWithOneLaser);
 
-  for (auto Channel = 0u; Channel < ChannelCount; ++Channel)
+  std::chrono::high_resolution_clock::time_point tStart = std::chrono::high_resolution_clock::now();
+
+  const uint32 ThreadCount = 4u;
+  const uint32 PointsPerThread = (ChannelCount * PointsToScanWithOneLaser) / ThreadCount;
+
+  // setup data
+  TArray<TArray<RayInfo>> RayInfoVector;
+  TArray<FRunnableThread*> ThreadVector;
+  const float Range = 5000.f;
+  RayInfoVector.SetNum(ThreadCount);
+
+  for (auto ThreadId = 0u; ThreadId < ThreadCount; ++ThreadId)
   {
-    for (auto i = 0u; i < PointsToScanWithOneLaser; ++i)
+    RayInfoVector[ThreadId].SetNumUninitialized(PointsPerThread);
+
+    for (auto i = 0u; i < PointsPerThread; ++i)
     {
       FVector Point;
-      const float Angle = CurrentHorizontalAngle + AngleDistanceOfLaserMeasure * i;
-      if (ShootLaser(Channel, Angle, Point))
+
+      const uint32 index = ThreadId * PointsPerThread + i;
+      const uint32 Channel = index / PointsToScanWithOneLaser;
+      const uint32 K = index % PointsToScanWithOneLaser;
+
+      const float Angle = CurrentHorizontalAngle + AngleDistanceOfLaserMeasure * static_cast<float>(K);
+
+      RayInfoVector[ThreadId][i] = RayInfo{Angle, LaserAngles[Channel], Range, false, FVector(0, 0, 0)};
+    }
+  }
+
+  // create runnables and threads
+
+  for (auto ThreadId = 0u; ThreadId < ThreadCount; ++ThreadId)
+  {
+    RunnableLineTrace* Runnable = new RunnableLineTrace(GetWorld(), this, RayInfoVector[ThreadId], GetActorLocation(), GetActorRotation());
+    ThreadVector.Push(FRunnableThread::Create(Runnable, TEXT("LineTraceThread")));
+  }
+
+  std::chrono::high_resolution_clock::time_point tLaunch = std::chrono::high_resolution_clock::now();
+
+
+  // wait for data
+  for (auto ThreadId = 0u; ThreadId < ThreadCount; ++ThreadId)
+  {
+    ThreadVector[ThreadId]->WaitForCompletion();
+  }
+  ThreadVector.Empty();
+
+  std::chrono::high_resolution_clock::time_point tWrite = std::chrono::high_resolution_clock::now();
+
+  for (auto ThreadId = 0u; ThreadId < ThreadCount; ++ThreadId)
+  {
+    for (auto i = 0u; i < PointsPerThread; ++i)
+    {
+      if (RayInfoVector[ThreadId][i].Hit)
       {
-        LidarMeasurement.WritePoint(Channel, Point);
+        // thread to channel conversion
+        const uint32 index = ThreadId * PointsPerThread + i;
+        const uint32 Channel = index / PointsToScanWithOneLaser;
+        const uint32 K = index % PointsToScanWithOneLaser;
+
+        LidarMeasurement.WritePoint(Channel, RayInfoVector[ThreadId][i].HitPoint);
       }
     }
   }
+  RayInfoVector.Empty();
+
+  std::chrono::high_resolution_clock::time_point tEnd = std::chrono::high_resolution_clock::now();
+  auto spawnTime = std::chrono::duration_cast<std::chrono::milliseconds>(tLaunch - tStart).count();
+  auto writeTime = std::chrono::duration_cast<std::chrono::milliseconds>(tEnd - tWrite).count();
+  auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tEnd - tStart).count();
+  UE_LOG(
+      LogCarla,
+      Warning,
+      TEXT("%s: Thread spawning time = %d ms"),
+      *GetName(),
+      spawnTime);
+
+  UE_LOG(
+      LogCarla,
+      Warning,
+      TEXT("%s: Raycast execution parallel = %d ms"),
+      *GetName(),
+      time);
+
+  UE_LOG(
+      LogCarla,
+      Warning,
+      TEXT("%s: Raycast execution write = %d ms"),
+      *GetName(),
+      writeTime);
 
   const float HorizontalAngle = std::fmod(CurrentHorizontalAngle + AngleDistanceOfTick, 360.0f);
   LidarMeasurement.SetHorizontalAngle(HorizontalAngle);
-}
-
-bool ARayCastLidar::ShootLaser(const uint32 Channel, const float HorizontalAngle, FVector &XYZ) const
-{
-  const float VerticalAngle = LaserAngles[Channel];
-
-  FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("Laser_Trace")), true, this);
-  TraceParams.bTraceComplex = true;
-  TraceParams.bReturnPhysicalMaterial = false;
-
-  FHitResult HitInfo(ForceInit);
-
-  FVector LidarBodyLoc = GetActorLocation();
-  FRotator LidarBodyRot = GetActorRotation();
-  FRotator LaserRot (VerticalAngle, HorizontalAngle, 0);  // float InPitch, float InYaw, float InRoll
-  FRotator ResultRot = UKismetMathLibrary::ComposeRotators(
-    LaserRot,
-    LidarBodyRot
-  );
-  const auto Range = Description.Range;
-  FVector EndTrace = Range * UKismetMathLibrary::GetForwardVector(ResultRot) + LidarBodyLoc;
-
-  GetWorld()->LineTraceSingleByChannel(
-    HitInfo,
-    LidarBodyLoc,
-    EndTrace,
-    ECC_MAX,
-    TraceParams,
-    FCollisionResponseParams::DefaultResponseParam
-  );
-
-  if (HitInfo.bBlockingHit)
-  {
-    if (Description.ShowDebugPoints)
-    {
-      DrawDebugPoint(
-        GetWorld(),
-        HitInfo.ImpactPoint,
-        10,  //size
-        FColor(255,0,255),
-        false,  //persistent (never goes away)
-        0.1  //point leaves a trail on moving object
-      );
-    }
-
-    XYZ = LidarBodyLoc - HitInfo.ImpactPoint;
-    XYZ = UKismetMathLibrary::RotateAngleAxis(
-      XYZ,
-      - LidarBodyRot.Yaw + 90,
-      FVector(0, 0, 1)
-    );
-
-    return true;
-  } else {
-    return false;
-  }
 }

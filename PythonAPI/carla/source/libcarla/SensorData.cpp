@@ -15,6 +15,7 @@
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LaneInvasionEvent.h>
 #include <carla/sensor/data/LidarMeasurement.h>
+#include <carla/sensor/data/ObjectLidarMeasurement.h>
 #include <carla/sensor/data/GnssEvent.h>
 
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
@@ -36,6 +37,14 @@ namespace data {
 
   std::ostream &operator<<(std::ostream &out, const LidarMeasurement &meas) {
     out << "LidarMeasurement(frame=" << meas.GetFrame()
+        << ", timestamp=" << meas.GetTimestamp()
+        << ", number_of_points=" << meas.size()
+        << ')';
+    return out;
+  }
+
+  std::ostream &operator<<(std::ostream &out, const ObjectLidarMeasurement &meas) {
+    out << "ObjectLidarMeasurement(frame=" << meas.GetFrame()
         << ", timestamp=" << meas.GetTimestamp()
         << ", number_of_points=" << meas.size()
         << ')';
@@ -204,6 +213,22 @@ void export_sensor_data() {
       return self.at(pos);
     })
     .def("__setitem__", +[](csd::LidarMeasurement &self, size_t pos, const cr::Location &point) {
+      self.at(pos) = point;
+    })
+    .def(self_ns::str(self_ns::self))
+  ;
+
+  class_<csd::ObjectLidarMeasurement, bases<cs::SensorData>, boost::noncopyable, boost::shared_ptr<csd::ObjectLidarMeasurement>>("ObjectLidarMeasurement", no_init)
+    .add_property("horizontal_angle", &csd::ObjectLidarMeasurement::GetHorizontalAngle)
+    .add_property("channels", &csd::ObjectLidarMeasurement::GetChannelCount)
+    .add_property("raw_data", &GetRawDataAsBuffer<csd::ObjectLidarMeasurement>)
+    .def("get_point_count", &csd::ObjectLidarMeasurement::GetPointCount, (arg("channel")))
+    .def("__len__", &csd::ObjectLidarMeasurement::size)
+    .def("__iter__", iterator<csd::ObjectLidarMeasurement>())
+    .def("__getitem__", +[](const csd::ObjectLidarMeasurement &self, size_t pos) -> cr::IntensityPoint {
+      return self.at(pos);
+    })
+    .def("__setitem__", +[](csd::ObjectLidarMeasurement &self, size_t pos, const cr::IntensityPoint &point) {
       self.at(pos) = point;
     })
     .def(self_ns::str(self_ns::self))

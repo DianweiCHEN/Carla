@@ -6,6 +6,9 @@ help:
 launch: LibCarla.server.release
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildCarlaUE4.sh --build --launch $(ARGS)
 
+editor: LibCarla.server.release
+	@${CARLA_BUILD_TOOLS_FOLDER}/BuildCarlaUE4.sh --build
+
 launch-only:
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildCarlaUE4.sh --launch $(ARGS)
 

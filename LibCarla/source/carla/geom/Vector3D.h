@@ -151,6 +151,11 @@ namespace geom {
       return FVector{x, y, z};
     }
 
+    Vector3D(const FVector &vector)
+      : x(vector.X),
+        y(vector.Y),
+        z(vector.Z) {}
+
 #endif // LIBCARLA_INCLUDED_FROM_UE4
 
     // =========================================================================

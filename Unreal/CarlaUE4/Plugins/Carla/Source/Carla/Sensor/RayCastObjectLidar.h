@@ -7,30 +7,29 @@
 #pragma once
 
 #include "Carla/Sensor/Sensor.h"
-#include "Carla/Sensor/RunnableLineTrace.h"
 
 #include "Carla/Actor/ActorDefinition.h"
 #include "Carla/Sensor/LidarDescription.h"
 
 #include <compiler/disable-ue4-macros.h>
-#include <carla/sensor/s11n/LidarMeasurement.h>
+#include <carla/sensor/s11n/ObjectLidarMeasurement.h>
 #include <compiler/enable-ue4-macros.h>
 
-#include "RayCastLidar.generated.h"
+#include "RayCastObjectLidar.generated.h"
 
 /// A ray-cast based Lidar sensor.
 UCLASS()
-class CARLA_API ARayCastLidar : public ASensor
+class CARLA_API ARayCastObjectLidar : public ASensor
 {
   GENERATED_BODY()
 
-  using FLidarMeasurement = carla::sensor::s11n::LidarMeasurement;
+  using FLidarMeasurement = carla::sensor::s11n::ObjectLidarMeasurement;
 
 public:
 
   static FActorDefinition GetSensorDefinition();
 
-  ARayCastLidar(const FObjectInitializer &ObjectInitializer);
+  ARayCastObjectLidar(const FObjectInitializer &ObjectInitializer);
 
   void Set(const FActorDescription &Description) override;
 
@@ -47,6 +46,9 @@ private:
 
   /// Updates LidarMeasurement with the points read in DeltaTime.
   void ReadPoints(float DeltaTime);
+
+  /// Shoot a laser ray-trace, return whether the laser hit something.
+  bool ShootLaser(uint32 Channel, float HorizontalAngle, FVector &Point, FVector &Velocity, float &Intensity, uint32_t & ObjectId) const;
 
   UPROPERTY(EditAnywhere)
   FLidarDescription Description;
