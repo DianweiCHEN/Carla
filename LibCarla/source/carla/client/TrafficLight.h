@@ -4,6 +4,16 @@
 // This work is licensed under the terms of the MIT license.
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
+/*
+ * ----------------- BEGIN LICENSE BLOCK ---------------------------------
+ *
+ * Copyright (C) 2018-2019 Intel Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * ----------------- END LICENSE BLOCK -----------------------------------
+ */
+
 #pragma once
 
 #include "carla/client/TrafficSign.h"
@@ -12,10 +22,12 @@
 namespace carla {
 namespace client {
 
-  class TrafficLight : public TrafficSign {
+  class TrafficLight : public TrafficLandmark {
   public:
 
-    explicit TrafficLight(ActorInitializer init) : TrafficSign(std::move(init)) {}
+    explicit TrafficLight(ActorInitializer init, TrafficLightType type)
+    : TrafficLandmark(std::move(init),
+    _type(type)) {}
 
     void SetState(rpc::TrafficLightState state);
 
@@ -59,6 +71,9 @@ namespace client {
     ///
     /// @note This function calls the simulator
     std::vector<SharedPtr<TrafficLight>> GetGroupTrafficLights();
+
+  private:
+    TrafficLightType _type;
   };
 
 } // namespace client
