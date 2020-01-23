@@ -8,6 +8,7 @@
 
 #include "carla/Memory.h"
 #include "carla/NonCopyable.h"
+#include "carla/client/TrafficLandMark.h"
 #include "carla/geom/Transform.h"
 #include "carla/road/element/LaneMarking.h"
 #include "carla/road/element/RoadInfoMarkRecord.h"
@@ -76,6 +77,30 @@ namespace client {
     boost::optional<road::element::LaneMarking> GetLeftLaneMarking() const;
 
     road::element::LaneMarking::LaneChange GetLaneChange() const;
+
+    std::pair<TrafficLandMark, float> NextLandmark(LandmarkType type);
+
+    std::vector<std::pair<TrafficLandMark, float>> NextLandmarks(
+      int MaxLandmarks,
+      LandmarkType type
+    );
+
+    std::pair<TrafficLandMark, float> PreviousLandmark(LandmarkType type);
+
+    std::vector<std::pair<TrafficLandMark, float>> PreviousLandmarks(
+      int MaxLandmarks,
+      LandmarkType type
+    );
+
+    std::vector<std::pair<TrafficLandMark, float>> NextLandmarkInRange(
+      float Distance,
+      LandmarkType type
+    );
+
+    std::vector<std::pair<TrafficLandMark, float>> NextLandmarksInRange(
+      float Distance,
+      LandmarkType type
+    );
 
   private:
 

@@ -4,21 +4,36 @@
 // This work is licensed under the terms of the MIT license.
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
+/*
+ * ----------------- BEGIN LICENSE BLOCK ---------------------------------
+ *
+ * Copyright (C) 2018-2019 Intel Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * ----------------- END LICENSE BLOCK -----------------------------------
+ */
+
 #pragma once
 
-#include "carla/client/Actor.h"
+#include "carla/client/TrafficLandmark.h"
 
 namespace carla {
 namespace client {
 
-  class TrafficSign : public Actor {
+  class TrafficSign : public TrafficLandmark {
   public:
-
-    explicit TrafficSign(ActorInitializer init) : Actor(std::move(init)) {}
-
-    const geom::BoundingBox &GetTriggerVolume() const {
-      return ActorState::GetBoundingBox();
+    enum class TrafficSignType : int32_t {
+      Invalid = 0,
     }
+
+    explicit TrafficSign(ActorInitializer init, TrafficSignType type)
+      : TrafficLandmark(std::move(init),
+      _type(type)) {}
+
+
+  private:
+    TrafficSignType _type;
   };
 
 } // namespace client

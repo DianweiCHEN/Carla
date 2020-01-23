@@ -134,5 +134,37 @@ namespace client {
     return (c_right & lane_change_type::Right) | (c_left & lane_change_type::Left);
   }
 
+  std::pair<TrafficLandMark, float> Waypoint::NextLandmark(LandmarkType type) {
+  }
+
+  std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarks(
+    int MaxLandmarks,
+    LandmarkType type) {
+
+  }
+
+  std::pair<TrafficLandMark, float> Waypoint::PreviousLandmark(LandmarkType type) {
+
+  }
+
+  std::vector<std::pair<TrafficLandMark, float>> Waypoint::PreviousLandmarks(
+    int MaxLandmarks,
+    LandmarkType type) {
+
+  }
+
+  std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarkInRange(
+    float Distance,
+    LandmarkType type) {
+
+  }
+
+  std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarksInRange(
+    float Distance,
+    LandmarkType type) {
+
+  }
+
+
 } // namespace client
 } // namespace carla
