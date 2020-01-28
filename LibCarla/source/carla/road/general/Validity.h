@@ -26,6 +26,10 @@ namespace general {
         _from_lane(from_lane),
         _to_lane(to_lane) {}
 
+    bool IsValid(road::LaneId laneId) const {
+      return (_from_lane <= laneId) && (laneId <= _to_lane);
+    }
+
   private:
 
 #if defined(__clang__)

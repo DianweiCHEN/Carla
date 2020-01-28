@@ -117,9 +117,13 @@ namespace road {
 
     LaneId _predecessor = 0;
 
+    // Key = s, Value = SignId
+    std::map<double, SignId> _signals;
+
     std::vector<Lane *> _next_lanes;
 
     std::vector<Lane *> _prev_lanes;
+
   };
 
 } // road

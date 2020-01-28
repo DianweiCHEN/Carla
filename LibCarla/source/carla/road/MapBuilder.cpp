@@ -40,6 +40,8 @@ namespace road {
 
     CreatePointersBetweenRoadSegments();
 
+    AssignSignalsToLanes();
+
     for (auto &&info : _temp_road_info_container) {
       DEBUG_ASSERT(info.first != nullptr);
       info.first->_info = InformationSet(std::move(info.second));
@@ -686,6 +688,27 @@ namespace road {
             }
           }
 
+        }
+      }
+    }
+  }
+
+  void MapBuilder::AssignSignalsToLanes() {
+    for (auto &road : _map_data._roads) {
+      std::unordered_map<SignId, signal::Signal>& signals = *(road.second.getSignals());
+      for (auto &section : road.second._lane_sections) {
+        for (auto &lane_map : section.second._lanes) {
+          Lane& lane = lane_map.second;
+          LaneId laneId = lane.GetId();
+          // Per each lane: loop each signal, detect validity, add it if is valid add it to lane signals
+          for(auto& signal_map : signals) {
+            SignId signId = signal_map.first;
+            signal::Signal& signal = signal_map.second;
+            DEBUG_ASSERT_EQ(signId, signal._signal_id);
+            if (signal.IsLaneValid(laneId)) {
+              lane._signals.emplace(signal._s, signId);
+            }
+          }
         }
       }
     }

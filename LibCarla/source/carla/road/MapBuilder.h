@@ -349,6 +349,9 @@ namespace road {
     /// Create the pointers between RoadSegments based on the ids.
     void CreatePointersBetweenRoadSegments();
 
+    /// Creates a map in each lane with the signals that are affecting the lane
+    void AssignSignalsToLanes();
+
     /// Return the pointer to a lane object.
     Lane *GetEdgeLanePointer(RoadId road_id, bool from_start, LaneId lane_id);
 
