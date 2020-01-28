@@ -69,7 +69,11 @@ namespace signal {
       _dependencies.push_back(std::move(dependency));
     }
 
+    bool IsLaneValid(road::LaneId laneId);
+
   private:
+
+    friend MapBuilder;
 
 #if defined(__clang__)
 #  pragma clang diagnostic push
