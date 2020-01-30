@@ -85,6 +85,10 @@ namespace road {
       return _info.GetInfos<T>();
     }
 
+    const std::map<double, SignId>& GetSignals() const {
+      return _signals;
+    }
+
     const std::vector<Lane *> &GetNextLanes() const {
       return _next_lanes;
     }

@@ -8,7 +8,7 @@
 
 #include "carla/Memory.h"
 #include "carla/NonCopyable.h"
-#include "carla/client/TrafficLandMark.h"
+#include "carla/client/TrafficLandmark.h"
 #include "carla/geom/Transform.h"
 #include "carla/road/element/LaneMarking.h"
 #include "carla/road/element/RoadInfoMarkRecord.h"
@@ -91,9 +91,9 @@ namespace client {
 
     road::element::LaneMarking::LaneChange GetLaneChange() const;
 
-    std::pair<TrafficLandMark, float> NextLandmark(LandmarkType type);
+    //std::pair<TrafficLandMark, float> NextLandmark(TrafficLandmark::LandmarkType type);
 
-    std::vector<std::pair<TrafficLandMark, float>> NextLandmarks(
+    /*std::vector<std::pair<TrafficLandMark, float>> NextLandmarks(
       int MaxLandmarks,
       LandmarkType type
     );
@@ -113,7 +113,7 @@ namespace client {
     std::vector<std::pair<TrafficLandMark, float>> NextLandmarksInRange(
       float Distance,
       LandmarkType type
-    );
+    );*/
 
   private:
 

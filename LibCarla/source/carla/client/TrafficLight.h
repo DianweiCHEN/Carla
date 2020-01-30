@@ -25,9 +25,8 @@ namespace client {
   class TrafficLight : public TrafficLandmark {
   public:
 
-    explicit TrafficLight(ActorInitializer init, TrafficLightType type)
-    : TrafficLandmark(std::move(init),
-    _type(type)) {}
+    explicit TrafficLight(ActorInitializer init)
+    : TrafficLandmark(std::move(init), TrafficLandmark::LandmarkType::TrafficLight) {}
 
     void SetState(rpc::TrafficLightState state);
 
@@ -73,7 +72,7 @@ namespace client {
     std::vector<SharedPtr<TrafficLight>> GetGroupTrafficLights();
 
   private:
-    TrafficLightType _type;
+
   };
 
 } // namespace client
