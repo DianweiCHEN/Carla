@@ -27,7 +27,8 @@ namespace general {
         _to_lane(to_lane) {}
 
     bool IsValid(road::LaneId laneId) const {
-      return (_from_lane <= laneId) && (laneId <= _to_lane);
+      return ((_from_lane <= laneId) && (laneId <= _to_lane) || // positivie lanes
+              (_from_lane >= laneId) && (laneId >= _to_lane));  // negative lanes
     }
 
   private:
