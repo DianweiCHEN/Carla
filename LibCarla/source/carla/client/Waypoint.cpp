@@ -134,37 +134,46 @@ namespace client {
     return (c_right & lane_change_type::Right) | (c_left & lane_change_type::Left);
   }
 
+/*
   std::pair<TrafficLandMark, float> Waypoint::NextLandmark(LandmarkType type) {
+    const road::Lane& lane = _parent->GetMap().GetLane(_waypoint);
+    const std::map<double, SignId>& signals = lane.GetSignals();
+    carla::log_info("Waypoint::NextLandmark:");
+    for(auto& signal : signals) {
+      carla::log_info("\t", signal.first);
+    }
+    return std::pair<TrafficLandMark, float>;
   }
-
+  */
+/*
   std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarks(
     int MaxLandmarks,
     LandmarkType type) {
-
+    return std::vector<std::pair<TrafficLandMark, float>>();
   }
 
   std::pair<TrafficLandMark, float> Waypoint::PreviousLandmark(LandmarkType type) {
-
+    return std::pair<TrafficLandMark, float>;
   }
 
   std::vector<std::pair<TrafficLandMark, float>> Waypoint::PreviousLandmarks(
     int MaxLandmarks,
     LandmarkType type) {
-
+    return std::vector<std::pair<TrafficLandMark, float>>;
   }
 
   std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarkInRange(
     float Distance,
     LandmarkType type) {
-
+    return std::vector<std::pair<TrafficLandMark, float>>;
   }
 
   std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarksInRange(
     float Distance,
     LandmarkType type) {
-
+    return std::vector<std::pair<TrafficLandMark, float>>;
   }
-
+*/
 
 } // namespace client
 } // namespace carla

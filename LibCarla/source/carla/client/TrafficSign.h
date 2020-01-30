@@ -25,15 +25,16 @@ namespace client {
   public:
     enum class TrafficSignType : int32_t {
       Invalid = 0,
-    }
+    };
 
-    explicit TrafficSign(ActorInitializer init, TrafficSignType type)
-      : TrafficLandmark(std::move(init),
-      _type(type)) {}
+    explicit TrafficSign(ActorInitializer init, TrafficSignType type = TrafficSignType::Invalid)
+      : TrafficLandmark(std::move(init), TrafficLandmark::LandmarkType::TrafficSign),
+      _sign_type(type) {}
 
+    TrafficSignType GetType() const { return _sign_type; }
 
   private:
-    TrafficSignType _type;
+    TrafficSignType _sign_type;
   };
 
 } // namespace client

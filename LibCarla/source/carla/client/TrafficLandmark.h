@@ -19,6 +19,8 @@
 #include "carla/client/Actor.h"
 #include "carla/geom/Vector3D.h"
 
+// TODO (doterop): is namespace right?
+
 namespace carla {
 namespace client {
 
@@ -43,18 +45,14 @@ namespace client {
     };
 
     explicit TrafficLandmark(ActorInitializer init, LandmarkType type)
-      : Actor(std::move(init),
-      _type(type)) {}
+      : Actor(std::move(init)),
+      _type(type) {}
 
     const geom::BoundingBox &GetTriggerVolume() const {
       return ActorState::GetBoundingBox();
     }
 
-    generate_trigger_volume(Vector3D extent)
-
-
-  private:
-    Waypoint _waypoint;
+  protected:
     LandmarkType _type;
     int32_t _traffic_landmark_id;
 

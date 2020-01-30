@@ -8,9 +8,10 @@
 
 namespace carla {
 namespace road {
+namespace signal {
 
 bool Signal::IsLaneValid(road::LaneId laneId) {
-  for(general::Validity validity: _validities) {
+  for(general::Validity& validity: _validities) {
     if(validity.IsValid(laneId)) {
       return true;
     }
@@ -18,5 +19,6 @@ bool Signal::IsLaneValid(road::LaneId laneId) {
   return false;
 }
 
+} // signal
 } // road
 } // carla

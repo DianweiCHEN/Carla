@@ -14,8 +14,12 @@
 #include <string>
 #include <vector>
 
+
 namespace carla {
 namespace road {
+
+class MapBuilder;
+
 namespace signal {
 
   class Signal : private MovableNonCopyable {
@@ -73,7 +77,7 @@ namespace signal {
 
   private:
 
-    friend MapBuilder;
+    friend class carla::road::MapBuilder;
 
 #if defined(__clang__)
 #  pragma clang diagnostic push
