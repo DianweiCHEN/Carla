@@ -184,6 +184,8 @@ void export_map() {
     .def("get_right_lane", &cc::Waypoint::GetRight)
     .def("get_left_lane", &cc::Waypoint::GetLeft)
     .def("get_junction", &cc::Waypoint::GetJunction, (args("lane_type")))
+    //.def("next_landmark", CALL_RETURNING_COPY(cc::Waypoint, NextLandmark, cc::TrafficLandmark::LandmarkType), (args("landmark_type")))
+    .def("next_landmark", CALL_RETURNING_COPY(cc::Waypoint, NextLandmark))
     .def(self_ns::str(self_ns::self))
   ;
 
