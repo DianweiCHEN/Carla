@@ -22,11 +22,11 @@
 namespace carla {
 namespace client {
 
-  class TrafficLight : public TrafficLandmark {
+  class TrafficLight : public TrafficSign {
   public:
 
     explicit TrafficLight(ActorInitializer init)
-    : TrafficLandmark(std::move(init), TrafficLandmark::LandmarkType::TrafficLight) {}
+    : TrafficSign(std::move(init)) {}
 
     void SetState(rpc::TrafficLightState state);
 

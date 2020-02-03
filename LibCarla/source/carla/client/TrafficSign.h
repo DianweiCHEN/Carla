@@ -16,12 +16,13 @@
 
 #pragma once
 
-#include "carla/client/TrafficLandmark.h"
+//#include "carla/client/TrafficLandmark.h"
+#include "carla/client/Actor.h"
 
 namespace carla {
 namespace client {
 
-  class TrafficSign : public TrafficLandmark {
+  /* class TrafficSign : public Actor {
   public:
     enum class TrafficSignType : int32_t {
       Invalid = 0,
@@ -35,6 +36,16 @@ namespace client {
 
   private:
     TrafficSignType _sign_type;
+  }; */
+
+  class TrafficSign : public Actor {
+  public:
+
+    explicit TrafficSign(ActorInitializer init) : Actor(std::move(init)) {}
+
+    const geom::BoundingBox &GetTriggerVolume() const {
+      return ActorState::GetBoundingBox();
+    }
   };
 
 } // namespace client

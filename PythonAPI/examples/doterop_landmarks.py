@@ -924,6 +924,19 @@ class CameraManager(object):
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
+def LoadOpenDriveMap(str):
+    # read the OpenDRIVE
+    try:
+        f = open(str, "rt")
+    except:
+        print("OpenDRIVE file not found!")
+        exit(1)
+
+    data = f.read()
+    f.close()
+
+    # create the map with the OpenDRIVE content
+    return carla.Map("test", data)
 
 def game_loop(args):
     pygame.init()
@@ -942,6 +955,16 @@ def game_loop(args):
         clock = pygame.time.Clock()
 
 
+        settings = world.world.get_settings()
+        settings.no_rendering_mode = True
+        world.world.apply_settings(settings)
+
+        print("========================================")
+        print("========================================")
+        print("========================================")
+        print("========================================")
+        map = LoadOpenDriveMap("test_maps/SceneStops.xodr")
+
 
         while True:
             clock.tick_busy_loop(60)
@@ -950,7 +973,8 @@ def game_loop(args):
 
 
             waypoint = world.map.get_waypoint(world.player.get_location())
-            waypoint.next_landmark()
+            # print(waypoint.next_landmark(0))
+            waypoint.next_landmark(0)
 
 
             # world.world.debug.draw_point(

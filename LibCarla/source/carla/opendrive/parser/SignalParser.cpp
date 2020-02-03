@@ -38,6 +38,7 @@ namespace parser {
   void SignalParser::Parse(
       const pugi::xml_document &xml,
       carla::road::MapBuilder &map_builder) {
+    carla::log_info("SignalParser::Parse");
     // Extracting the OpenDRIVE
     const pugi::xml_node opendrive_node = xml.child("OpenDRIVE");
     const std::string validity = "validity";
@@ -49,6 +50,7 @@ namespace parser {
       for (pugi::xml_node signal_node = signals_node.child("signal");
           signal_node;
           signal_node = signal_node.next_sibling("signal")) {
+        carla::log_info("\t\tsignal");
         const double s_position = signal_node.attribute("s").as_double();
         const double t_position = signal_node.attribute("t").as_double();
         const SignalID signal_id = static_cast<SignalID>(signal_node.attribute("id").as_int());
@@ -115,6 +117,7 @@ namespace parser {
         for (pugi::xml_node dependency_node = signal_node.child("dependency");
             dependency_node;
             dependency_node = dependency_node.next_sibling("validity")) {
+          carla::log_info("\t\tvalidity");
           const DependencyID dependency_id = dependency_node.attribute("id").as_uint();
           const std::string dependency_type = dependency_node.attribute("type").value();
           log_debug("Added dependency to signal ", signal_id, ":", dependency_id, dependency_type);
