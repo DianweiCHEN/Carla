@@ -55,6 +55,15 @@ static carla::geom::GeoLocation ToGeolocation(
   return self.GetGeoReference().Transform(location);
 }
 
+static auto NextLandmark(
+    const carla::client::Waypoint &self,
+    //const carla::client::TrafficLandmark::LandmarkType /* type */) {
+    const int /* type */) {
+  namespace py = boost::python;
+  auto pair = self.NextLandmark(/* type */);
+  return py::make_tuple(pair.first, pair.second);
+}
+
 void export_map() {
   using namespace boost::python;
   namespace cc = carla::client;
@@ -168,8 +177,7 @@ void export_map() {
     .def("next", CALL_RETURNING_LIST_1(cc::Waypoint, GetNext, double), (args("distance")))
     .def("get_right_lane", &cc::Waypoint::GetRight)
     .def("get_left_lane", &cc::Waypoint::GetLeft)
-    //.def("next_landmark", CALL_RETURNING_COPY(cc::Waypoint, NextLandmark, cc::TrafficLandmark::LandmarkType), (args("landmark_type")))
-    .def("next_landmark", CALL_RETURNING_COPY(cc::Waypoint, NextLandmark))
+    .def("next_landmark", &NextLandmark, (arg("landmark_type")))
     .def(self_ns::str(self_ns::self))
   ;
 }

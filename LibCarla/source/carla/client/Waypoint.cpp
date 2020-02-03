@@ -134,19 +134,22 @@ namespace client {
     return (c_right & lane_change_type::Right) | (c_left & lane_change_type::Left);
   }
 
-  float Waypoint::NextLandmark(
+  std::pair<int, float> Waypoint::NextLandmark(
   //std::pair<SharedPtr<TrafficLandmark>, float> Waypoint::NextLandmark(
     /* TrafficLandmark::LandmarkType type */) const {
-    carla::log_info("Waypoint::NextLandmark");
-    /*const road::Lane& lane = _parent->GetMap().GetLane(_waypoint);
-    const std::map<double, SignId>& signals = lane.GetSignals();
-    for(auto& signal : signals) {
-      carla::log_info("\t", signal.first);
-    }*/
+    // carla::log_info("==================================================================");
+    // const road::Lane& lane = _parent->GetMap().GetLane(_waypoint);
+    // const std::map<double, road::SignId>& signals = lane.GetSignals();
+    // carla::log_info("Waypoint::NextLandmark (",signals.size(),")");
+    // for(auto& signal : signals) {
+      // carla::log_info("\t", signal.first);
+    // }
     //std::pair<SharedPtr<TrafficLandmark>, float> p;
     //return p;
-    return 0.0f;
+    std::pair<int, float> p (66, 99.9f);
+    return p;
   }
+
 
 /*
   std::vector<std::pair<TrafficLandMark, float>> Waypoint::NextLandmarks(

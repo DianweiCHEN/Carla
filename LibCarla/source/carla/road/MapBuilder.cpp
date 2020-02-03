@@ -252,6 +252,7 @@ namespace road {
       const double hOffset,
       const double pitch,
       const double roll) {
+    carla::log_info("MapBuilder::AddSignal");
     auto signals = _map_data.GetRoad(road_id).getSignals();
     DEBUG_ASSERT(signals != nullptr);
     signals->emplace(signal_id,
@@ -265,6 +266,7 @@ namespace road {
       const uint32_t signal_id,
       const int32_t from_lane,
       const int32_t to_lane) {
+    carla::log_info("MapBuilder::AddValidityToLastAddedSignal");
     _map_data.GetRoad(road_id).GetSignal(signal_id)->AddValidity(general::Validity(signal_id, from_lane,
         to_lane));
   }
@@ -482,6 +484,7 @@ namespace road {
       const double s_position,
       const double t_position,
       const std::string signal_reference_orientation) {
+    carla::log_info("MapBuilder::AddSignalReference");
     DEBUG_ASSERT(_map_data.GetRoad(road_id).getSignalReferences() != nullptr);
     _map_data.GetRoad(road_id).getSignalReferences()->emplace(signal_reference_id,
         signal::SignalReference(road_id, signal_reference_id, s_position, t_position,
@@ -493,6 +496,7 @@ namespace road {
       const SignId signal_id,
       const uint32_t dependency_id,
       const std::string dependency_type) {
+    carla::log_info("MapBuilder::AddDependencyToSignal");
     DEBUG_ASSERT(_map_data.GetRoad(road_id).GetSignal(signal_id) != nullptr);
     _map_data.GetRoad(road_id).GetSignal(signal_id)->AddDependency(signal::SignalDependency(
         road_id,
@@ -694,6 +698,7 @@ namespace road {
   }
 
   void MapBuilder::AssignSignalsToLanes() {
+     carla::log_info("MapBuilder::AssignSignalsToLanes");
     for (auto &road : _map_data._roads) {
       std::unordered_map<SignId, signal::Signal>& signals = *(road.second.getSignals());
       for (auto &section : road.second._lane_sections) {
@@ -701,11 +706,15 @@ namespace road {
           Lane& lane = lane_map.second;
           LaneId laneId = lane.GetId();
           // Per each lane: loop each signal, detect validity, add it if is valid add it to lane signals
+          if(signals.size()>0)
+            carla::log_info("MapBuilder::AssignSignalsToLanes for signals", signals.size());
           for(auto& signal_map : signals) {
             SignId signId = signal_map.first;
             signal::Signal& signal = signal_map.second;
             DEBUG_ASSERT_EQ(signId, signal._signal_id);
+
             if (signal.IsLaneValid(laneId)) {
+              carla::log_info("signal:", signal._name, laneId);
               lane._signals.emplace(signal._s, signId);
             }
           }

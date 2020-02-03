@@ -79,7 +79,7 @@ namespace client {
     road::element::LaneMarking::LaneChange GetLaneChange() const;
 
     // CAREFUL! boost::optional ?
-    float NextLandmark(
+    std::pair<int, float> NextLandmark(
     //std::pair<SharedPtr<TrafficLandmark>, float> NextLandmark(
       /* TrafficLandmark::LandmarkType type */) const;
 
