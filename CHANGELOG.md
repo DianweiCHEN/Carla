@@ -11,6 +11,9 @@
   * Fixed docker build of .BIN for pedestrian navigation
   * Fixed typos
   * Fixed agent failures due to API changes in is_within_distance_ahead()
+  * Fixed import pipeline bugs:
+    - Crash when no pedestrian navmesh is present
+    - Automatically imported static meshes not properly tagged
   * Fixed incorrect doppler velocity for RADAR sensors.
   * Fixed import pipeline bugs:
     - Crash when no pedestrian navmesh is present
