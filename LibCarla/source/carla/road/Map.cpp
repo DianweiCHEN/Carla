@@ -16,6 +16,8 @@
 #include "carla/road/element/RoadInfoElevation.h"
 #include "carla/geom/Math.h"
 
+#include <queue>
+
 #include <stdexcept>
 
 namespace carla {
@@ -673,6 +675,153 @@ namespace road {
     }
     return result;
   }
+
+    // Road based
+  struct AStarElement{
+    RoadId road_id;
+    bool direction;
+    size_t predecessor;
+    float distance;
+  };
+  bool operator<(const AStarElement & element1, const AStarElement & element2){
+    return element1.distance < element2.distance;
+  }
+
+  Route Map::ComputeRoute(const geom::Location & start_location,
+                    const geom::Location & end_location) const {
+
+    auto start_waypoint = GetClosestWaypointOnRoad(start_location);
+    auto end_waypoint = GetClosestWaypointOnRoad(end_location);
+    auto end_position = ComputeTransform(end_waypoint.get()).location;
+    bool end_direction = end_waypoint->lane_id;
+
+    const auto &roads = _data.GetRoads();
+    for (const auto &road_pair : roads) {
+      const auto &road = road_pair.second;
+      //road.GetSuccesso();
+      road.GetNexts();
+    }
+
+    std::priority_queue<AStarElement> open_list;
+    std::vector<AStarElement> closed_list;
+    std::map<RoadId, bool> visited_list;
+    open_list.push(AStarElement{start_waypoint->road_id, start_waypoint->lane_id > 0, 0, 0});
+    visited_list[start_waypoint->road_id] = true;
+    while (open_list.size())
+    {
+      auto current_element = open_list.top();
+      open_list.pop();
+      closed_list.emplace_back(current_element);
+      auto predecessor = closed_list.size();
+      if (current_element.road_id == end_waypoint->road_id && end_direction == current_element.direction) {
+        break;
+      }
+
+      const auto &road = _data.GetRoad(current_element.road_id);
+      road.GetLanesAt(road.GetLength());
+
+      std::vector<Road *> next_roads;
+      if(current_element.direction) {
+        next_roads = _data.GetRoad(current_element.road_id).GetNexts();
+      }else {
+        next_roads = _data.GetRoad(current_element.road_id).GetPrevs();
+      }
+
+      for (auto &lane_pair : road.GetLanesAt(road.GetLength())) {
+        auto *lane = lane_pair.second;
+        auto next_lanes = lane->GetNextLanes();
+        for(auto * next_lane : next_lanes) {
+          auto road_id = next_lane->GetRoad()->GetId();
+          if(visited_list.count(road_id) == 0){
+            visited_list[road_id] = true;
+            element::Waypoint next_waypoint{road_id, next_lane->GetLaneSection()->GetId(), next_lane->GetId(), road.GetLength()};
+            auto next_position = ComputeTransform(next_waypoint).location;
+            open_list.push(AStarElement {
+                road_id,
+                next_lane->GetId() > 0,
+                predecessor,
+                geom::Math::DistanceSquared(next_position, end_position) + static_cast<float>(road.GetLength())
+            });
+          }
+        }
+      }
+    }
+
+    AStarElement &last = closed_list.back();
+    if(last.road_id != end_waypoint->road_id || end_direction != last.direction){
+      return Route(); // no route found
+    }
+    // Reconstruct route
+    Route route;
+    route.start_waypoint = start_waypoint.get();
+    route.end_waypoint = end_waypoint.get();
+    double length = 0;
+    size_t current_index = closed_list.size() - 1;
+    std::vector<RouteSegment> reversed_segment_list;
+    while (current_index > 0) {
+      auto &current_element = closed_list[current_index];
+
+      RouteSegment segment;
+      segment.road_id = current_element.road_id;
+      segment.direction = current_element.direction;
+      reversed_segment_list.emplace_back(segment);
+      length += _data.GetRoad(segment.road_id).GetLength();
+      current_index = current_element.predecessor - 1;
+    }
+    for (size_t i = reversed_segment_list.size() - 1; i > 0; --i){
+      route.route_segments.emplace_back(reversed_segment_list[i]);
+    }
+    route.length = length;
+    return route;
+  }
+  // Lane based
+  /*struct AStarElement{
+    RoadId road_id;
+    LaneId lane_id;
+    SectionId section_id;
+    int predecessor;
+    double distance;
+  };
+  bool operator<(const AStarElement & element1, const AStarElement & element2){
+    return element1.distance < element2.distance;
+  }
+
+  Route Map::ComputeRoute(const geom::Location & start_location,
+                    const geom::Location & end_location) const {
+
+    auto start_waypoint = GetClosestWaypointOnRoad(start_location);
+    auto end_waypoint = GetClosestWaypointOnRoad(end_location);
+    const auto &roads = _data.GetRoads();
+    for (const auto &road_pair : roads) {
+      const auto &road = road_pair.second;
+      //road.GetSuccesso();
+      road.GetNexts();
+    }
+
+    std::priority_queue<AStarElement> open_list;
+    std::vector<AStarElement> closed_list;
+    std::map<RoadId, bool> visited_list;
+    open_list.push(AStarElement{start_waypoint->road_id, start_waypoint->lane_id, start_waypoint->section_id, -1, 0});
+
+    while (open_list.size()) {
+      auto current_element = open_list.top();
+      open_list.pop();
+      closed_list.emplace_back(current_element);
+      auto predecessor = closed_list.size() - 1;
+      visited_list[current_element.road_id] = true;
+      if (current_element.road_id == end_waypoint->road_id) {
+        break;
+      }
+
+      const auto &road = _data.GetRoad(current_element.road_id);
+      const auto &section = road.GetLaneSectionById(current_element.section_id);
+      const auto &lane = road.GetLaneById(current_element.section_id, current_element.lane_id);
+      //lane.GetInfo<RoadInfoLaneAccess>
+
+    }
+
+    return Route();
+  }*/
 
   // ===========================================================================
   // -- Map: Private functions -------------------------------------------------

@@ -14,6 +14,7 @@
 #include "carla/road/element/RoadInfoMarkRecord.h"
 #include "carla/road/element/Waypoint.h"
 #include "carla/geom/Rtree.h"
+#include "carla/road/Route.h"
 
 #include <boost/optional.hpp>
 
@@ -124,6 +125,9 @@ namespace road {
     Junction* GetJunction(JuncId id);
 
     const Junction* GetJunction(JuncId id) const;
+
+    Route ComputeRoute(const geom::Location &start_location,
+        const geom::Location &end_location) const;
 
 #ifdef LIBCARLA_WITH_GTEST
     MapData &GetMap() {

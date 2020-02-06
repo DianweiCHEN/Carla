@@ -10,6 +10,8 @@
 #include <carla/client/Map.h>
 #include <carla/client/Waypoint.h>
 #include <carla/road/element/LaneMarking.h>
+#include <carla/client/Route.h>
+#include <carla/client/RouteSegment.h>
 
 #include <ostream>
 #include <fstream>
@@ -191,5 +193,15 @@ void export_map() {
     .add_property("id", &cc::Junction::GetId)
     .add_property("bounding_box", &cc::Junction::GetBoundingBox)
     .def("get_waypoints", &GetJunctionWaypoints)
+  ;
+
+  class_<cc::Route, boost::noncopyable, boost::shared_ptr<cc::Route>>("Route", no_init)
+    .add_property("length", &cc::Route::GetLength)
+    .def("get_segment", &cc::Route::GetSegment)
+    .def("get_number_segments", &cc::Route::GetNumberOfSegments)
+  ;
+
+  class_<cc::RouteSegment, boost::noncopyable, boost::shared_ptr<cc::RouteSegment>>("RouteSegment", no_init)
+    .add_property("road_id", &cc::RouteSegment::GetRoadId)
   ;
 }
