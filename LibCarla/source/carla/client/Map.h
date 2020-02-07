@@ -22,6 +22,7 @@ namespace client {
 
   class Waypoint;
   class Junction;
+  class Route;
 
   class Map
     : public EnableSharedFromThis<Map>,
@@ -80,6 +81,10 @@ namespace client {
     /// junction
     std::vector<std::pair<SharedPtr<Waypoint>, SharedPtr<Waypoint>>> GetJunctionWaypoints(
         road::JuncId id, road::Lane::LaneType type) const;
+
+    SharedPtr<Route> ComputeRoute(
+        const geom::Location &origin,
+        const geom::Location &destination);
 
   private:
 

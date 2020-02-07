@@ -690,6 +690,7 @@ namespace road {
   Route Map::ComputeRoute(const geom::Location & start_location,
                     const geom::Location & end_location) const {
 
+    double epsilon = 0.000001; // 1 micrometer
     auto start_waypoint = GetClosestWaypointOnRoad(start_location);
     auto end_waypoint = GetClosestWaypointOnRoad(end_location);
     auto end_position = ComputeTransform(end_waypoint.get()).location;
@@ -702,17 +703,19 @@ namespace road {
       road.GetNexts();
     }
 
+    log_warning("start");
+
     std::priority_queue<AStarElement> open_list;
     std::vector<AStarElement> closed_list;
-    std::map<RoadId, bool> visited_list;
-    open_list.push(AStarElement{start_waypoint->road_id, start_waypoint->lane_id > 0, 0, 0});
-    visited_list[start_waypoint->road_id] = true;
-    while (open_list.size())
-    {
+    std::map<std::pair<RoadId, bool>, bool> visited_list;
+    open_list.push(AStarElement{start_waypoint->road_id, start_waypoint->lane_id < 0, 0, 0});
+    visited_list[std::make_pair(start_waypoint->road_id, start_waypoint->lane_id < 0)] = true;
+    while (!open_list.empty()) {
       auto current_element = open_list.top();
       open_list.pop();
       closed_list.emplace_back(current_element);
       auto predecessor = closed_list.size();
+      log_warning("astar: road_id:", current_element.road_id);
       if (current_element.road_id == end_waypoint->road_id && end_direction == current_element.direction) {
         break;
       }
@@ -731,14 +734,25 @@ namespace road {
         auto *lane = lane_pair.second;
         auto next_lanes = lane->GetNextLanes();
         for(auto * next_lane : next_lanes) {
+          if(next_lane->GetType() != Lane::LaneType::Driving){
+            continue;
+          }
           auto road_id = next_lane->GetRoad()->GetId();
-          if(visited_list.count(road_id) == 0){
-            visited_list[road_id] = true;
-            element::Waypoint next_waypoint{road_id, next_lane->GetLaneSection()->GetId(), next_lane->GetId(), road.GetLength()};
+          bool next_direction = next_lane->GetId() < 0;
+          if (visited_list.count(std::make_pair(road_id,next_direction)) == 0) {
+            visited_list[std::make_pair(road_id, next_direction)] = true;
+            auto lane_id = next_lane->GetId();
+            log_warning("next_lane, laneid:", road_id, next_lane->GetId());
+            element::Waypoint next_waypoint{road_id, next_lane->GetLaneSection()->GetId(), next_lane->GetId(), 0};
+            if(lane_id > 0){
+              next_waypoint.s = 0;
+            }else{
+              next_waypoint.s = next_lane->GetRoad()->GetLength() - epsilon;
+            }
             auto next_position = ComputeTransform(next_waypoint).location;
             open_list.push(AStarElement {
                 road_id,
-                next_lane->GetId() > 0,
+                next_lane->GetId() < 0,
                 predecessor,
                 geom::Math::DistanceSquared(next_position, end_position) + static_cast<float>(road.GetLength())
             });
@@ -749,6 +763,7 @@ namespace road {
 
     AStarElement &last = closed_list.back();
     if(last.road_id != end_waypoint->road_id || end_direction != last.direction){
+      log_warning("end, route not found");
       return Route(); // no route found
     }
     // Reconstruct route
@@ -771,6 +786,7 @@ namespace road {
     for (size_t i = reversed_segment_list.size() - 1; i > 0; --i){
       route.route_segments.emplace_back(reversed_segment_list[i]);
     }
+    log_warning("end");
     route.length = length;
     return route;
   }

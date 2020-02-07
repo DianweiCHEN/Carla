@@ -21,5 +21,9 @@ namespace client {
     return 0.0;
   }
 
+  SharedPtr<RouteSegment> Route::GetSegment(uint32_t segment_id){
+    return SharedPtr<RouteSegment>(new RouteSegment(shared_from_this(), _route.route_segments[segment_id]));
+  }
+
 } // namespace client
 } // namespace carla

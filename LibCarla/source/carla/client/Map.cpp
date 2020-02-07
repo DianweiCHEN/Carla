@@ -11,6 +11,7 @@
 #include "carla/opendrive/OpenDriveParser.h"
 #include "carla/road/Map.h"
 #include "carla/road/RoadTypes.h"
+#include "carla/client/Route.h"
 
 #include <sstream>
 
@@ -130,6 +131,12 @@ namespace client {
       SharedPtr<Waypoint>(new Waypoint(shared_from_this(), waypoint_pair.second))));
     }
     return result;
+  }
+
+  SharedPtr<Route> Map::ComputeRoute(
+      const geom::Location &origin,
+      const geom::Location &destination) {
+    return SharedPtr<Route>(new Route(shared_from_this(), GetMap().ComputeRoute(origin, destination)));
   }
 
 } // namespace client

@@ -150,6 +150,7 @@ void export_map() {
     .def("to_opendrive", CALL_RETURNING_COPY(cc::Map, GetOpenDrive))
     .def("save_to_disk", &SaveOpenDriveToDisk, (arg("path")=""))
     .def("get_crosswalks", CALL_RETURNING_LIST(cc::Map, GetAllCrosswalkZones))
+    .def("compute_route", &cc::Map::ComputeRoute)
     .def(self_ns::str(self_ns::self))
   ;
 

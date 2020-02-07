@@ -43,8 +43,6 @@ namespace client {
 
     Route(SharedPtr<const Map> parent, road::Route route);
 
-    std::vector<SharedPtr<RouteSegment>> _route_segments;
-
     SharedPtr<const Map> _parent;
 
     road::Route _route;
