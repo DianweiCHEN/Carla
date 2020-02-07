@@ -60,7 +60,6 @@ namespace LocalizationConstants {
     // Initializing srand.
     srand(static_cast<unsigned>(time(NULL)));
 
-
     // Initializing buffer lists.
     buffer_list = std::make_shared<BufferList>();
 
@@ -171,9 +170,6 @@ namespace LocalizationConstants {
         PushWaypoint(waypoint_buffer, actor_id, next_wp);
       }
 
-      // Updating geodesic grid position for actor.
-      track_traffic.UpdateGridPosition(actor_id, waypoint_buffer);
-
       // Generating output.
       const float target_point_distance = std::max(std::ceil(vehicle_velocity * TARGET_WAYPOINT_TIME_HORIZON),
           TARGET_WAYPOINT_HORIZON_LENGTH);
@@ -245,6 +241,34 @@ namespace LocalizationConstants {
         }
       }
 
+      // Updating actor in traffic tracker.
+      track_traffic.UpdateActor(vehicle, waypoint_buffer);
+      //auto aabb = track_traffic.GetActorAABB(actor_id);
+
+      // Debugging
+      //float min_x = aabb[0].x;
+      //float max_x = aabb[1].x;
+      //float min_y = aabb[1].y;
+      //float max_y = aabb[0].y;
+      //cg::Location top_left = cg::Location(cg::Vector3D(min_x, max_y, vehicle_location.z + 5.0f));
+      //cg::Location top_right = cg::Location(cg::Vector3D(max_x, max_y, vehicle_location.z + 5.0f));
+      //cg::Location bottom_left = cg::Location(cg::Vector3D(min_x, min_y, vehicle_location.z + 5.0f));
+      //cg::Location bottom_right = cg::Location(cg::Vector3D(max_x, min_y, vehicle_location.z + 5.0f));
+
+      //debug_helper.DrawLine(top_left, top_right, 0.1f, {255u, 255u, 0u}, 0.1f);
+      //debug_helper.DrawLine(top_right, bottom_right, 0.1f, {255u, 255u, 0u}, 0.1f);
+      //debug_helper.DrawLine(bottom_right, bottom_left, 0.1f, {255u, 255u, 0u}, 0.1f);
+      //debug_helper.DrawLine(bottom_left, top_left, 0.1f, {255u, 255u, 0u}, 0.1f);
+
+      // const auto vehicle_ptr = boost::static_pointer_cast<cc::Vehicle>(vehicle);
+      // if (vehicle_ptr->GetTrafficLightState() == TLS::Green) {
+      //   debug_helper.DrawPoint(vehicle_location + cg::Location(0.0f,0.0f,2.0f), 0.1f, {0u, 255u, 0u}, 0.1f);
+      // } else if (vehicle_ptr->GetTrafficLightState() == TLS::Red) {
+      //   debug_helper.DrawPoint(vehicle_location + cg::Location(0.0f,0.0f,2.0f), 0.1f, {255u, 0u, 0u}, 0.1f);
+      // } else {
+      //   debug_helper.DrawPoint(vehicle_location + cg::Location(0.0f,0.0f,2.0f), 0.1f, {0u, 0u, 255u}, 0.1f);
+      // }
+
       // Editing output frames.
       LocalizationToPlannerData &planner_message = current_planner_frame->at(i);
       planner_message.actor = vehicle;
@@ -256,7 +280,7 @@ namespace LocalizationConstants {
       collision_message.actor = vehicle;
       collision_message.buffer = waypoint_buffer;
       collision_message.overlapping_actors.clear();
-      ActorIdSet overlapping_actor_set = track_traffic.GetOverlappingVehicles(actor_id);
+      ActorIdSet overlapping_actor_set = track_traffic.GetOverlappingActors(actor_id);
       for (ActorId overlapping_actor_id: overlapping_actor_set) {
         Actor actor_ptr = nullptr;
         if (vehicle_id_to_index.find(overlapping_actor_id) != vehicle_id_to_index.end()) {
@@ -391,25 +415,11 @@ namespace LocalizationConstants {
     const auto current_snapshot = world.GetSnapshot();
     for (auto it = unregistered_actors.cbegin(); it != unregistered_actors.cend();) {
       if (registered_actors.Contains(it->first) || !current_snapshot.Contains(it->first)) {
-        track_traffic.DeleteActor(it->first);
+        track_traffic.CleanActor(it->first);
         it = unregistered_actors.erase(it);
       } else {
         // Updating data structures.
-        cg::Location location = it->second->GetLocation();
-        const auto type = it->second->GetTypeId();
-
-        SimpleWaypointPtr nearest_waypoint = nullptr;
-        if (type[0] == 'v') {
-          nearest_waypoint = local_map.GetWaypointInVicinity(location);
-        } else if (type[0] == 'w') {
-          nearest_waypoint = local_map.GetPedWaypoint(location);
-        }
-        if (nearest_waypoint == nullptr) {
-          nearest_waypoint = local_map.GetWaypoint(location);
-        }
-
-        track_traffic.UpdateUnregisteredGridPosition(it->first, nearest_waypoint);
-
+        track_traffic.UpdateActor(it->second);
         ++it;
       }
     }
@@ -430,7 +440,7 @@ namespace LocalizationConstants {
 
     if (!force && current_waypoint != nullptr) {
 
-      const auto blocking_vehicles = track_traffic.GetOverlappingVehicles(actor_id);
+      const auto blocking_vehicles = track_traffic.GetOverlappingActors(actor_id);
 
       bool abort_lane_change = false;
       for (auto i = blocking_vehicles.begin();
@@ -671,7 +681,7 @@ SimpleWaypointPtr LocalizationStage::GetSafeLocationAfterJunction(const Vehicle 
   }
 
   void LocalizationStage::CleanActor(const ActorId actor_id) {
-    track_traffic.DeleteActor(actor_id);
+    track_traffic.CleanActor(actor_id);
     for (const auto& waypoint : buffer_list->at(actor_id)) {
       track_traffic.RemovePassingVehicle(waypoint->GetId(), actor_id);
     }

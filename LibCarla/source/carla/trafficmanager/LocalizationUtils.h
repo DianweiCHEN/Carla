@@ -14,13 +14,21 @@
 #include "carla/road/RoadTypes.h"
 #include "carla/rpc/ActorId.h"
 
+#include "carla/geom/BoundingBox.h"
+#include "carla/geom/Transform.h"
+#include "carla/geom/Vector2D.h"
+
 #include "carla/trafficmanager/SimpleWaypoint.h"
+
+#include <array>
+#include <boost/unordered_map.hpp>
 
 namespace carla {
 namespace traffic_manager {
 
   namespace cc = carla::client;
   namespace cg = carla::geom;
+
   using Actor = carla::SharedPtr<cc::Actor>;
   using ActorId = carla::ActorId;
   using ActorIdSet = std::unordered_set<ActorId>;
@@ -31,34 +39,33 @@ namespace traffic_manager {
   class TrackTraffic{
 
   private:
+    std::unordered_map<ActorId, std::array<geom::Vector2D, 2>> _mapped_aabb;
+    boost::unordered_map<std::pair<int64_t, int64_t>, std::unordered_set<ActorId>> _spatial_hash;
+
     /// Structure to keep track of overlapping waypoints between vehicles.
     using WaypointOverlap = std::unordered_map<uint64_t, ActorIdSet>;
     WaypointOverlap waypoint_overlap_tracker;
-    /// Stored vehicle id set record.
-    ActorIdSet actor_id_set_record;
-    /// Geodesic grids occupied by actors's paths.
-    std::unordered_map<ActorId, std::unordered_set<GeoGridId>> actor_to_grids;
-    /// Actors currently passing through grids.
-    std::unordered_map<GeoGridId, ActorIdSet> grid_to_actors;
 
   public:
     TrackTraffic();
+
+    void UpdateActor(const Actor& actor);
+    void UpdateActor(const Actor& actor, const Buffer& buffer);
+
+    bool CleanActor(ActorId actor_id);
+
+    std::array<geom::Vector2D, 2> GetActorAABB(ActorId actor_id) const;  // Remove
+
+    ActorIdSet GetOverlappingActors(ActorId actor_id) const;
 
     /// Methods to update, remove and retrieve vehicles passing through a waypoint.
     void UpdatePassingVehicle(uint64_t waypoint_id, ActorId actor_id);
     void RemovePassingVehicle(uint64_t waypoint_id, ActorId actor_id);
     ActorIdSet GetPassingVehicles(uint64_t waypoint_id);
 
-    void UpdateGridPosition(const ActorId actor_id, const Buffer& buffer);
-    void UpdateUnregisteredGridPosition(const ActorId actor_id, const SimpleWaypointPtr& waypoint);
+  private:
+    std::pair<int64_t, int64_t> GetSpatialKey(geom::Vector2D pos) const;
 
-    ActorIdSet GetOverlappingVehicles(ActorId actor_id);
-    /// Method to delete actor data from tracking.
-    void DeleteActor(ActorId actor_id);
-
-    std::unordered_set<GeoGridId> GetGridIds(ActorId actor_id);
-
-    std::unordered_map<GeoGridId, ActorIdSet> GetGridActors();
   };
 
   /// Returns the cross product (z component value) between the vehicle's
@@ -68,6 +75,9 @@ namespace traffic_manager {
   /// Returns the dot product between the vehicle's heading vector and
   /// the vector along the direction to the next target waypoint on the horizon.
   float DeviationDotProduct(Actor actor, const cg::Location &vehicle_location, const cg::Location &target_location, bool rear_offset=false);
+
+  /// Returns the position of 2 vertices (top-left corner and bottom-right corner) in world space.
+  std::array<geom::Vector2D, 2> GetWorldVerticesAABB(const geom::BoundingBox& bbox, const geom::Transform& transform);
 
 } // namespace traffic_manager
 } // namespace carla

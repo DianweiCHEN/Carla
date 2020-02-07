@@ -10,7 +10,7 @@ namespace carla {
 namespace traffic_manager {
 
 namespace LocalizationConstants {
-  const static uint64_t BUFFER_STEP_THROUGH = 10u;
+  const static float GRID_SIZE = 2.0f;
 } // namespace LocalizationConstants
 
   using namespace LocalizationConstants;
@@ -57,138 +57,128 @@ namespace LocalizationConstants {
     }
   }
 
+  std::array<geom::Vector2D, 2> GetWorldVerticesAABB(const geom::BoundingBox& bbox, const geom::Transform& transform) {
+    auto bbox_vertices = bbox.GetWorldVertices(transform);
+    float min_x = std::numeric_limits<float>::max();
+    float max_y = std::numeric_limits<float>::lowest();
+    float max_x = std::numeric_limits<float>::lowest();
+    float min_y = std::numeric_limits<float>::max();
+    for (const geom::Location& vertex : bbox_vertices) {
+      min_x = (vertex.x < min_x) ? vertex.x : min_x;
+      max_y = (vertex.y > max_y) ? vertex.y : max_y;
+      max_x = (vertex.x > max_x) ? vertex.x : max_x;
+      min_y = (vertex.y < min_y) ? vertex.y : min_y;
+    }
+
+    return {{
+      geom::Vector2D(min_x, max_y),
+      geom::Vector2D(max_x, min_y)
+    }};
+  }
+
   TrackTraffic::TrackTraffic() {}
 
-  void TrackTraffic::UpdateUnregisteredGridPosition(const ActorId actor_id, const SimpleWaypointPtr& waypoint) {
+  std::pair<int64_t, int64_t> TrackTraffic::GetSpatialKey(geom::Vector2D pos) const {
+    return std::make_pair(
+        static_cast<int64_t>(pos.x / GRID_SIZE),
+        static_cast<int64_t>(pos.y / GRID_SIZE)
+    );
+  }
 
-    // Add actor entry if not present.
-    if (actor_to_grids.find(actor_id) == actor_to_grids.end()) {
-      actor_to_grids.insert({actor_id, {}});
-    }
+  void TrackTraffic::UpdateActor(const Actor& actor) {
+    CleanActor(actor->GetId());
 
-    std::unordered_set<GeoGridId>& current_grids = actor_to_grids.at(actor_id);
+    // Computing AABB based on vehicle bounding box.
+    const auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
+    geom::BoundingBox bbox = vehicle->GetBoundingBox();
+    std::array<geom::Vector2D, 2> aabb = GetWorldVerticesAABB(bbox, vehicle->GetTransform());
+    _mapped_aabb.insert({actor->GetId(), aabb});
 
-    // Clear current actor from all grids containing current actor.
-    for (auto& grid_id: current_grids) {
-      if (grid_to_actors.find(grid_id) != grid_to_actors.end()) {
-        ActorIdSet& actor_ids = grid_to_actors.at(grid_id);
-        if (actor_ids.find(actor_id) != actor_ids.end()) {
-          actor_ids.erase(actor_id);
-        }
-      }
-    }
-
-    // Clear all grids current actor is tracking.
-    current_grids.clear();
-
-    // Step through buffer and update grid list for actor and actor list for grids.
-    if (waypoint != nullptr) {
-
-      GeoGridId ggid = waypoint->GetGeodesicGridId();
-      current_grids.insert(ggid);
-
-      // Add grid entry if not present.
-      if (grid_to_actors.find(ggid) == grid_to_actors.end()) {
-        grid_to_actors.insert({ggid, {}});
-      }
-
-      ActorIdSet& actor_ids = grid_to_actors.at(ggid);
-      if (actor_ids.find(actor_id) == actor_ids.end()) {
-        actor_ids.insert(actor_id);
+    // Adding information to spatial hashing.
+    auto top_left = GetSpatialKey(aabb[0]);
+    auto bottom_right = GetSpatialKey(aabb[1]);
+    for (int64_t x = top_left.first; x <= bottom_right.first; x++) {
+      for (int64_t y = top_left.second; y >= bottom_right.second; y--) {
+        _spatial_hash[std::make_pair(x, y)].insert(actor->GetId());
       }
     }
   }
 
+  void TrackTraffic::UpdateActor(const Actor& actor, const Buffer& buffer) {
+    CleanActor(actor->GetId());
 
-  void TrackTraffic::UpdateGridPosition(const ActorId actor_id, const Buffer& buffer) {
+    // Computing AABB path boundary based on waypoint buffer.
+    const auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
+    geom::BoundingBox bbox = vehicle->GetBoundingBox();
+    std::array<geom::Vector2D, 2> aabb = GetWorldVerticesAABB(bbox, vehicle->GetTransform());
 
-    // Add actor entry if not present.
-    if (actor_to_grids.find(actor_id) == actor_to_grids.end()) {
-      actor_to_grids.insert({actor_id, {}});
-    }
+    float& min_x = aabb[0].x;
+    float& max_y = aabb[0].y;
+    float& max_x = aabb[1].x;
+    float& min_y = aabb[1].y;
+    for (const auto& swp : buffer) {
+      geom::Transform transform = swp->GetWaypoint()->GetTransform();
+      std::array<geom::Location, 8> vertices = bbox.GetWorldVertices(transform);
 
-    std::unordered_set<GeoGridId>& current_grids = actor_to_grids.at(actor_id);
-
-    // Clear current actor from all grids containing current actor.
-    for (auto& grid_id: current_grids) {
-      if (grid_to_actors.find(grid_id) != grid_to_actors.end()) {
-        ActorIdSet& actor_ids = grid_to_actors.at(grid_id);
-        if (actor_ids.find(actor_id) != actor_ids.end()) {
-          actor_ids.erase(actor_id);
-        }
+      for (const geom::Location& vertex : vertices) {
+        min_x = (vertex.x < min_x) ? vertex.x : min_x;
+        max_y = (vertex.y > max_y) ? vertex.y : max_y;
+        max_x = (vertex.x > max_x) ? vertex.x : max_x;
+        min_y = (vertex.y < min_y) ? vertex.y : min_y;
       }
     }
 
-    // Clear all grids current actor is tracking.
-    current_grids.clear();
+    _mapped_aabb.insert({actor->GetId(), aabb});
 
-    // Step through buffer and update grid list for actor and actor list for grids.
-    if (!buffer.empty()) {
-      uint64_t buffer_size = buffer.size();
-      uint64_t step_size = static_cast<uint64_t>(std::floor(buffer_size/BUFFER_STEP_THROUGH));
-      for (uint64_t i = 0u; i <= BUFFER_STEP_THROUGH; ++i) {
-        GeoGridId ggid = buffer.at(std::min(i* step_size, buffer_size-1u))->GetGeodesicGridId();
-        current_grids.insert(ggid);
-
-        // Add grid entry if not present.
-        if (grid_to_actors.find(ggid) == grid_to_actors.end()) {
-          grid_to_actors.insert({ggid, {}});
-        }
-
-        ActorIdSet& actor_ids = grid_to_actors.at(ggid);
-        if (actor_ids.find(actor_id) == actor_ids.end()) {
-          actor_ids.insert(actor_id);
-        }
+    // Adding information to spatial hashing.
+    auto top_left = GetSpatialKey(aabb[0]);
+    auto bottom_right = GetSpatialKey(aabb[1]);
+    for (int64_t x = top_left.first; x <= bottom_right.first; x++) {
+      for (int64_t y = top_left.second; y >= bottom_right.second; y--) {
+        _spatial_hash[std::make_pair(x, y)].insert(actor->GetId());
       }
     }
   }
 
-  ActorIdSet TrackTraffic::GetOverlappingVehicles(ActorId actor_id) {
-
-    ActorIdSet actor_id_set;
-
-    if (actor_to_grids.find(actor_id) != actor_to_grids.end()) {
-      std::unordered_set<GeoGridId>& grid_ids = actor_to_grids.at(actor_id);
-      for (auto& grid_id: grid_ids) {
-        if (grid_to_actors.find(grid_id) != grid_to_actors.end()) {
-          ActorIdSet& actor_ids = grid_to_actors.at(grid_id);
-          actor_id_set.insert(actor_ids.begin(), actor_ids.end());
+  bool TrackTraffic::CleanActor(ActorId actor_id) {
+    // Cleaning information spatial hashing.
+    if (_mapped_aabb.count(actor_id)) {
+      const auto& aabb = _mapped_aabb.at(actor_id);
+      auto top_left = GetSpatialKey(aabb[0]);
+      auto bottom_right = GetSpatialKey(aabb[1]);
+    for (int64_t x = top_left.first; x <= bottom_right.first; x++) {
+      for (int64_t y = top_left.second; y >= bottom_right.second; y--) {
+          _spatial_hash[std::make_pair(x, y)].erase(actor_id);
         }
       }
-    }
 
-    return actor_id_set;
+      // Cleaning mapped AABB.
+      _mapped_aabb.erase(actor_id);
+      return true;
+    }
+    return false;
   }
 
-  void TrackTraffic::DeleteActor(ActorId actor_id) {
+  std::array<geom::Vector2D, 2> TrackTraffic::GetActorAABB(ActorId actor_id) const {
+    return _mapped_aabb.at(actor_id);
+  }
 
-    if (actor_to_grids.find(actor_id) != actor_to_grids.end()) {
-      std::unordered_set<GeoGridId>& grid_ids = actor_to_grids.at(actor_id);
-      for (auto& grid_id: grid_ids) {
-        if (grid_to_actors.find(grid_id) != grid_to_actors.end()) {
-          ActorIdSet& actor_ids = grid_to_actors.at(grid_id);
-          if (actor_ids.find(actor_id) != actor_ids.end()) {
-            actor_ids.erase(actor_id);
-          }
-        }
+  ActorIdSet TrackTraffic::GetOverlappingActors(ActorId actor_id) const {
+    ActorIdSet result;
+    if (!_mapped_aabb.count(actor_id)) {
+      return result;
+    }
+
+    const auto& aabb = _mapped_aabb.at(actor_id);
+    auto top_left = GetSpatialKey(aabb[0]);
+    auto bottom_right = GetSpatialKey(aabb[1]);
+    for (int64_t x = top_left.first; x <= bottom_right.first; x++) {
+      for (int64_t y = top_left.second; y >= bottom_right.second; y--) {
+        auto actor_ids = _spatial_hash.at(std::make_pair(x, y));
+        result.insert(actor_ids.begin(), actor_ids.end());
       }
-      actor_to_grids.erase(actor_id);
     }
-  }
-
-  std::unordered_set<GeoGridId> TrackTraffic::GetGridIds(ActorId actor_id) {
-
-    std::unordered_set<GeoGridId> grid_ids;
-
-    if (actor_to_grids.find(actor_id) != actor_to_grids.end()) {
-      grid_ids = actor_to_grids.at(actor_id);
-    }
-
-    return grid_ids;
-  }
-
-  std::unordered_map<GeoGridId, ActorIdSet> TrackTraffic::GetGridActors() {
-    return grid_to_actors;
+    return result;
   }
 
   void TrackTraffic::UpdatePassingVehicle(uint64_t waypoint_id, ActorId actor_id) {
