@@ -6,6 +6,8 @@
 
 #include "carla/trafficmanager/LocalizationUtils.h"
 
+#include <iterator>
+
 namespace carla {
 namespace traffic_manager {
 
@@ -75,8 +77,6 @@ namespace LocalizationConstants {
       geom::Vector2D(max_x, min_y)
     }};
   }
-
-  TrackTraffic::TrackTraffic() {}
 
   std::pair<int64_t, int64_t> TrackTraffic::GetSpatialKey(geom::Vector2D pos) const {
     return std::make_pair(
@@ -149,6 +149,10 @@ namespace LocalizationConstants {
     for (int64_t x = top_left.first; x <= bottom_right.first; x++) {
       for (int64_t y = top_left.second; y >= bottom_right.second; y--) {
           _spatial_hash[std::make_pair(x, y)].erase(actor_id);
+
+          if (_spatial_hash[std::make_pair(x, y)].empty()) {
+            _spatial_hash.erase(std::make_pair(x, y));
+          }
         }
       }
 
@@ -176,6 +180,22 @@ namespace LocalizationConstants {
       for (int64_t y = top_left.second; y >= bottom_right.second; y--) {
         auto actor_ids = _spatial_hash.at(std::make_pair(x, y));
         result.insert(actor_ids.begin(), actor_ids.end());
+      }
+    }
+    return result;
+  }
+
+  std::unordered_set<OverlappingPair> TrackTraffic::GetOverlappingActors() const {
+    std::unordered_set<OverlappingPair> result;
+    for (auto& cell : _spatial_hash) {
+      auto& actors = cell.second;
+
+      if (actors.size() >= 2u) {
+        for (auto i = actors.begin(); i != actors.end(); i++) {
+          for (auto j = std::next(i); j != actors.end(); j++) {
+            result.insert({{*i, *j}});
+          }
+        }
       }
     }
     return result;
