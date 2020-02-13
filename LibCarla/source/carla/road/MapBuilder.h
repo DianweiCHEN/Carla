@@ -349,6 +349,9 @@ namespace road {
     /// Create the pointers between RoadSegments based on the ids.
     void CreatePointersBetweenRoadSegments();
 
+    /// Create the bounding boxes of each junction
+    void CreateJunctionBoundingBoxes(Map &map);
+
     /// Creates a map in each lane with the signals that are affecting the lane
     void AssignSignalsToLanes();
 
