@@ -25,5 +25,10 @@ namespace client {
     return _bounding_box;
   }
 
+  std::vector<road::RoadId> Junction::GetConflictingRoads(road::RoadId id) const {
+    //auto conflicts = _parent->GetMap().ComputeJunctionConflicts(GetId());
+    return _parent->GetMap().GetJunction(_id)->GetConflictsOfRoad(id);
+  }
+
 } // namespace client
 } // namespace carla

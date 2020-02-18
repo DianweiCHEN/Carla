@@ -352,6 +352,9 @@ namespace road {
     /// Create the bounding boxes of each junction
     void CreateJunctionBoundingBoxes(Map &map);
 
+    /// Compute the conflicts of the roads (intersecting roads)
+    void ComputeJunctionRoadConflicts(Map &map);
+
     /// Return the pointer to a lane object.
     Lane *GetEdgeLanePointer(RoadId road_id, bool from_start, LaneId lane_id);
 

@@ -14,6 +14,7 @@
 #include "carla/client/Waypoint.h"
 
 #include <vector>
+#include <unordered_map>
 
 namespace carla {
 namespace client {
@@ -35,6 +36,8 @@ namespace client {
 
     geom::BoundingBox GetBoundingBox() const;
 
+    std::vector<road::RoadId> GetConflictingRoads(road::RoadId id) const;
+
   private:
 
     friend class Map;
@@ -46,6 +49,9 @@ namespace client {
     geom::BoundingBox _bounding_box;
 
     road::JuncId _id;
+
+    std::unordered_map<road::RoadId, std::vector<road::RoadId>>
+        _road_conflicts;
   };
 
 } // namespace client

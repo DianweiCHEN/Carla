@@ -65,6 +65,7 @@ namespace road {
     // or move it (will return move -> Map(Map &&))
     Map map(std::move(_map_data));
     CreateJunctionBoundingBoxes(map);
+    ComputeJunctionRoadConflicts(map);
 
     return map;
   }
@@ -805,6 +806,13 @@ namespace road {
       carla::geom::Vector3D extent(0.5f * (maxx - minx), 0.5f * (maxy - miny), 0.5f * (maxz - minz));
 
       junction->_bounding_box = carla::geom::BoundingBox(location, extent);
+    }
+  }
+
+  void MapBuilder::ComputeJunctionRoadConflicts(Map &map) {
+    for (auto &junctionpair : map._data.GetJunctions()) {
+      auto& junction = junctionpair.second;
+      junction._road_conflicts = (map.ComputeJunctionConflicts(junction.GetId()));
     }
   }
 

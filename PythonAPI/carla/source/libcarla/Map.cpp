@@ -191,5 +191,6 @@ void export_map() {
     .add_property("id", &cc::Junction::GetId)
     .add_property("bounding_box", &cc::Junction::GetBoundingBox)
     .def("get_waypoints", &GetJunctionWaypoints)
+    .def("conflicting_roads", CALL_RETURNING_LIST_1(cc::Junction, GetConflictingRoads, carla::road::RoadId), (args("road_id")))
   ;
 }
