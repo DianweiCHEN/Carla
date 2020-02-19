@@ -194,6 +194,11 @@ namespace road {
         const LaneId from,
         const LaneId to);
 
+    void AddPriority(
+        const JuncId junction_id,
+        const RoadId high,
+        const RoadId low);
+
     void AddRoadSection(
         const RoadId road_id,
         const SectionId section_index,
@@ -353,7 +358,7 @@ namespace road {
     void CreateJunctionBoundingBoxes(Map &map);
 
     /// Compute the conflicts of the roads (intersecting roads)
-    void ComputeJunctionRoadConflicts(Map &map);
+    void ComputeJunctionPriorities(Map &map);
 
     /// Return the pointer to a lane object.
     Lane *GetEdgeLanePointer(RoadId road_id, bool from_start, LaneId lane_id);
@@ -380,7 +385,6 @@ namespace road {
 
     std::unordered_map<Lane *, std::vector<std::unique_ptr<element::RoadInfo>>>
     _temp_lane_info_container;
-
   };
 
 } // namespace road

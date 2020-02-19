@@ -36,7 +36,11 @@ namespace client {
 
     geom::BoundingBox GetBoundingBox() const;
 
-    std::vector<road::RoadId> GetConflictingRoads(road::RoadId id) const;
+    // Returns a list of roads that have higher priority than the specified road id
+    std::vector<road::RoadId> GetHigherPriorities(road::RoadId id) const;
+
+    // Returns a list of roads that have lower priority than the specified road
+    std::vector<road::RoadId> GetLowerPriorities(road::RoadId id) const;
 
   private:
 
@@ -49,9 +53,6 @@ namespace client {
     geom::BoundingBox _bounding_box;
 
     road::JuncId _id;
-
-    std::unordered_map<road::RoadId, std::vector<road::RoadId>>
-        _road_conflicts;
   };
 
 } // namespace client

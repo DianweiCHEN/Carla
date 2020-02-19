@@ -34,6 +34,8 @@ namespace parser {
       road::JuncId id;
       std::string name;
       std::vector<Connection> connections;
+      std::vector<std::pair<road::RoadId, road::RoadId>>
+          priorities;
     };
 
     pugi::xml_node open_drive_node = xml.child("OpenDRIVE");
@@ -66,6 +68,12 @@ namespace parser {
         junction.connections.push_back(connection);
       }
 
+      for (pugi::xml_node priority_node : junction_node.children("priority")) {
+        std::pair<road::RoadId, road::RoadId> priority;
+        priority.first = priority_node.attribute("high").as_uint();
+        priority.second = priority_node.attribute("low").as_uint();
+        junction.priorities.push_back(priority);
+      }
       junctions.push_back(junction);
     }
 
@@ -83,6 +91,11 @@ namespace parser {
               connection.id,
               lane_link.from,
               lane_link.to);
+        }
+        for (auto &priority : junction.priorities) {
+          map_builder.AddPriority(junction.id,
+              priority.first,
+              priority.second);
         }
       }
     }

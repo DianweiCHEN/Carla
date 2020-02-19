@@ -84,6 +84,14 @@ namespace road {
       return result;
     }
 
+  const std::vector<std::pair<RoadId, RoadId>> &GetPriorities() const {
+    return _priorities;
+  }
+
+  const std::vector<std::pair<RoadId, RoadId>> &GetOpenDrivePriorities() const {
+    return _opendrive_priorities;
+  }
+
   private:
 
     friend MapBuilder;
@@ -98,6 +106,11 @@ namespace road {
 
     std::unordered_map<RoadId, std::unordered_set<RoadId>>
         _road_conflicts;
+
+    std::vector<std::pair<RoadId, RoadId>> _priorities;
+
+    // priorities from opendrive
+    std::vector<std::pair<RoadId, RoadId>> _opendrive_priorities;
   };
 
 } // road

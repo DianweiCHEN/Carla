@@ -674,32 +674,50 @@ namespace road {
     return result;
   }
 
-  std::unordered_map<road::RoadId, std::unordered_set<road::RoadId>>
-      Map::ComputeJunctionConflicts(JuncId id) const {
-    const float epsilon = 0.0001f; // small delta in the road (set to 1
-                                     // milimeter to prevent numeric errors)
-    const Junction *junction = GetJunction(id);
-    std::unordered_map<road::RoadId, std::unordered_set<road::RoadId>>
-        conflicts;
-    // 2d typedefs
-    typedef boost::geometry::model::point
-        <float, 2, boost::geometry::cs::cartesian> Point2d;
-    typedef boost::geometry::model::segment<Point2d> Segment2d;
+  std::vector<Map::Rtree::TreeElement> Map::GetSegmentsInJunction(const Junction * junction) const {
     typedef boost::geometry::model::box<Rtree::BPoint> Box;
+    // small delta to expand the box to prevent numeric errors
+    const float epsilon = 0.0001f;
     // box range
     auto bbox_pos = junction->GetBoundingBox().location;
     auto bbox_ext = junction->GetBoundingBox().extent;
     auto min_corner = geom::Vector3D(
         bbox_pos.x - bbox_ext.x,
         bbox_pos.y - bbox_ext.y,
-        bbox_pos.z - bbox_ext.z - epsilon);
+        bbox_pos.z - bbox_ext.z);
     auto max_corner = geom::Vector3D(
         bbox_pos.x + bbox_ext.x,
         bbox_pos.y + bbox_ext.y,
-        bbox_pos.z + bbox_ext.z + epsilon);
-    Box box({min_corner.x, min_corner.y, min_corner.z},
-        {max_corner.x, max_corner.y, max_corner.z});
-    auto segments = _rtree.GetIntersections(box);
+        bbox_pos.z + bbox_ext.z);
+    Box box({min_corner.x, min_corner.y, min_corner.z - epsilon},
+        {max_corner.x, max_corner.y, max_corner.z + epsilon});
+    return _rtree.GetIntersections(box);
+  }
+
+  // Check if the vector (x2,y2) is on the righ side of the vector (x1,y1)
+  bool IsVectorOnTheRight(float x1, float y1, float x2, float y2) {
+    return (x1 * (-y2) + y1 * x2) > 0;
+  }
+  std::unordered_map<road::RoadId, std::unordered_set<road::RoadId>>
+      Map::ComputeJunctionPriorities(
+          JuncId id,
+          const std::vector<std::pair<RoadId,RoadId>> &predefined_priorities) const {
+
+    // 2d typedefs
+    typedef boost::geometry::model::point
+        <float, 2, boost::geometry::cs::cartesian> Point2d;
+    typedef boost::geometry::model::segment<Point2d> Segment2d;
+
+    const Junction *junction = GetJunction(id);
+    // priorities left higher than right
+    std::unordered_map<road::RoadId, std::unordered_set<road::RoadId>>
+        conflicts;
+    // get priorities previously defined
+    for (auto &priority : predefined_priorities) {
+      conflicts[priority.first].insert(priority.second);
+    }
+
+    auto segments = GetSegmentsInJunction(junction);
 
     for (size_t i = 0; i < segments.size(); ++i){
       auto &segment1 = segments[i];
@@ -709,6 +727,7 @@ namespace road {
       if(junc_id1 != id){
         continue;
       }
+      // conversion to 2d segment
       Segment2d seg1{{segment1.first.first.get<0>(), segment1.first.first.get<1>()},
           {segment1.first.second.get<0>(), segment1.first.second.get<1>()}};
       for (size_t j = i + 1; j < segments.size(); ++j){
@@ -723,19 +742,25 @@ namespace road {
         if(waypoint1.road_id == waypoint2.road_id){
           continue;
         }
+        // conversion to 2d segment
         Segment2d seg2{{segment2.first.first.get<0>(), segment2.first.first.get<1>()},
             {segment2.first.second.get<0>(), segment2.first.second.get<1>()}};
 
         double distance = boost::geometry::distance(seg1, seg2);
-        // better to set distance to lanewidth
+        // better to set distance to lanewidth (but crash)
         if(distance > 2.0){
           continue;
         }
-        if(conflicts[waypoint1.road_id].count(waypoint2.road_id) == 0){
+        // Priority to cars comming from your right side
+        bool lane_comming_from_right = !IsVectorOnTheRight(
+            seg1.second.get<0>() - seg1.first.get<0>(),
+            seg1.second.get<1>() - seg1.first.get<1>(),
+            seg2.second.get<0>() - seg2.first.get<0>(),
+            seg2.second.get<1>() - seg2.first.get<1>());
+        if (conflicts[waypoint1.road_id].count(waypoint2.road_id) == 0 &&
+            conflicts[waypoint2.road_id].count(waypoint1.road_id) == 0 &&
+            lane_comming_from_right) {
           conflicts[waypoint1.road_id].insert(waypoint2.road_id);
-        }
-        if(conflicts[waypoint2.road_id].count(waypoint1.road_id) == 0){
-          conflicts[waypoint2.road_id].insert(waypoint1.road_id);
         }
       }
     }

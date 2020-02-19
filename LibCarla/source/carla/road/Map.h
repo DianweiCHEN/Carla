@@ -126,7 +126,10 @@ namespace road {
     const Junction* GetJunction(JuncId id) const;
 
     std::unordered_map<road::RoadId, std::unordered_set<road::RoadId>>
-        ComputeJunctionConflicts(JuncId id) const;
+        ComputeJunctionPriorities(
+            JuncId id,
+            const std::vector<std::pair<RoadId,RoadId>> &predefined_priorities =
+                std::vector<std::pair<RoadId,RoadId>>()) const;
 
 #ifdef LIBCARLA_WITH_GTEST
     MapData &GetMap() {
@@ -157,6 +160,10 @@ private:
         geom::Transform &current_transform,
         Waypoint &current_waypoint,
         Waypoint &next_waypoint);
+
+    // Helper functions for computing road intersection and priorities in junctions
+    std::vector<Rtree::TreeElement> GetSegmentsInJunction(
+        const Junction * junction) const;
   };
 
 } // namespace road

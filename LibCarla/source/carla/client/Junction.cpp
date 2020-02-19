@@ -25,9 +25,26 @@ namespace client {
     return _bounding_box;
   }
 
-  std::vector<road::RoadId> Junction::GetConflictingRoads(road::RoadId id) const {
-    //auto conflicts = _parent->GetMap().ComputeJunctionConflicts(GetId());
-    return _parent->GetMap().GetJunction(_id)->GetConflictsOfRoad(id);
+  std::vector<road::RoadId> Junction::GetHigherPriorities(road::RoadId id) const {
+    auto &priorities = _parent->GetMap().GetJunction(_id)->GetPriorities();
+    std::vector<road::RoadId> result;
+    for (auto &priority : priorities) {
+      if (priority.second == id) {
+        result.push_back(priority.first);
+      }
+    }
+    return result;
+  }
+
+  std::vector<road::RoadId> Junction::GetLowerPriorities(road::RoadId id) const {
+    auto &priorities = _parent->GetMap().GetJunction(_id)->GetPriorities();
+    std::vector<road::RoadId> result;
+    for (auto &priority : priorities) {
+      if (priority.first == id) {
+        result.push_back(priority.second);
+      }
+    }
+    return result;
   }
 
 } // namespace client

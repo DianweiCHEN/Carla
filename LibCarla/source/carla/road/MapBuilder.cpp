@@ -65,7 +65,7 @@ namespace road {
     // or move it (will return move -> Map(Map &&))
     Map map(std::move(_map_data));
     CreateJunctionBoundingBoxes(map);
-    ComputeJunctionRoadConflicts(map);
+    ComputeJunctionPriorities(map);
 
     return map;
   }
@@ -507,6 +507,14 @@ namespace road {
     _map_data.GetJunction(junction_id)->GetConnection(connection_id)->AddLaneLink(from, to);
   }
 
+  void MapBuilder::AddPriority(
+      const JuncId junction_id,
+      const RoadId high,
+      const RoadId low){
+    DEBUG_ASSERT(_map_data.GetJunction(junction_id) != nullptr);
+    _map_data.GetJunction(junction_id)->_opendrive_priorities.push_back({high, low});
+  }
+
   void MapBuilder::AddValidityToSignal(
       const uint32_t road_id,
       const uint32_t signal_id,
@@ -809,10 +817,17 @@ namespace road {
     }
   }
 
-  void MapBuilder::ComputeJunctionRoadConflicts(Map &map) {
+  void MapBuilder::ComputeJunctionPriorities(Map &map) {
     for (auto &junctionpair : map._data.GetJunctions()) {
       auto& junction = junctionpair.second;
-      junction._road_conflicts = (map.ComputeJunctionConflicts(junction.GetId()));
+      auto road_conflicts = map.ComputeJunctionPriorities(
+          junction.GetId(), junction.GetOpenDrivePriorities());
+      for (auto &conflict : road_conflicts) {
+        auto high = conflict.first;
+        for (auto &low : conflict.second) {
+          junction._priorities.push_back({high, low});
+        }
+      }
     }
   }
 
