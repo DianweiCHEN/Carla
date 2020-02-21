@@ -65,6 +65,10 @@ namespace client {
         nullptr;
   }
 
+  SharedPtr<Waypoint> Map::MakeWaypoint(road::element::Waypoint waypoint) const {
+    return SharedPtr<Waypoint>(new Waypoint{shared_from_this(), waypoint});
+  }
+
   Map::TopologyList Map::GetTopology() const {
     namespace re = carla::road::element;
     std::unordered_map<re::Waypoint, SharedPtr<Waypoint>> waypoints;

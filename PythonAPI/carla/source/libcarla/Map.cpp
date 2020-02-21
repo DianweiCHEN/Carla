@@ -150,7 +150,7 @@ void export_map() {
     .def("to_opendrive", CALL_RETURNING_COPY(cc::Map, GetOpenDrive))
     .def("save_to_disk", &SaveOpenDriveToDisk, (arg("path")=""))
     .def("get_crosswalks", CALL_RETURNING_LIST(cc::Map, GetAllCrosswalkZones))
-    .def("compute_route", &cc::Map::ComputeRoute)
+    .def("compute_route", &cc::Map::ComputeRoute, args("origin", "destination"))
     .def(self_ns::str(self_ns::self))
   ;
 
@@ -200,6 +200,7 @@ void export_map() {
     .add_property("length", &cc::Route::GetLength)
     .def("get_segment", &cc::Route::GetSegment)
     .def("get_number_segments", &cc::Route::GetNumberOfSegments)
+    .def("generate_waypoints", CALL_RETURNING_LIST_1(cc::Route, GenerateWaypoints, double), args("separation"))
   ;
 
   class_<cc::RouteSegment, boost::noncopyable, boost::shared_ptr<cc::RouteSegment>>("RouteSegment", no_init)

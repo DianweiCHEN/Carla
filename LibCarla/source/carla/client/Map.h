@@ -61,6 +61,8 @@ namespace client {
         carla::road::LaneId lane_id,
         float s) const;
 
+    SharedPtr<Waypoint> MakeWaypoint(road::element::Waypoint waypoint) const;
+
     using TopologyList = std::vector<std::pair<SharedPtr<Waypoint>, SharedPtr<Waypoint>>>;
 
     TopologyList GetTopology() const;

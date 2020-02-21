@@ -129,6 +129,8 @@ namespace road {
     Route ComputeRoute(const geom::Location &start_location,
         const geom::Location &end_location) const;
 
+    std::vector<Waypoint> GenerateRouteWaypoints(const Route &route, double separation) const;
+
 #ifdef LIBCARLA_WITH_GTEST
     MapData &GetMap() {
       return _data;

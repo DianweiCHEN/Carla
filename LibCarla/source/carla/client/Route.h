@@ -33,9 +33,12 @@ namespace client {
     size_t GetNumberOfSegments() const {
       return _route.route_segments.size();
     }
+
     SharedPtr<RouteSegment> GetSegment(uint32_t segment_id);
 
     double EstimateRoadTime() const;
+
+    std::vector<SharedPtr<Waypoint>> GenerateWaypoints(double separation) const;
 
   private:
 

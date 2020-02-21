@@ -20,6 +20,8 @@ namespace road {
 
   struct RouteSegment {
     RoadId road_id;
+    LaneId lane_id;
+    SectionId section_id;
     bool direction;
   };
 

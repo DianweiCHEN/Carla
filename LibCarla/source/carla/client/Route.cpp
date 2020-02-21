@@ -25,5 +25,14 @@ namespace client {
     return SharedPtr<RouteSegment>(new RouteSegment(shared_from_this(), _route.route_segments[segment_id]));
   }
 
+  std::vector<SharedPtr<Waypoint>> Route::GenerateWaypoints(double separation) const {
+    std::vector<SharedPtr<Waypoint>> result;
+    auto waypoints = _parent->GetMap().GenerateRouteWaypoints(_route, separation);
+    for(auto& waypoint : waypoints) {
+      result.emplace_back(_parent->MakeWaypoint(waypoint));
+    }
+    return result;
+  }
+
 } // namespace client
 } // namespace carla
