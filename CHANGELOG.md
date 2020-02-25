@@ -15,9 +15,6 @@
     - Crash when no pedestrian navmesh is present
     - Automatically imported static meshes not properly tagged
   * Fixed incorrect doppler velocity for RADAR sensors.
-  * Fixed import pipeline bugs:
-    - Crash when no pedestrian navmesh is present
-    - Automatically imported static meshes not properly tagged
 
 ## CARLA 0.9.7
   * Upgraded parameters of Unreal/CarlaUE4/Config/DefaultInput.ini to prevent mouse freeze
