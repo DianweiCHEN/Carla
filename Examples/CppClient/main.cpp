@@ -16,6 +16,7 @@
 #include <carla/geom/Transform.h>
 #include <carla/image/ImageIO.h>
 #include <carla/image/ImageView.h>
+#include <carla/trafficmanager/TrafficManager.h>
 #include <carla/sensor/data/Image.h>
 
 namespace cc = carla::client;
@@ -36,18 +37,18 @@ static auto &RandomChoice(const RangeT &range, RNG &&generator) {
 }
 
 /// Save a semantic segmentation image to disk converting to CityScapes palette.
-static void SaveSemSegImageToDisk(const csd::Image &image) {
-  using namespace carla::image;
-
-  char buffer[9u];
-  std::snprintf(buffer, sizeof(buffer), "%08zu", image.GetFrame());
-  auto filename = "_images/"s + buffer + ".png";
-
-  auto view = ImageView::MakeColorConvertedView(
-      ImageView::MakeView(image),
-      ColorConverter::CityScapesPalette());
-  ImageIO::WriteView(filename, view);
-}
+//static void SaveSemSegImageToDisk(const csd::Image &image) {
+//  using namespace carla::image;
+//
+//  char buffer[9u];
+//  std::snprintf(buffer, sizeof(buffer), "%08zu", image.GetFrame());
+//  auto filename = "_images/"s + buffer + ".png";
+//
+//  auto view = ImageView::MakeColorConvertedView(
+//      ImageView::MakeView(image),
+//      ColorConverter::CityScapesPalette());
+//  ImageIO::WriteView(filename, view);
+//}
 
 static auto ParseArguments(int argc, const char *argv[]) {
   EXPECT_TRUE((argc == 1u) || (argc == 3u));
@@ -69,13 +70,16 @@ int main(int argc, const char *argv[]) {
     auto client = cc::Client(host, port);
     client.SetTimeout(10s);
 
+    std::cout << "Test ########################################### "  << '\n';
     std::cout << "Client API version : " << client.GetClientVersion() << '\n';
     std::cout << "Server API version : " << client.GetServerVersion() << '\n';
 
     // Load a random town.
     auto town_name = RandomChoice(client.GetAvailableMaps(), rng);
     std::cout << "Loading world: " << town_name << std::endl;
-    auto world = client.LoadWorld(town_name);
+    auto world = client.GetWorld(); //LoadWorld(town_name);
+    carla::traffic_manager::TrafficManager tm = client.GetInstanceTM();
+    std::vector<carla::SharedPtr<carla::client::Actor>> vList; 
 
     // Get a random vehicle blueprint.
     auto blueprint_library = world.GetBlueprintLibrary();
@@ -92,18 +96,35 @@ int main(int argc, const char *argv[]) {
 
     // Find a valid spawn point.
     auto map = world.GetMap();
-    auto transform = RandomChoice(map->GetRecommendedSpawnPoints(), rng);
-
-    // Spawn the vehicle.
-    auto actor = world.SpawnActor(blueprint, transform);
-    std::cout << "Spawned " << actor->GetDisplayId() << '\n';
-    auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
+      
+    for(int x = 0; x < 10; x++) {
+      // Get spawn point	    
+      auto transform = RandomChoice(map->GetRecommendedSpawnPoints(), rng);
+    
+      // Spawn the vehicle. 
+      
+      try {
+      	auto actor = world.TrySpawnActor(blueprint, transform);
+      
+        if(actor != nullptr) {
+          std::cout << "Spawned " << actor->GetDisplayId() << '\n';
+          // auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
+          // vehicle.SetAutopilot(true);
+          vList.push_back(actor);
+        }
+      }catch(...) {}
+    }
 
     // Apply control to vehicle.
-    cc::Vehicle::Control control;
-    control.throttle = 1.0f;
-    vehicle->ApplyControl(control);
+    // cc::Vehicle::Control control;
+    // control.throttle = 1.0f;
+    // vehicle->ApplyControl(control);
 
+    if(!vList.empty()) {
+      tm.RegisterVehicles(vList);
+    }
+
+    /*
     // Move spectator so we can see the vehicle from the simulator window.
     auto spectator = world.GetSpectator();
     transform.location += 32.0f * transform.GetForwardVector();
@@ -129,12 +150,16 @@ int main(int argc, const char *argv[]) {
       EXPECT_TRUE(image != nullptr);
       SaveSemSegImageToDisk(*image);
     });
+    */
 
-    std::this_thread::sleep_for(10s);
+    std::this_thread::sleep_for(30s);
 
     // Remove actors from the simulation.
-    camera->Destroy();
-    vehicle->Destroy();
+    //camera->Destroy();
+    for(auto actor : vList) {
+      auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
+      vehicle->Destroy();
+    }
     std::cout << "Actors destroyed." << std::endl;
 
   } catch (const cc::TimeoutException &e) {
