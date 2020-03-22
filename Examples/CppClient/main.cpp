@@ -96,25 +96,28 @@ int main(int argc, const char *argv[]) {
 
     // Find a valid spawn point.
     auto map = world.GetMap();
-      
-    for(int x = 0; x < 10; x++) {
+    auto spawnpoints = map->GetRecommendedSpawnPoints();
+
+
+    auto cspawnpoint = spawnpoints.begin();
+    for(int x = 0; x < 200; x++) {
       // Get spawn point	    
-      auto transform = RandomChoice(map->GetRecommendedSpawnPoints(), rng);
+      // auto transform = RandomChoice(cspawnpoint, rng);
     
       // Spawn the vehicle. 
-      
-      try {
-      	auto actor = world.TrySpawnActor(blueprint, transform);
+      	auto actor = world.TrySpawnActor(blueprint, *cspawnpoint);
       
         if(actor != nullptr) {
           std::cout << "Spawned " << actor->GetDisplayId() << '\n';
           // auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
           // vehicle.SetAutopilot(true);
           vList.push_back(actor);
+
+          ++cspawnpoint;
         }
-      }catch(...) {}
     }
 
+    std::cout << "Total vehicle spawned: " << vList.size() << std::endl;
     // Apply control to vehicle.
     // cc::Vehicle::Control control;
     // control.throttle = 1.0f;
@@ -156,9 +159,9 @@ int main(int argc, const char *argv[]) {
 
     // Remove actors from the simulation.
     //camera->Destroy();
-    for(auto actor : vList) {
-      auto vehicle = boost::static_pointer_cast<cc::Vehicle>(actor);
-      vehicle->Destroy();
+    tm.UnregisterVehicles(vList);
+    for(auto actorV : vList) {
+      actorV->Destroy();
     }
     std::cout << "Actors destroyed." << std::endl;
 
