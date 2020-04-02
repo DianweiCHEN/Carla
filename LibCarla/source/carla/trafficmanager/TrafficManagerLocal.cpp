@@ -42,6 +42,9 @@ TrafficManagerLocal::~TrafficManagerLocal() {
 
 void TrafficManagerLocal::Start() {
 
+	/// Initialize tmProcessor
+	tmProcessor.Initialize(&glbdata);
+
   const carla::SharedPtr<cc::Map> world_map = episodeProxyTM.Lock()->GetCurrentMap();
   local_map = std::make_shared<traffic_manager::InMemoryMap>(world_map);
   local_map->SetUp();
@@ -106,6 +109,10 @@ void TrafficManagerLocal::Start() {
 }
 
 void TrafficManagerLocal::Stop() {
+
+	/// Initialize tmProcessor
+	tmProcessor.Release(&glbdata);
+
   localization_collision_messenger->Stop();
   localization_traffic_light_messenger->Stop();
   localization_planner_messenger->Stop();

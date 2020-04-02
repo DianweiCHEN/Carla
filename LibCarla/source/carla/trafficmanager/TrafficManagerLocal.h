@@ -37,7 +37,7 @@
 
 #include "carla/trafficmanager/TrafficManagerBase.h"
 #include "carla/trafficmanager/TrafficManagerServer.h"
-
+#include "carla/trafficmanager/TrafficManagerProcessor.h"
 namespace carla {
 namespace traffic_manager {
 
@@ -50,6 +50,12 @@ namespace traffic_manager {
   class TrafficManagerLocal : public TrafficManagerBase {
 
   private:
+
+  	/// Traffic manager global data
+  	GlbData glbdata;
+
+  	/// The processor element for vehicle wise analysis
+  	TrafficManagerProcessor tmProcessor;
 
     /// PID controller parameters.
     std::vector<float> longitudinal_PID_parameters;
