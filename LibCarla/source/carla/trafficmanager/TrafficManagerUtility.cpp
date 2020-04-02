@@ -26,8 +26,6 @@
 namespace carla {
 namespace traffic_manager {
 
-#define ROUND(x)                (((x)>0)?((x)+0.5):((x)-0.5))
-
 /// Initialize with zero for first time usage
 static unsigned long int startTime = 0;
 

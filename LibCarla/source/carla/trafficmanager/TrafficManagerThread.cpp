@@ -16,7 +16,7 @@
 #include "carla/trafficmanager/TrafficManagerThread.h"
 #include "carla/trafficmanager/TrafficManagerMessageType.h"
 
-#define DEBUG_PRINT_THREAD		1
+#define DEBUG_PRINT_THREAD		0
 
 namespace carla {
 namespace traffic_manager {
@@ -25,6 +25,9 @@ void TrafficManagerThread::TrafficManagerAssignerThread(GlbData *glbdata)
 {
 	/// Run for ever
 	while(true) {
+
+		/// DEBUG Run in 30-40fps
+		std::this_thread::sleep_for(std::chrono::milliseconds(25));
 
 		/// Contains of message should be allocated by assigner thread and
 		/// Free by worker thread which consumes the data
@@ -51,9 +54,6 @@ void TrafficManagerThread::TrafficManagerAssignerThread(GlbData *glbdata)
 			break;
 		}
 
-		/// DEBUG Run in 30-40fps
-		std::this_thread::sleep_for(std::chrono::milliseconds(25));
-
 		/// Add all Vehicles for processing
 		for (int var = 0; var < 100; ++var) {
 
@@ -65,8 +65,10 @@ void TrafficManagerThread::TrafficManagerAssignerThread(GlbData *glbdata)
 			glbdata->jobQueue.push(mData);
 		}
 
+#if DEBUG_PRINT_THREAD
 		/// DEBUG current job queue size
 		std::cout << "TrafficManagerAssignerThread assigned ... at " << mData.timestamp << " : " << glbdata->jobQueue.size() << std::endl;
+#endif
 
 		/// Release data lock
 		glbdata->dlock.unlock();
@@ -84,6 +86,7 @@ void TrafficManagerThread::TrafficManagerAssignerThread(GlbData *glbdata)
 
 void TrafficManagerThread::TrafficManagerWorkerThread(GlbData *glbdata)
 {
+	int vCount = 0;
 	/// Set default
 	bool threadExitFlag;
 
@@ -99,11 +102,6 @@ void TrafficManagerThread::TrafficManagerWorkerThread(GlbData *glbdata)
 
 		/// Free signal lock so that other workers also can act on the signal (if present)
 		signalLock.unlock();
-
-#if DEBUG_PRINT_THREAD
-		/// Worker thread debug print
-		std::cout << "TrafficManagerWorkerThread Got Signal ... at " << TrafficManagerUtil::GetTimeMiliseconds() << "ID : " << std::this_thread::get_id() << std::endl;
-#endif
 
 		/// As long as data is present in the queue process them
 		while(true) {
@@ -133,7 +131,7 @@ void TrafficManagerThread::TrafficManagerWorkerThread(GlbData *glbdata)
 				glbdata->jobQueue.pop();
 
 #if DEBUG_PRINT_THREAD
-				std::cout << "TrafficManagerWorkerThread Got Job " << mData.msgType << " of " << mData.timestamp << " taken ... at " << TrafficManagerUtil::GetTimeMiliseconds() << std::endl;
+				std::cout << "TrafficManagerWorkerThread Got Job [" << glbdata->jobQueue.size() << "]: "<< mData.timestamp << " taken ... GAP: " << (TrafficManagerUtil::GetTimeMiliseconds() - mData.timestamp) << std::endl;
 #endif
 				/// Unlock mutex for other threads before consuming data
 				/// As it may take time to do so.
@@ -141,6 +139,8 @@ void TrafficManagerThread::TrafficManagerWorkerThread(GlbData *glbdata)
 
 				/// Consume / Process data
 				/// TODO:
+				std::this_thread::sleep_for(std::chrono::microseconds(rand()%50));
+				vCount ++;
 			} else {
 
 				/// Unlock mutex for other threads
@@ -184,7 +184,7 @@ void TrafficManagerThread::TrafficManagerDispatcherThread(GlbData *glbdata)
 
 			/// Prepare command to dispatch
 			/// Add all Vehicles for processing
-			for (int var = 0; var < 1000; ++var) {
+			for (int var = 0; var < 100; ++var) {
 
 				/// Set vehicle information
 				/// TODO:

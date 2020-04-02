@@ -11,6 +11,10 @@
 namespace carla {
 namespace traffic_manager {
 
+#define ROUND(__x)             (((__x)>0)?((__x)+0.5):((__x)-0.5))
+#define BOUND(__x, __y, __z)   (((__x)<(__y))?(__y):(((__x)>(__z))?(__z):(__x)))
+
+
 class TrafficManagerUtil {
 public:
 

@@ -17,15 +17,23 @@ namespace carla {
 namespace traffic_manager {
 
 enum _thread_name {
-	__ASSIGNER_TH   = 0,
-	__DISPATCHER_TH = 1
+	__ASSIGNER_TH_POS   = 0,
+	__DISPATCHER_TH_POS = 1,
+	__WORKER_TH_POS     = 2
 };
+
+#define MIN_NUMBER_TH					4
+#define MAX_NUMBER_TH					128
 
 /// Initialization function
 void TrafficManagerProcessor::Initialize(GlbData *gData)
 {
+	/// Get total thread count
+	gData->threadCount = std::thread::hardware_concurrency();
+	gData->threadCount = BOUND(gData->threadCount, MIN_NUMBER_TH, MAX_NUMBER_TH);
+
 	/// PThread array to contain threads
-	gData->threadList = new(std::nothrow) std::thread[NUMBER_OF_WORKER_TH + 2];
+	gData->threadList = new(std::nothrow) std::thread[gData->threadCount];
 	if(gData->threadList == nullptr) {
 		DEBUG_ASSERT(gData->threadList != nullptr);
 	}
@@ -36,21 +44,21 @@ void TrafficManagerProcessor::Initialize(GlbData *gData)
 	/// Global exit flag to stop processing
 	gData->exitFlag = false;
 
+	/// Assigner thread initialization
+	gData->threadList[__ASSIGNER_TH_POS] =
+			std::thread(TrafficManagerThread::TrafficManagerAssignerThread, gData);
+
+	/// Dispatcher thread initialization
+	gData->threadList[__DISPATCHER_TH_POS] =
+			std::thread(TrafficManagerThread::TrafficManagerDispatcherThread, gData);
+
 	/// Initialize worker threads
-	for (int thCount = 0; thCount < NUMBER_OF_WORKER_TH; thCount++) {
+	for (int thCount = __WORKER_TH_POS; thCount < gData->threadCount; thCount++) {
 
 		/// Assign individual threads
 		gData->threadList[thCount] =
 				std::thread(TrafficManagerThread::TrafficManagerWorkerThread, gData);
 	}
-
-	/// Assigner thread initialization
-	gData->threadList[NUMBER_OF_WORKER_TH + __ASSIGNER_TH] =
-			std::thread(TrafficManagerThread::TrafficManagerAssignerThread, gData);
-
-	/// Dispatcher thread initialization
-	gData->threadList[NUMBER_OF_WORKER_TH + __DISPATCHER_TH] =
-			std::thread(TrafficManagerThread::TrafficManagerDispatcherThread, gData);
 }
 
 /// Release function
@@ -72,10 +80,10 @@ void TrafficManagerProcessor::Release(GlbData *gData)
 	gData->cond.notify_all();
 
 	/// Wait for all threads to exit
-	std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
 	/// Wait for all threads to exit
-	for (int thCount = 0; thCount < NUMBER_OF_WORKER_TH + 2; thCount++) {
+	for (int thCount = 0; thCount < gData->threadCount; thCount++) {
 
 		/// release individual threads
 		if(gData->threadList[thCount].joinable()) {

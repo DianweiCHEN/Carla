@@ -18,10 +18,11 @@
 namespace carla {
 namespace traffic_manager {
 
-#define NUMBER_OF_WORKER_TH			8 /// +2 for Assigner & Dispatcher thread
-
 /// Global data to contain System information
 typedef struct __global_data__ {
+
+	/// Total internal thread count
+	int threadCount;
 
 	/// Thread array to contain threads
 	std::thread *threadList;
