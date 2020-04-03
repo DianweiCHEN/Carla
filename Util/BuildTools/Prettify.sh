@@ -79,6 +79,7 @@ else
   pushd ${UNCRUSTIFY_BASENAME}-build >/dev/null
 
   cmake -G "Ninja" \
+      -D_GLIBCXX_USE_CXX11_ABI=0 \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX="../${UNCRUSTIFY_BASENAME}-install" \
       ../${UNCRUSTIFY_BASENAME}-source

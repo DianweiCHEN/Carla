@@ -32,6 +32,7 @@ $(BINDIR)/cpp_client: | build_libcarla
 	$(call log,Compiling C++ Client...)
 	@mkdir -p $(BINDIR)
 	@$(CXX) $(CXXFLAGS) -I$(INSTALLDIR)/include -isystem $(INSTALLDIR)/include/system -L$(INSTALLDIR)/lib \
+		-D_GLIBCXX_USE_CXX11_ABI=0 \
 		-o $(BINDIR)/cpp_client main.cpp \
 		-Wl,-Bstatic -lcarla_client -lrpc -lboost_filesystem -Wl,-Bdynamic \
 		-lpng -ltiff -ljpeg -lRecast -lDetour -lDetourCrowd
@@ -45,6 +46,7 @@ build_libcarla: $(TOOLCHAIN)
 		if [ ! -f "build.ninja" ]; then \
 		cmake \
 			-G "Ninja" \
+			-D_GLIBCXX_USE_CXX11_ABI=0 \
 			-DCMAKE_BUILD_TYPE=Client \
 			-DLIBCARLA_BUILD_RELEASE=ON \
 			-DLIBCARLA_BUILD_DEBUG=OFF \
