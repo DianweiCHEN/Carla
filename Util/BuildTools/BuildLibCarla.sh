@@ -117,6 +117,7 @@ fi
 function build_libcarla {
 
   CMAKE_EXTRA_OPTIONS=''
+  CMAKE_ABI=''
 
   if [ $1 == Server ] ; then
     M_TOOLCHAIN=${LIBCPP_TOOLCHAIN_FILE}
@@ -126,12 +127,14 @@ function build_libcarla {
     M_TOOLCHAIN=${LIBSTDCPP_TOOLCHAIN_FILE}
     M_BUILD_FOLDER=${LIBCARLA_BUILD_CLIENT_FOLDER}.$(echo "$2" | tr '[:upper:]' '[:lower:]')
     M_INSTALL_FOLDER=${LIBCARLA_INSTALL_CLIENT_FOLDER}
+    CMAKE_ABI="-D_GLIBCXX_USE_CXX11_ABI=0"
   elif [ $1 == ClientRSS ] ; then
     BUILD_TYPE='Client'
     M_TOOLCHAIN=${LIBSTDCPP_TOOLCHAIN_FILE}
     M_BUILD_FOLDER=${LIBCARLA_BUILD_CLIENT_FOLDER}.rss.$(echo "$2" | tr '[:upper:]' '[:lower:]')
     M_INSTALL_FOLDER=${LIBCARLA_INSTALL_CLIENT_FOLDER}
     CMAKE_EXTRA_OPTIONS="${CMAKE_EXTRA_OPTIONS:+${CMAKE_EXTRA_OPTIONS} }-DBUILD_RSS_VARIANT=ON -DCMAKE_PREFIX_PATH=$CARLA_BUILD_FOLDER/ad-rss-install"
+    CMAKE_ABI="-D_GLIBCXX_USE_CXX11_ABI=0"
   else
     fatal_error "Invalid build configuration \"$1\""
   fi
@@ -166,6 +169,7 @@ function build_libcarla {
 
     cmake \
         -G "Eclipse CDT4 - Ninja" \
+        ${CMAKE_ABI} \
         -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-$1} \
         -DLIBCARLA_BUILD_DEBUG=${M_DEBUG} \
         -DLIBCARLA_BUILD_RELEASE=${M_RELEASE} \

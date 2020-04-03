@@ -63,6 +63,10 @@ endforeach(target)
 
 if (LIBCARLA_BUILD_DEBUG)
   # Specific options for debug.
+  if (CMAKE_BUILD_TYPE STREQUAL "Client")
+      # to use ABI prior to std11 for legacy python packages
+      add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+  endif()
   set_target_properties(libcarla_test_${carla_config}_debug PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS_DEBUG}")
   target_link_libraries(libcarla_test_${carla_config}_debug "carla_${carla_config}_debug")
   target_compile_definitions(libcarla_test_${carla_config}_debug PUBLIC -DBOOST_ASIO_ENABLE_BUFFER_DEBUGGING)
@@ -73,10 +77,13 @@ endif()
 
 if (LIBCARLA_BUILD_RELEASE)
   # Specific options for release.
+  if (CMAKE_BUILD_TYPE STREQUAL "Client")
+      # to use ABI prior to std11 for legacy python packages
+      add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+  endif()
   set_target_properties(libcarla_test_${carla_config}_release PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS_RELEASE}")
   target_link_libraries(libcarla_test_${carla_config}_release "carla_${carla_config}")
   if (CMAKE_BUILD_TYPE STREQUAL "Client")
       target_link_libraries(libcarla_test_${carla_config}_release "${BOOST_LIB_PATH}/libboost_filesystem.a")
   endif()
 endif()
-

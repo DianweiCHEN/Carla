@@ -247,6 +247,9 @@ if (LIBCARLA_BUILD_RELEASE)
       set(CMAKE_CXX_FLAGS_RELEASE_CLIENT ${CMAKE_CXX_FLAGS_RELEASE})
     endif()
 
+    # to use ABI prior to std11 for legacy python packages
+    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+
     set_target_properties(carla_client PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS_RELEASE_CLIENT}")
 
     target_link_libraries(carla_client "${RECAST_LIB_PATH}/libRecast.a")
@@ -283,6 +286,9 @@ if (LIBCARLA_BUILD_DEBUG)
     if (NOT DEFINED CMAKE_CXX_FLAGS_DEBUG_CLIENT)
       set(CMAKE_CXX_FLAGS_DEBUG_CLIENT ${CMAKE_CXX_FLAGS_DEBUG})
     endif()
+
+    # to use ABI prior to std11 for legacy python packages
+    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
     set_target_properties(carla_client_debug PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS_DEBUG_CLIENT}")
 
