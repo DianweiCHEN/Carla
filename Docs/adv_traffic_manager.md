@@ -10,7 +10,6 @@
 * [__Other considerations__](#other-considerations)  
 	* FPS limitations  
 	* Multiclient management  
-* [__Summary__](#summary)  
 
 ---
 ## What is it?
@@ -241,8 +240,6 @@ TM-Clients cannot tick the CARLA server in synchronous mode, __only a TM-Server 
 If more than one TM-Server ticks, the synchrony will fail, as the server will move forward on every tick. This is specially relevant when working with the __ScenarioRunner__, which runs a TM. In this case, the TM will be subordinated to the ScenarioRunner and wait for it. 
 
 ---
-## Summary
-
 
 The Traffic Manager is one of the most complex features in CARLA and so, one that is prone to all kind of unexpected and really specific issues. The CARLA forum is open to everybody to post any doubts or suggestions, and it is the best way to keep track of issues and help the CARLA community to become greater. Feel free to login and join the community. 
 
