@@ -102,7 +102,11 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
             Buffer,
             carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
             InRHICmdList);
-        Stream.Send(Sensor, std::move(Buffer));
+
+        {
+          SCOPE_CYCLE_COUNTER(STAT_CaptureCameraStreamSend);
+          Stream.Send(Sensor, std::move(Buffer));
+        }
       }
     }
   );

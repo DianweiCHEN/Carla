@@ -63,13 +63,20 @@ static void WritePixelsToBuffer_Vulkan(
 
   // NS: Extra copy here, don't know how to avoid it.
   TArray<FColor> Pixels;
-  InRHICmdList.ReadSurfaceData(
+  {
+    SCOPE_CYCLE_COUNTER(STAT_CaptureCameraReadRT);
+
+    InRHICmdList.ReadSurfaceData(
       Texture,
       FIntRect(0, 0, RenderResource->GetSizeXY().X, RenderResource->GetSizeXY().Y),
       Pixels,
       FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
 
-  Buffer.copy_from(Offset, Pixels);
+  }
+  {
+    SCOPE_CYCLE_COUNTER(STAT_CaptureCameraBufferCopy);
+    Buffer.copy_from(Offset, Pixels);
+  }
 }
 
 #endif // CARLA_WITH_VULKAN_SUPPORT
