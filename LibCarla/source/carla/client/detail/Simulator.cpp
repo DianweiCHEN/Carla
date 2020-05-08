@@ -18,6 +18,7 @@
 #include "carla/client/detail/ActorFactory.h"
 #include "carla/trafficmanager/TrafficManager.h"
 #include "carla/sensor/Deserializer.h"
+#include "carla/profiler/Tracer.h"
 
 #include <exception>
 #include <thread>
@@ -33,6 +34,7 @@ namespace detail {
   // ===========================================================================
 
   static void ValidateVersions(Client &client) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     const auto vc = client.GetClientVersion();
     const auto vs = client.GetServerVersion();
     if (vc != vs) {
@@ -45,6 +47,7 @@ namespace detail {
   }
 
   static bool SynchronizeFrame(uint64_t frame, const Episode &episode, time_duration timeout) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     bool result = true;
     auto start = std::chrono::system_clock::now();
     while (frame > episode.GetState()->GetTimestamp().frame) {
@@ -83,6 +86,7 @@ namespace detail {
   // ===========================================================================
 
   EpisodeProxy Simulator::LoadEpisode(std::string map_name) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     const auto id = GetCurrentEpisode().GetId();
     _client.LoadEpisode(std::move(map_name));
     size_t number_of_attempts = _client.GetTimeout().milliseconds() / 10u;
@@ -100,6 +104,7 @@ namespace detail {
   EpisodeProxy Simulator::LoadOpenDriveEpisode(
       std::string opendrive,
       const rpc::OpendriveGenerationParameters & params) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     // The "OpenDriveMap" is an ".umap" located in:
     // "carla/Unreal/CarlaUE4/Content/Carla/Maps/"
     // It will load the last sended OpenDRIVE by client's "LoadOpenDriveEpisode()"
@@ -113,6 +118,7 @@ namespace detail {
   // ===========================================================================
 
   EpisodeProxy Simulator::GetCurrentEpisode() {
+    TRACE_SCOPE_FUNCTION("Simulator");
     if (_episode == nullptr) {
       ValidateVersions(_client);
       _episode = std::make_shared<Episode>(_client);
@@ -126,6 +132,7 @@ namespace detail {
   }
 
   SharedPtr<Map> Simulator::GetCurrentMap() {
+    TRACE_SCOPE_FUNCTION("Simulator");
     return MakeShared<Map>(_client.GetMapInfo());
   }
 
@@ -134,6 +141,7 @@ namespace detail {
   // ===========================================================================
 
   WorldSnapshot Simulator::WaitForTick(time_duration timeout) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     DEBUG_ASSERT(_episode != nullptr);
     auto result = _episode->WaitForState(timeout);
     if (!result.has_value()) {
@@ -143,6 +151,7 @@ namespace detail {
   }
 
   uint64_t Simulator::Tick(time_duration timeout) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     DEBUG_ASSERT(_episode != nullptr);
     const auto frame = _client.SendTickCue();
     bool result = SynchronizeFrame(frame, *_episode, timeout);
@@ -157,15 +166,18 @@ namespace detail {
   // ===========================================================================
 
   SharedPtr<BlueprintLibrary> Simulator::GetBlueprintLibrary() {
+    TRACE_SCOPE_FUNCTION("Simulator");
     auto defs = _client.GetActorDefinitions();
     return MakeShared<BlueprintLibrary>(std::move(defs));
   }
 
   SharedPtr<Actor> Simulator::GetSpectator() {
+    TRACE_SCOPE_FUNCTION("Simulator");
     return MakeActor(_client.GetSpectator());
   }
 
   uint64_t Simulator::SetEpisodeSettings(const rpc::EpisodeSettings &settings) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     if (settings.synchronous_mode && !settings.fixed_delta_seconds) {
       log_warning(
           "synchronous mode enabled with variable delta seconds. It is highly "
@@ -182,6 +194,7 @@ namespace detail {
   // ===========================================================================
 
   void Simulator::RegisterAIController(const WalkerAIController &controller) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     auto walker = controller.GetParent();
     if (walker == nullptr) {
       throw_exception(std::runtime_error(controller.GetDisplayId() + ": not attached to walker"));
@@ -194,6 +207,7 @@ namespace detail {
   }
 
   void Simulator::UnregisterAIController(const WalkerAIController &controller) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     auto walker = controller.GetParent();
     if (walker == nullptr) {
       throw_exception(std::runtime_error(controller.GetDisplayId() + ": not attached to walker"));
@@ -206,6 +220,7 @@ namespace detail {
   }
 
   boost::optional<geom::Location> Simulator::GetRandomLocationFromNavigation() {
+    TRACE_SCOPE_FUNCTION("Simulator");
     DEBUG_ASSERT(_episode != nullptr);
     auto navigation = _episode->CreateNavigationIfMissing();
     DEBUG_ASSERT(navigation != nullptr);
@@ -213,6 +228,7 @@ namespace detail {
   }
 
   void Simulator::SetPedestriansCrossFactor(float percentage) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     DEBUG_ASSERT(_episode != nullptr);
     auto navigation = _episode->CreateNavigationIfMissing();
     DEBUG_ASSERT(navigation != nullptr);
@@ -229,6 +245,7 @@ namespace detail {
       Actor *parent,
       rpc::AttachmentType attachment_type,
       GarbageCollectionPolicy gc) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     rpc::Actor actor;
     if (parent != nullptr) {
       actor = _client.SpawnActorWithParent(
@@ -254,6 +271,7 @@ namespace detail {
   }
 
   bool Simulator::DestroyActor(Actor &actor) {
+    TRACE_SCOPE_FUNCTION("Simulator");
     bool success = true;
     success = _client.DestroyActor(actor.GetId());
     if (success) {
@@ -273,10 +291,12 @@ namespace detail {
   void Simulator::SubscribeToSensor(
       const Sensor &sensor,
       std::function<void(SharedPtr<sensor::SensorData>)> callback) {
+    TRACE_SCOPE_FUNCTION("EpisodeState");
     DEBUG_ASSERT(_episode != nullptr);
     _client.SubscribeToStream(
         sensor.GetActorDescription().GetStreamToken(),
         [cb=std::move(callback), ep=WeakEpisodeProxy{shared_from_this()}](auto buffer) {
+          TRACE_SCOPE("Sensor Stream", "EpisodeState");
           auto data = sensor::Deserializer::Deserialize(std::move(buffer));
           data->_episode = ep.TryLock();
           cb(std::move(data));
@@ -284,6 +304,7 @@ namespace detail {
   }
 
   void Simulator::UnSubscribeFromSensor(const Sensor &sensor) {
+    TRACE_SCOPE_FUNCTION("EpisodeState");
     _client.UnSubscribeFromStream(sensor.GetActorDescription().GetStreamToken());
   }
 

@@ -11,6 +11,7 @@
 #include "carla/opendrive/OpenDriveParser.h"
 #include "carla/road/Map.h"
 #include "carla/road/RoadTypes.h"
+#include "carla/profiler/Tracer.h"
 
 #include <sstream>
 
@@ -18,6 +19,7 @@ namespace carla {
 namespace client {
 
   static auto MakeMap(const std::string &opendrive_contents) {
+    TRACE_SCOPE_FUNCTION("Map");
     auto stream = std::istringstream(opendrive_contents);
     auto map = opendrive::OpenDriveParser::Load(stream.str());
     if (!map.has_value()) {
@@ -42,6 +44,7 @@ namespace client {
   const geom::Location &location,
   bool project_to_road,
   uint32_t lane_type) const {
+    TRACE_SCOPE_FUNCTION("Map");
     boost::optional<road::element::Waypoint> waypoint;
     if (project_to_road) {
       waypoint = _map.GetClosestWaypointOnRoad(location, lane_type);
@@ -57,6 +60,7 @@ namespace client {
       carla::road::RoadId road_id,
       carla::road::LaneId lane_id,
       float s) const {
+    TRACE_SCOPE_FUNCTION("Map");
     boost::optional<road::element::Waypoint> waypoint;
     waypoint = _map.GetWaypoint(road_id, lane_id, s);
     return waypoint.has_value() ?
@@ -67,7 +71,7 @@ namespace client {
   Map::TopologyList Map::GetTopology() const {
     namespace re = carla::road::element;
     std::unordered_map<re::Waypoint, SharedPtr<Waypoint>> waypoints;
-
+    TRACE_SCOPE_FUNCTION("Map");
     auto get_or_make_waypoint = [&](const auto &waypoint) {
       auto it = waypoints.find(waypoint);
       if (it == waypoints.end()) {
@@ -90,6 +94,7 @@ namespace client {
   }
 
   std::vector<SharedPtr<Waypoint>> Map::GenerateWaypoints(double distance) const {
+    TRACE_SCOPE_FUNCTION("Map");
     std::vector<SharedPtr<Waypoint>> result;
     const auto waypoints = _map.GenerateWaypoints(distance);
     result.reserve(waypoints.size());
@@ -102,18 +107,22 @@ namespace client {
   std::vector<road::element::LaneMarking> Map::CalculateCrossedLanes(
   const geom::Location &origin,
   const geom::Location &destination) const {
+    TRACE_SCOPE_FUNCTION("Map");
     return _map.CalculateCrossedLanes(origin, destination);
   }
 
   const geom::GeoLocation &Map::GetGeoReference() const {
+    TRACE_SCOPE_FUNCTION("Map");
     return _map.GetGeoReference();
   }
 
   std::vector<geom::Location> Map::GetAllCrosswalkZones() const {
+    TRACE_SCOPE_FUNCTION("Map");
     return _map.GetAllCrosswalkZones();
   }
 
   SharedPtr<Junction> Map::GetJunction(const Waypoint &waypoint) const {
+    TRACE_SCOPE_FUNCTION("Map");
     const road::Junction *juncptr = GetMap().GetJunction(waypoint.GetJunctionId());
     auto junction = SharedPtr<Junction>(new Junction(shared_from_this(), juncptr));
     return junction;
@@ -122,6 +131,7 @@ namespace client {
   std::vector<std::pair<SharedPtr<Waypoint>, SharedPtr<Waypoint>>> Map::GetJunctionWaypoints(
       road::JuncId id,
       road::Lane::LaneType lane_type) const {
+    TRACE_SCOPE_FUNCTION("Map");
     std::vector<std::pair<SharedPtr<Waypoint>, SharedPtr<Waypoint>>> result;
     auto junction_waypoints = GetMap().GetJunctionWaypoints(id, lane_type);
     for (auto &waypoint_pair : junction_waypoints) {
@@ -132,7 +142,8 @@ namespace client {
     return result;
   }
 
-  std::vector<SharedPtr<Landmark>> Map::GetAllLandmarks() const {
+  std::vector<SharedPtr<Landmark>> Map::GetAllLandmarks() const {\
+    TRACE_SCOPE_FUNCTION("Map");
     std::vector<SharedPtr<Landmark>> result;
     auto signal_references = _map.GetAllSignalReferences();
     for(auto* signal_reference : signal_references) {
@@ -143,6 +154,7 @@ namespace client {
   }
 
   std::vector<SharedPtr<Landmark>> Map::GetLandmarksFromId(std::string id) const {
+    TRACE_SCOPE_FUNCTION("Map");
     std::vector<SharedPtr<Landmark>> result;
     auto signal_references = _map.GetAllSignalReferences();
     for(auto* signal_reference : signal_references) {
@@ -155,6 +167,7 @@ namespace client {
   }
 
   std::vector<SharedPtr<Landmark>> Map::GetAllLandmarksOfType(std::string type) const {
+    TRACE_SCOPE_FUNCTION("Map");
     std::vector<SharedPtr<Landmark>> result;
     auto signal_references = _map.GetAllSignalReferences();
     for(auto* signal_reference : signal_references) {
@@ -168,6 +181,7 @@ namespace client {
 
   std::vector<SharedPtr<Landmark>>
       Map::GetLandmarkGroup(const Landmark &landmark) const {
+    TRACE_SCOPE_FUNCTION("Map");
     std::vector<SharedPtr<Landmark>> result;
     auto &controllers = landmark._signal->GetSignal()->GetControllers();
     for (auto& controller_id : controllers) {

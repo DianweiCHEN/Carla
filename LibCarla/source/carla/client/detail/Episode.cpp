@@ -11,6 +11,7 @@
 #include "carla/client/detail/WalkerNavigation.h"
 #include "carla/sensor/Deserializer.h"
 #include "carla/trafficmanager/TrafficManager.h"
+#include "carla/profiler/Tracer.h"
 
 #include <exception>
 
@@ -27,6 +28,7 @@ using namespace std::chrono_literals;
 
   template <typename RangeT>
   static auto GetActorsById_Impl(Client &client, CachedActorList &actors, const RangeT &actor_ids) {
+    TRACE_SCOPE_FUNCTION("Episode");
     auto missing_ids = actors.GetMissingIds(actor_ids);
     if (!missing_ids.empty()) {
       actors.InsertRange(client.GetActorsById(missing_ids));
@@ -51,8 +53,10 @@ using namespace std::chrono_literals;
   }
 
   void Episode::Listen() {
+    TRACE_SCOPE_FUNCTION("Episode");
     std::weak_ptr<Episode> weak = shared_from_this();
     _client.SubscribeToStream(_token, [weak](auto buffer) {
+      TRACE_SCOPE("ListenStream", "Episode");
       auto self = weak.lock();
 
       if (self != nullptr) {
@@ -113,6 +117,7 @@ using namespace std::chrono_literals;
   }
 
   boost::optional<rpc::Actor> Episode::GetActorById(ActorId id) {
+    TRACE_SCOPE_FUNCTION("Episode");
     auto actor = _actors.GetActorById(id);
     if (!actor.has_value()) {
       auto actor_list = _client.GetActorsById({id});
@@ -125,6 +130,7 @@ using namespace std::chrono_literals;
   }
 
   std::shared_ptr<WalkerNavigation> Episode::CreateNavigationIfMissing() {
+    TRACE_SCOPE_FUNCTION("Episode");
     std::shared_ptr<WalkerNavigation> navigation;
     do {
       navigation = _navigation.load();
@@ -137,14 +143,17 @@ using namespace std::chrono_literals;
   }
 
   std::vector<rpc::Actor> Episode::GetActorsById(const std::vector<ActorId> &actor_ids) {
+    TRACE_SCOPE_FUNCTION("Episode");
     return GetActorsById_Impl(_client, _actors, actor_ids);
   }
 
   std::vector<rpc::Actor> Episode::GetActors() {
+    TRACE_SCOPE_FUNCTION("Episode");
     return GetActorsById_Impl(_client, _actors, GetState()->GetActorIds());
   }
 
   void Episode::OnEpisodeStarted() {
+    TRACE_SCOPE_FUNCTION("Episode");
     _actors.Clear();
     _on_tick_callbacks.Clear();
     _navigation.reset();
@@ -152,6 +161,7 @@ using namespace std::chrono_literals;
   }
 
 void Episode::OnEpisodeChanged() {
+  TRACE_SCOPE_FUNCTION("Episode");
   traffic_manager::TrafficManager::Reset();
 }
 

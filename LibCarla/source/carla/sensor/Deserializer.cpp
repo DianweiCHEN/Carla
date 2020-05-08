@@ -8,10 +8,13 @@
 
 #include "carla/sensor/SensorRegistry.h"
 
+#include "carla/profiler/Tracer.h"
+
 namespace carla {
 namespace sensor {
 
   SharedPtr<SensorData> Deserializer::Deserialize(Buffer &&buffer) {
+    TRACE_SCOPE_FUNCTION("Deserialize");
     return SensorRegistry::Deserialize(std::move(buffer));
   }
 

@@ -12,6 +12,7 @@
 #include "carla/client/ActorSnapshot.h"
 #include "carla/client/Timestamp.h"
 #include "carla/sensor/data/RawEpisodeState.h"
+#include "carla/profiler/Tracer.h"
 
 #include <boost/optional.hpp>
 
@@ -60,22 +61,26 @@ namespace detail {
     }
 
     bool ContainsActorSnapshot(ActorId actor_id) const {
+      TRACE_SCOPE_FUNCTION("EpisodeState");
       return _actors.find(actor_id) != _actors.end();
     }
 
     ActorSnapshot GetActorSnapshot(ActorId id) const {
+      TRACE_SCOPE_FUNCTION("EpisodeState");
       ActorSnapshot state;
       CopyActorSnapshotIfPresent(id, state);
       return state;
     }
 
     boost::optional<ActorSnapshot> GetActorSnapshotIfPresent(ActorId id) const {
+      TRACE_SCOPE_FUNCTION("EpisodeState");
       boost::optional<ActorSnapshot> state;
       CopyActorSnapshotIfPresent(id, state);
       return state;
     }
 
     auto GetActorIds() const {
+      TRACE_SCOPE_FUNCTION("EpisodeState");
       return MakeListView(
           iterator::make_map_keys_const_iterator(_actors.begin()),
           iterator::make_map_keys_const_iterator(_actors.end()));
@@ -97,6 +102,7 @@ namespace detail {
 
     template <typename T>
     void CopyActorSnapshotIfPresent(ActorId id, T &value) const {
+      TRACE_SCOPE_FUNCTION("EpisodeState");
       auto it = _actors.find(id);
       if (it != _actors.end()) {
         value = it->second;

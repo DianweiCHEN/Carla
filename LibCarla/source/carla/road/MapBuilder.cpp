@@ -24,6 +24,7 @@
 #include "carla/road/element/RoadInfoCrosswalk.h"
 #include "carla/road/InformationSet.h"
 #include "carla/road/Signal.h"
+#include "carla/profiler/Tracer.h"
 
 #include <iterator>
 #include <memory>
@@ -34,7 +35,7 @@ namespace carla {
 namespace road {
 
   boost::optional<Map> MapBuilder::Build() {
-
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     CreatePointersBetweenRoadSegments();
 
     for (auto &&info : _temp_road_info_container) {
@@ -75,6 +76,7 @@ namespace road {
       const double b,
       const double c,
       const double d) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     auto elevation = std::make_unique<RoadInfoElevation>(s, a, b, c, d);
     _temp_road_info_container[road].emplace_back(std::move(elevation));
@@ -93,6 +95,7 @@ namespace road {
       const double width,
       const double length,
       const std::vector<road::element::CrosswalkPoint> points) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     auto cross = std::make_unique<RoadInfoCrosswalk>(s, name, t, zOffset, hdg, pitch, roll, std::move(orientation), width, length, std::move(points));
     _temp_road_info_container[road].emplace_back(std::move(cross));
@@ -103,6 +106,7 @@ namespace road {
       Lane *lane,
       const double s,
       const std::string restriction) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneAccess>(s, restriction));
   }
@@ -114,6 +118,7 @@ namespace road {
       const double b,
       const double c,
       const double d) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneBorder>(s, a, b, c, d));
   }
@@ -123,6 +128,7 @@ namespace road {
       const double s,
       const double inner,
       const double outer) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneHeight>(s, inner, outer));
   }
@@ -133,6 +139,7 @@ namespace road {
       const std::string surface,
       const double friction,
       const double roughness) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneMaterial>(s, surface, friction,
         roughness));
@@ -142,6 +149,7 @@ namespace road {
       Lane *lane,
       const double s,
       const std::string value) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneRule>(s, value));
   }
@@ -153,6 +161,7 @@ namespace road {
       const double back,
       const double left,
       const double right) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneVisibility>(s, forward, back,
         left, right));
@@ -165,6 +174,7 @@ namespace road {
       const double b,
       const double c,
       const double d) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoLaneWidth>(s, a, b, c, d));
   }
@@ -182,6 +192,7 @@ namespace road {
       const double height,
       const std::string type_name,
       const double type_width) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     RoadInfoMarkRecord::LaneChange lc;
 
@@ -210,6 +221,7 @@ namespace road {
       const double s,
       const std::string rule,
       const double width) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     auto it = MakeRoadInfoIterator<RoadInfoMarkRecord>(_temp_lane_info_container[lane]);
     for (; !it.IsAtEnd(); ++it) {
@@ -227,6 +239,7 @@ namespace road {
       const double s,
       const double max,
       const std::string /*unit*/) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(lane != nullptr);
     _temp_lane_info_container[lane].emplace_back(std::make_unique<RoadInfoSpeed>(s, max));
   }
@@ -252,6 +265,7 @@ namespace road {
         const double hOffset,
         const double pitch,
         const double roll) {
+      TRACE_SCOPE_FUNCTION("MapBuilder");
       _temp_signal_container[signal_id] = std::make_unique<Signal>(
           road->GetId(),
           signal_id,
@@ -282,7 +296,7 @@ namespace road {
         const double s_position,
         const double t_position,
         const std::string signal_reference_orientation) {
-
+      TRACE_SCOPE_FUNCTION("MapBuilder");
       const double epsilon = 0.00001;
       RELEASE_ASSERT(s_position >= 0.0);
       // Prevent s_position from being equal to the road length
@@ -299,6 +313,7 @@ namespace road {
         element::RoadInfoSignal* signal_reference,
         const LaneId from_lane,
         const LaneId to_lane) {
+      TRACE_SCOPE_FUNCTION("MapBuilder");
       signal_reference->_validities.emplace_back(LaneValidity(from_lane, to_lane));
     }
 
@@ -306,6 +321,7 @@ namespace road {
         const SignId signal_id,
         const std::string dependency_id,
         const std::string dependency_type) {
+      TRACE_SCOPE_FUNCTION("MapBuilder");
       _temp_signal_container[signal_id]->_dependencies.emplace_back(
           SignalDependency(dependency_id, dependency_type));
     }
@@ -319,7 +335,7 @@ namespace road {
         const RoadId predecessor,
         const RoadId successor)
     {
-
+      TRACE_SCOPE_FUNCTION("MapBuilder");
       // add it
       auto road = &(_map_data._roads.emplace(road_id, Road()).first->second);
 
@@ -340,6 +356,7 @@ namespace road {
       Road *road,
       const SectionId id,
       const double s) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     carla::road::LaneSection &sec = road->_lane_sections.Emplace(id, s);
     sec._road = road;
@@ -353,6 +370,7 @@ namespace road {
       const bool lane_level,
       const int32_t predecessor,
       const int32_t successor) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(section != nullptr);
 
     // add the lane
@@ -376,6 +394,7 @@ namespace road {
       const double y,
       const double hdg,
       const double length) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     const geom::Location location(static_cast<float>(x), static_cast<float>(y), 0.0f);
     auto line_geometry = std::make_unique<GeometryLine>(
@@ -394,6 +413,7 @@ namespace road {
       const std::string /*type*/,
       const double max,
       const std::string /*unit*/) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     _temp_road_info_container[road].emplace_back(std::make_unique<RoadInfoSpeed>(s, max));
   }
@@ -405,6 +425,7 @@ namespace road {
       const double b,
       const double c,
       const double d) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     _temp_road_info_container[road].emplace_back(std::make_unique<RoadInfoLaneOffset>(s, a, b, c, d));
   }
@@ -417,6 +438,7 @@ namespace road {
       const double hdg,
       const double length,
       const double curvature) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(road != nullptr);
     const geom::Location location(static_cast<float>(x), static_cast<float>(y), 0.0f);
     auto arc_geometry = std::make_unique<GeometryArc>(
@@ -439,6 +461,7 @@ namespace road {
       const double length,
       const double curvStart,
       const double curvEnd) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     //throw_exception(std::runtime_error("geometry spiral not supported"));
     DEBUG_ASSERT(road != nullptr);
     const geom::Location location(static_cast<float>(x), static_cast<float>(y), 0.0f);
@@ -465,6 +488,7 @@ namespace road {
       const double b,
       const double c,
       const double d) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     //throw_exception(std::runtime_error("geometry poly3 not supported"));
     DEBUG_ASSERT(road != nullptr);
     const geom::Location location(static_cast<float>(x), static_cast<float>(y), 0.0f);
@@ -497,6 +521,7 @@ namespace road {
       const double cV,
       const double dV,
       const std::string p_range) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     //throw_exception(std::runtime_error("geometry poly3 not supported"));
     bool arcLength;
     if(p_range == "arcLength"){
@@ -525,6 +550,7 @@ namespace road {
   }
 
   void MapBuilder::AddJunction(const int32_t id, const std::string name) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     _map_data.GetJunctions().emplace(id, Junction(id, name));
   }
 
@@ -533,6 +559,7 @@ namespace road {
       const ConId connection_id,
       const RoadId incoming_road,
       const RoadId connecting_road) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(_map_data.GetJunction(junction_id) != nullptr);
     _map_data.GetJunction(junction_id)->GetConnections().emplace(connection_id,
         Junction::Connection(connection_id, incoming_road, connecting_road));
@@ -543,6 +570,7 @@ namespace road {
       const ConId connection_id,
       const LaneId from,
       const LaneId to) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(_map_data.GetJunction(junction_id) != nullptr);
     _map_data.GetJunction(junction_id)->GetConnection(connection_id)->AddLaneLink(from, to);
   }
@@ -550,6 +578,7 @@ namespace road {
   void MapBuilder::AddJunctionController(
       const JuncId junction_id,
       std::set<road::ContId>&& controllers) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DEBUG_ASSERT(_map_data.GetJunction(junction_id) != nullptr);
     _map_data.GetJunction(junction_id)->_controllers = std::move(controllers);
   }
@@ -558,16 +587,19 @@ namespace road {
       const RoadId road_id,
       const LaneId lane_id,
       const double s) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     return &_map_data.GetRoad(road_id).GetLaneByDistance(s, lane_id);
   }
 
   Road *MapBuilder::GetRoad(
       const RoadId road_id) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     return &_map_data.GetRoad(road_id);
   }
 
   // return the pointer to a lane object
   Lane *MapBuilder::GetEdgeLanePointer(RoadId road_id, bool from_start, LaneId lane_id) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
 
     if (!_map_data.ContainsRoad(road_id)) {
       return nullptr;
@@ -593,6 +625,7 @@ namespace road {
       RoadId road_id,
       SectionId section_id,
       LaneId lane_id) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     std::vector<Lane *> result;
 
     if (!_map_data.ContainsRoad(road_id)) {
@@ -659,6 +692,7 @@ namespace road {
       JuncId junction_id,
       RoadId road_id,
       LaneId lane_id) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     std::vector<std::pair<RoadId, LaneId>> result;
 
     // get the junction
@@ -693,6 +727,7 @@ namespace road {
 
   // assign pointers to the next lanes
   void MapBuilder::CreatePointersBetweenRoadSegments(void) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     // process each lane to define its nexts
     for (auto &road : _map_data._roads) {
       for (auto &section : road.second._lane_sections) {
@@ -747,6 +782,7 @@ namespace road {
   }
 
   geom::Transform MapBuilder::ComputeSignalTransform(std::unique_ptr<Signal> &signal, MapData &data) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     DirectedPoint point = data.GetRoad(signal->_road_id).GetDirectedPointIn(signal->_s);
     point.ApplyLateralOffset(static_cast<float>(-signal->_t));
     point.location.y *= -1; // Unreal Y axis hack
@@ -759,6 +795,7 @@ namespace road {
   }
 
   void MapBuilder::SolveSignalReferencesAndTransforms() {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     for(auto signal_reference : _temp_signal_reference_container){
       signal_reference->_signal =
           _temp_signal_container[signal_reference->_signal_id].get();
@@ -775,6 +812,7 @@ namespace road {
   }
 
   void MapBuilder::SolveControllerAndJuntionReferences() {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     for(const auto& junction : _map_data._junctions) {
       for(const auto& controller : junction.second._controllers) {
         auto it = _map_data._controllers.find(controller);
@@ -789,6 +827,7 @@ namespace road {
   }
 
   void MapBuilder::CreateJunctionBoundingBoxes(Map &map) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     for (auto &junctionpair : map._data.GetJunctions()) {
       auto* junction = map.GetJunction(junctionpair.first);
       auto waypoints = map.GetJunctionWaypoints(junction->GetId(), Lane::LaneType::Any);
@@ -858,6 +897,7 @@ void MapBuilder::CreateController(
   const std::string controller_name,
   const uint32_t controller_sequence,
   const std::set<road::SignId>&& signals) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
 
     // Add the Controller to MapData
     auto controller_pair = _map_data._controllers.emplace(
@@ -882,6 +922,7 @@ void MapBuilder::CreateController(
 }
 
   void MapBuilder::ComputeJunctionRoadConflicts(Map &map) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     for (auto &junctionpair : map._data.GetJunctions()) {
       auto& junction = junctionpair.second;
       junction._road_conflicts = (map.ComputeJunctionConflicts(junction.GetId()));
@@ -889,6 +930,7 @@ void MapBuilder::CreateController(
   }
 
   void MapBuilder::GenerateDefaultValiditiesForSignalReferences() {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     for (auto * signal_reference : _temp_signal_reference_container) {
       if (signal_reference->_validities.size() == 0) {
         Road* road = GetRoad(signal_reference->GetRoadId());
@@ -956,6 +998,7 @@ void MapBuilder::CreateController(
   }
 
   void MapBuilder::CheckSignalsOnRoads(Map &map) {
+    TRACE_SCOPE_FUNCTION("MapBuilder");
     for (auto& signal_pair : map._data._signals) {
       auto& signal = signal_pair.second;
       auto signal_position = signal->GetTransform().location;

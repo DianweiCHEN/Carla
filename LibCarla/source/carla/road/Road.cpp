@@ -17,6 +17,7 @@
 #include "carla/road/Lane.h"
 #include "carla/road/MapData.h"
 #include "carla/road/Road.h"
+#include "carla/profiler/Tracer.h"
 
 #include <stdexcept>
 
@@ -64,6 +65,8 @@ namespace road {
   }
 
   const geom::CubicPolynomial &Road::GetElevationOn(const double s) const {
+    TRACE_SCOPE_FUNCTION("Road");
+
     auto info = GetInfo<element::RoadInfoElevation>(s);
     if (info == nullptr) {
       throw_exception(std::runtime_error("failed to find road elevation."));
@@ -72,6 +75,7 @@ namespace road {
   }
 
   Lane &Road::GetLaneByDistance(double s, LaneId lane_id) {
+    TRACE_SCOPE_FUNCTION("Road");
     for (auto &section : GetLaneSectionsAt(s)) {
       auto *lane = section.GetLane(lane_id);
       if (lane != nullptr) {
@@ -82,10 +86,12 @@ namespace road {
   }
 
   const Lane &Road::GetLaneByDistance(double s, LaneId lane_id) const {
+    TRACE_SCOPE_FUNCTION("Road");
     return const_cast<Road *>(this)->GetLaneByDistance(s, lane_id);
   }
 
   std::vector<Lane*> Road::GetLanesByDistance(double s) {
+    TRACE_SCOPE_FUNCTION("Road");
     std::vector<Lane*> result;
     auto lane_sections = GetLaneSectionsAt(s);
     for (auto &lane_section : lane_sections) {
@@ -97,6 +103,7 @@ namespace road {
   }
 
   std::vector<const Lane*> Road::GetLanesByDistance(double s) const {
+    TRACE_SCOPE_FUNCTION("Road");
     std::vector<const Lane*> result;
     const auto lane_sections = GetLaneSectionsAt(s);
     for (const auto &lane_section : lane_sections) {
@@ -108,16 +115,18 @@ namespace road {
   }
 
   Lane &Road::GetLaneById(SectionId section_id, LaneId lane_id) {
+    TRACE_SCOPE_FUNCTION("Road");
     return GetLaneSectionById(section_id).GetLanes().at(lane_id);
   }
 
   const Lane &Road::GetLaneById(SectionId section_id, LaneId lane_id) const {
+    TRACE_SCOPE_FUNCTION("Road");
     return const_cast<Road *>(this)->GetLaneById(section_id, lane_id);
   }
 
   // get the lane on a section next to 's'
   Lane *Road::GetNextLane(const double s, const LaneId lane_id) {
-
+    TRACE_SCOPE_FUNCTION("Road");
     auto upper = _lane_sections.upper_bound(s);
 
     while (upper != _lane_sections.end()) {
@@ -134,7 +143,7 @@ namespace road {
 
   // get the lane on a section previous to 's'
   Lane *Road::GetPrevLane(const double s, const LaneId lane_id) {
-
+    TRACE_SCOPE_FUNCTION("Road");
     auto lower = _lane_sections.lower_bound(s);
     auto rlower = std::make_reverse_iterator(lower);
 
@@ -152,6 +161,7 @@ namespace road {
 
   // get the start and end section with a lan id
   LaneSection *Road::GetStartSection(LaneId id) {
+    TRACE_SCOPE_FUNCTION("Road");
     auto it = _lane_sections.begin();
     while (it != _lane_sections.end()) {
       // check id
@@ -165,6 +175,7 @@ namespace road {
   }
 
   LaneSection *Road::GetEndSection(LaneId id) {
+    TRACE_SCOPE_FUNCTION("Road");
     auto it = _lane_sections.rbegin();
     while (it != _lane_sections.rend()) {
       // check id
@@ -178,6 +189,7 @@ namespace road {
   }
 
   element::DirectedPoint Road::GetDirectedPointIn(const double s) const {
+    TRACE_SCOPE_FUNCTION("Road");
     const auto clamped_s = geom::Math::Clamp(s, 0.0, _length);
     const auto geometry = _info.GetInfo<element::RoadInfoGeometry>(clamped_s);
 
@@ -200,6 +212,7 @@ namespace road {
   }
 
   const std::pair<double, double> Road::GetNearestPoint(const geom::Location &loc) const {
+    TRACE_SCOPE_FUNCTION("Road");
     std::pair<double, double> last = { 0.0, std::numeric_limits<double>::max() };
 
     auto geom_info_list = _info.GetInfos<element::RoadInfoGeometry>();
@@ -228,6 +241,7 @@ namespace road {
       const double s,
       const geom::Location &loc,
       uint32_t lane_type) const {
+    TRACE_SCOPE_FUNCTION("Road");
     using namespace carla::road::element;
     std::map<LaneId, const Lane *> lanes(GetLanesAt(s));
     // negative right lanes
@@ -291,6 +305,7 @@ namespace road {
   }
 
   std::map<LaneId, const Lane *> Road::GetLanesAt(const double s) const {
+    TRACE_SCOPE_FUNCTION("Road");
     std::map<LaneId, const Lane *> map;
     for (auto &&lane_section : GetLaneSectionsAt(s)) {
       for (auto &&lane : lane_section.GetLanes()) {
