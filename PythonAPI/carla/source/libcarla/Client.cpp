@@ -10,16 +10,19 @@
 #include "carla/Logging.h"
 #include "carla/rpc/ActorId.h"
 #include "carla/trafficmanager/TrafficManager.h"
+#include "carla/profiler/Tracer.h"
 
 #include <thread>
 
 #include <boost/python/stl_iterator.hpp>
 
 static void SetTimeout(carla::client::Client &client, double seconds) {
+  TRACE_SCOPE_FUNCTION("Client");
   client.SetTimeout(TimeDurationFromSeconds(seconds));
 }
 
 static auto GetAvailableMaps(const carla::client::Client &self) {
+  TRACE_SCOPE_FUNCTION("Client");
   carla::PythonUtil::ReleaseGIL unlock;
   boost::python::list result;
   for (const auto &str : self.GetAvailableMaps()) {
@@ -32,6 +35,7 @@ static void ApplyBatchCommands(
     const carla::client::Client &self,
     const boost::python::object &commands,
     bool do_tick) {
+  TRACE_SCOPE_FUNCTION("Client");
   using CommandType = carla::rpc::Command;
   std::vector<CommandType> cmds{
     boost::python::stl_input_iterator<CommandType>(commands),
@@ -43,6 +47,8 @@ static auto ApplyBatchCommandsSync(
     const carla::client::Client &self,
     const boost::python::object &commands,
     bool do_tick) {
+
+  TRACE_SCOPE_FUNCTION("Client");
 
   using CommandType = carla::rpc::Command;
   std::vector<CommandType> cmds {
@@ -69,6 +75,8 @@ static auto ApplyBatchCommandsSync(
   vehicles_to_disable_index.store(0);
 
   auto ProcessCommand = [&](size_t min_index, size_t max_index) {
+    TRACE_SCOPE("ApplyBatchCommandsSync Process", "Client");
+
     for (size_t i = min_index; i < max_index; ++i) {
       if (!responses[i].HasError()) {
 
@@ -155,6 +163,7 @@ static auto ApplyBatchCommandsSync(
   return result;
 }
 
+
 void export_client() {
   using namespace boost::python;
   namespace cc = carla::client;
@@ -192,5 +201,10 @@ void export_client() {
     .def("apply_batch", &ApplyBatchCommands, (arg("commands"), arg("do_tick")=false))
     .def("apply_batch_sync", &ApplyBatchCommandsSync, (arg("commands"), arg("do_tick")=false))
     .def("get_trafficmanager", CONST_CALL_WITHOUT_GIL_1(cc::Client, GetInstanceTM, uint16_t), (arg("port")=TM_DEFAULT_PORT))
+
+    .def("start_tracing",&cc::Client::StartTracing)
+    .def("flush_tracing",&cc::Client::FlushTracing)
+    .def("stop_tracing",&cc::Client::StopTracing)
+
   ;
 }

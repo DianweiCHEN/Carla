@@ -10,6 +10,7 @@
 #include "carla/client/World.h"
 #include "carla/PythonUtil.h"
 #include "carla/trafficmanager/TrafficManager.h"
+#include "carla/profiler/Tracer.h"
 
 namespace carla {
 namespace client {
@@ -33,99 +34,134 @@ namespace client {
     /// Set a timeout for networking operations. If set, any networking
     /// operation taking longer than @a timeout throws rpc::timeout.
     void SetTimeout(time_duration timeout) {
+      TRACE_SCOPE_FUNCTION("Client");
       _simulator->SetNetworkingTimeout(timeout);
     }
 
     time_duration GetTimeout() {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->GetNetworkingTimeout();
     }
 
     /// Return the version string of this client API.
     std::string GetClientVersion() const {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->GetClientVersion();
     }
 
     /// Return the version string of the simulator we are connected to.
     std::string GetServerVersion() const {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->GetServerVersion();
     }
 
     std::vector<std::string> GetAvailableMaps() const {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->GetAvailableMaps();
     }
 
     World ReloadWorld() const {
+      TRACE_SCOPE_FUNCTION("Client");
       return World{_simulator->ReloadEpisode()};
     }
 
     World LoadWorld(std::string map_name) const {
+      TRACE_SCOPE_FUNCTION("Client");
       return World{_simulator->LoadEpisode(std::move(map_name))};
     }
 
     World GenerateOpenDriveWorld(
         std::string opendrive,
         const rpc::OpendriveGenerationParameters & params) const {
+      TRACE_SCOPE_FUNCTION("Client");
       return World{_simulator->LoadOpenDriveEpisode(
           std::move(opendrive), params)};
     }
 
     /// Return an instance of the world currently active in the simulator.
     World GetWorld() const {
+      TRACE_SCOPE_FUNCTION("Client");
       return World{_simulator->GetCurrentEpisode()};
     }
 
     /// Return an instance of the TrafficManager currently active in the simulator.
     TrafficManager GetInstanceTM(uint16_t port = TM_DEFAULT_PORT) const {
+      TRACE_SCOPE_FUNCTION("Client");
       return TrafficManager(_simulator->GetCurrentEpisode(), port);
     }
 
     /// Return an instance of the Episode currently active in the simulator.
     carla::client::detail::EpisodeProxy GetCurrentEpisode() const {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->GetCurrentEpisode();
     }
 
     std::string StartRecorder(std::string name) {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->StartRecorder(name);
     }
 
     void StopRecorder(void) {
+      TRACE_SCOPE_FUNCTION("Client");
       _simulator->StopRecorder();
     }
 
     std::string ShowRecorderFileInfo(std::string name, bool show_all) {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->ShowRecorderFileInfo(name, show_all);
     }
 
     std::string ShowRecorderCollisions(std::string name, char type1, char type2) {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->ShowRecorderCollisions(name, type1, type2);
     }
 
     std::string ShowRecorderActorsBlocked(std::string name, double min_time, double min_distance) {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->ShowRecorderActorsBlocked(name, min_time, min_distance);
     }
 
     std::string ReplayFile(std::string name, double start, double duration, uint32_t follow_id) {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->ReplayFile(name, start, duration, follow_id);
     }
 
     void SetReplayerTimeFactor(double time_factor) {
+      TRACE_SCOPE_FUNCTION("Client");
       _simulator->SetReplayerTimeFactor(time_factor);
     }
 
     void SetReplayerIgnoreHero(bool ignore_hero) {
+      TRACE_SCOPE_FUNCTION("Client");
       _simulator->SetReplayerIgnoreHero(ignore_hero);
     }
 
     void ApplyBatch(
         std::vector<rpc::Command> commands,
         bool do_tick_cue = false) const {
+          TRACE_SCOPE_FUNCTION("Client");
       _simulator->ApplyBatch(std::move(commands), do_tick_cue);
     }
 
     std::vector<rpc::CommandResponse> ApplyBatchSync(
         std::vector<rpc::Command> commands,
         bool do_tick_cue = false) const {
+      TRACE_SCOPE_FUNCTION("Client");
       return _simulator->ApplyBatchSync(std::move(commands), do_tick_cue);
+    }
+
+    void StartTracing() {
+      TRACE_INIT();
+      TRACE_PROCESS_NAME("Carla");
+      TRACE_THREAD_NAME("Main Thread");
+    }
+
+    void FlushTracing() {
+      TRACE_FLUSH();
+    }
+
+    void StopTracing() {
+      TRACE_SHUTDOWN();
     }
 
   private:
