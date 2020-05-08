@@ -116,6 +116,11 @@ public:
     file.close();
   }
 
+  void Shutdown() {
+    Flush();
+    _events.clear();
+  }
+
   void AddEvent(const char *name, const char *category, char event_type) {
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -238,8 +243,9 @@ struct ScopedEvent {
 
 #if TRACE_ENABLE
 
-#define TRACE_INIT() carla::profiler::detail::Tracer::GetInstance(); // carla::profiler::detail::InitTracer();// carla::profiler::detail::Tracer::GetInstance();
-#define TRACE_SHUTDOWN() carla::profiler::detail::Tracer::GetInstance().Flush();
+#define TRACE_INIT() carla::profiler::detail::Tracer::GetInstance();
+#define TRACE_FLUSH() carla::profiler::detail::Tracer::GetInstance().Flush();
+#define TRACE_SHUTDOWN() carla::profiler::detail::Tracer::GetInstance().Shutdown();
 #define TRACE_PROCESS_NAME(name) carla::profiler::detail::Tracer::GetInstance().AddMetaDataEvent(name, "process_name");
 #define TRACE_THREAD_NAME(name) carla::profiler::detail::Tracer::GetInstance().AddMetaDataEvent(name, "thread_name");
 #define TRACE_BEGIN(name, category) carla::profiler::detail::Tracer::GetInstance().AddEvent(name, category, 'B');
