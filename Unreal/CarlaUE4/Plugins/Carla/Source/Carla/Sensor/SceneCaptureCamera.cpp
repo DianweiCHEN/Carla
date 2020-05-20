@@ -18,12 +18,56 @@ FActorDefinition ASceneCaptureCamera::GetSensorDefinition()
 ASceneCaptureCamera::ASceneCaptureCamera(const FObjectInitializer &ObjectInitializer)
   : Super(ObjectInitializer)
 {
+  PrimaryActorTick.bCanEverTick = false;
+
   AddPostProcessingMaterial(
       TEXT("Material'/Carla/PostProcessingMaterials/PhysicLensDistortion.PhysicLensDistortion'"));
 }
 
+void ASceneCaptureCamera::BeginPlay()
+{
+  Super::BeginPlay();
+
+  CreateTextures();
+  // OnEndFrame_GameThread
+  FCoreDelegates::OnEndFrame.AddUObject(this, &ASceneCaptureCamera::Capture);
+}
+/*
 void ASceneCaptureCamera::Tick(float DeltaTime)
 {
   Super::Tick(DeltaTime);
+
   FPixelReader::SendPixelsInRenderThread(*this);
 }
+ */
+
+void ASceneCaptureCamera::CreateTextures()
+{
+
+  if (!ReadbackTexture)
+  {
+    ASceneCaptureCamera* This = this;
+    ENQUEUE_RENDER_COMMAND(MediaOutputCaptureFrameCreateTexture)(
+      [This](FRHICommandListImmediate& RHICmdList)
+      {
+        FRHIResourceCreateInfo CreateInfo;
+        This->ReadbackTexture = RHICreateTexture2D(
+          This->GetImageWidth(),
+          This->GetImageHeight(),
+          PF_B8G8R8A8,
+          1,
+          1,
+          TexCreate_CPUReadback,
+          CreateInfo
+        );
+      }
+    );
+  }
+}
+
+void ASceneCaptureCamera::Capture()
+{
+  FPixelReader::SendPixelsInRenderThread(*this, ReadbackTexture);
+}
+
+

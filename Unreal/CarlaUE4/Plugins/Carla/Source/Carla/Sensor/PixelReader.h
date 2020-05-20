@@ -15,6 +15,8 @@
 #include <carla/sensor/SensorRegistry.h>
 #include <compiler/enable-ue4-macros.h>
 
+#include "RHIResources.h"
+
 // =============================================================================
 // -- FPixelReader -------------------------------------------------------------
 // =============================================================================
@@ -62,7 +64,7 @@ public:
   ///
   /// @pre To be called from game-thread.
   template <typename TSensor>
-  static void SendPixelsInRenderThread(TSensor &Sensor);
+  static void SendPixelsInRenderThread(TSensor &Sensor, FTexture2DRHIRef ReadbackTexture = nullptr);
 
 private:
 
@@ -73,7 +75,8 @@ private:
       UTextureRenderTarget2D &RenderTarget,
       carla::Buffer &Buffer,
       uint32 Offset,
-      FRHICommandListImmediate &InRHICmdList);
+      FRHICommandListImmediate &InRHICmdList,
+      FTexture2DRHIRef ReadbackTexture);
 
 };
 
@@ -82,7 +85,7 @@ private:
 // =============================================================================
 
 template <typename TSensor>
-void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
+void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, FTexture2DRHIRef ReadbackTexture)
 {
   check(Sensor.CaptureRenderTarget != nullptr);
 
@@ -91,7 +94,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
   // game-thread.
   ENQUEUE_RENDER_COMMAND(FWritePixels_SendPixelsInRenderThread)
   (
-    [&Sensor, Stream=Sensor.GetDataStream(Sensor)](auto &InRHICmdList) mutable
+    [&Sensor, &ReadbackTexture, Stream=Sensor.GetDataStream(Sensor)](auto &InRHICmdList) mutable
     {
       /// @todo Can we make sure the sensor is not going to be destroyed?
       if (!Sensor.IsPendingKill())
@@ -101,7 +104,8 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
             *Sensor.CaptureRenderTarget,
             Buffer,
             carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
-            InRHICmdList);
+            InRHICmdList,
+            ReadbackTexture);
 
         {
           SCOPE_CYCLE_COUNTER(STAT_CaptureCameraStreamSend);

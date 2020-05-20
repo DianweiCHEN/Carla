@@ -11,6 +11,8 @@
 #include "HighResScreenshot.h"
 #include "Runtime/ImageWriteQueue/Public/ImageWriteQueue.h"
 
+#include "RenderTargetPool.h"
+
 // For now we only support Vulkan on Windows.
 #if PLATFORM_WINDOWS
 #  define CARLA_WITH_VULKAN_SUPPORT 1
@@ -49,34 +51,81 @@ static void WritePixelsToBuffer_Vulkan(
     const UTextureRenderTarget2D &RenderTarget,
     carla::Buffer &Buffer,
     uint32 Offset,
-    FRHICommandListImmediate &InRHICmdList)
+    FRHICommandListImmediate &InRHICmdList,
+    FTexture2DRHIRef ReadbackTexture)
 {
   check(IsInRenderingThread());
-  auto RenderResource =
-      static_cast<const FTextureRenderTarget2DResource *>(RenderTarget.Resource);
-  FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
-  if (!Texture)
-  {
-    UE_LOG(LogCarla, Error, TEXT("FPixelReader: UTextureRenderTarget2D missing render target texture"));
-    return;
-  }
+// FFrameGrabber g;
+// MediaCapture m;
+  //RHICmdList.EnqueueLambda([&](FRHICommandListImmediate &InRHICmdList)
+  //{
+    auto RenderResource =
+        static_cast<const FTextureRenderTarget2DResource *>(RenderTarget.Resource);
 
-  // NS: Extra copy here, don't know how to avoid it.
-  TArray<FColor> Pixels;
-  {
-    SCOPE_CYCLE_COUNTER(STAT_CaptureCameraReadRT);
+    FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
+    if (!Texture)
+    {
+      UE_LOG(LogCarla, Error, TEXT("FPixelReader: UTextureRenderTarget2D missing render target texture"));
+      return;
+    }
 
-    InRHICmdList.ReadSurfaceData(
-      Texture,
-      FIntRect(0, 0, RenderResource->GetSizeXY().X, RenderResource->GetSizeXY().Y),
-      Pixels,
-      FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
+    FIntPoint Rect = RenderResource->GetSizeXY();
 
-  }
-  {
-    SCOPE_CYCLE_COUNTER(STAT_CaptureCameraBufferCopy);
-    Buffer.copy_from(Offset, Pixels);
-  }
+    FPooledRenderTargetDesc OutputDesc = FPooledRenderTargetDesc::Create2DDesc(
+      Rect,
+      PF_B8G8R8A8,
+      FClearValueBinding::None,
+      TexCreate_None,
+      TexCreate_RenderTargetable,
+      false);
+    TRefCountPtr<IPooledRenderTarget> ResampleTexturePooledRenderTarget;
+    GRenderTargetPool.FindFreeElement(InRHICmdList, OutputDesc, ResampleTexturePooledRenderTarget, TEXT("SceneCaptureSensor"));
+    const FSceneRenderTargetItem& DestRenderTarget = ResampleTexturePooledRenderTarget->GetRenderTargetItem();
+
+    FResolveParams ResolveParams;
+    ResolveParams.Rect = FResolveRect(0, 0, Rect.X, Rect.Y);
+    ResolveParams.DestRect = FResolveRect(0, 0, Rect.X, Rect.Y);
+
+
+    // NS: Extra copy here, don't know how to avoid it.
+    TArray<FColor> Pixels;
+    {
+      SCOPE_CYCLE_COUNTER(STAT_CaptureCameraReadRT);
+
+/*
+      InRHICmdList.ReadSurfaceData(
+        Texture,
+        FIntRect(0, 0, Rect.X, Rect.Y),
+        Pixels,
+        FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
+*/
+
+
+    // Asynchronously copy target from GPU to GPU
+    //void* Pixels = nullptr;
+
+
+      InRHICmdList.CopyToResolveTarget(Texture, DestRenderTarget.TargetableTexture, ResolveParams);
+
+
+      check(ReadbackTexture.IsValid());
+
+      int32 Width = 0, Height = 0;
+      void* OutData = (void*)Pixels.GetData();
+      InRHICmdList.MapStagingSurface(ReadbackTexture, OutData, Width, Height);
+    }
+
+    {
+      SCOPE_CYCLE_COUNTER(STAT_CaptureCameraBufferCopy);
+      Buffer.copy_from(Offset, Pixels);
+    }
+
+    {
+      InRHICmdList.UnmapStagingSurface(ReadbackTexture);
+    }
+
+  //});
+  //RHICmdList.RHIThreadFence(true);
 }
 
 #endif // CARLA_WITH_VULKAN_SUPPORT
@@ -145,14 +194,15 @@ void FPixelReader::WritePixelsToBuffer(
 #if CARLA_WITH_VULKAN_SUPPORT == 1
     InRHICmdList
 #endif // CARLA_WITH_VULKAN_SUPPORT
-    )
+    , FTexture2DRHIRef ReadbackTexture
+  )
 {
   check(IsInRenderingThread());
 
 #if CARLA_WITH_VULKAN_SUPPORT == 1
   if (IsVulkanPlatform(GMaxRHIShaderPlatform))
   {
-    WritePixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList);
+    WritePixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList, ReadbackTexture);
     return;
   }
 #endif // CARLA_WITH_VULKAN_SUPPORT

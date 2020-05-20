@@ -24,7 +24,19 @@ public:
 
   ASceneCaptureCamera(const FObjectInitializer &ObjectInitializer);
 
+  void BeginPlay() override;
+
+/*
 protected:
 
   void Tick(float DeltaTime) override;
+*/
+
+private:
+
+  void CreateTextures();
+  void Capture();
+
+  FTexture2DRHIRef ReadbackTexture;
+
 };
