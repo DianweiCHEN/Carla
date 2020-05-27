@@ -39,6 +39,7 @@ void ALSM::Update() {
   ActorList world_actors = world.GetActors();
   ActorList world_vehicles = world_actors->Filter("vehicle.*");
   ActorList world_pedestrians = world_actors->Filter("walker.*");
+  rpc::VehicleLightStateList vehicles_light_states = world->GetVehiclesLightStates();
 
   // Scanning for new unregistered vehicles.
   for (auto iter = world_vehicles->begin(); iter != world_vehicles->end(); ++iter) {
@@ -198,17 +199,19 @@ void ALSM::Update() {
 
     // Updated traffic light state object.
     TrafficLightState tl_state = {vehicle_ptr->GetTrafficLightState(), vehicle_ptr->IsAtTrafficLight()};
+    VLS vl_state = vehicle_ptr->GetVehicleLightState();
 
     // Update simulation state.
     if (simulation_state.ContainsActor(actor_id)) {
       simulation_state.UpdateKinematicState(actor_id, kinematic_state);
       simulation_state.UpdateTrafficLightState(actor_id, tl_state);
+      simulation_state.UpdateVehicleLightState(actor_id, vl_state);
     }
     else {
       cg::Vector3D dimensions = vehicle_ptr->GetBoundingBox().extent;
       StaticAttributes attributes{ActorType::Vehicle, dimensions.x, dimensions.y, dimensions.z};
 
-      simulation_state.AddActor(actor_id, kinematic_state, attributes, tl_state);
+      simulation_state.AddActor(actor_id, kinematic_state, attributes, tl_state, vl_state);
     }
 
     // Updating idle time when necessary.
@@ -236,6 +239,8 @@ void ALSM::Update() {
 
     TrafficLightState tl_state;
 
+    VLS vl_state;
+
     const std::string type_id = actor_ptr->GetTypeId();
     ActorType actor_type = ActorType::Any;
     cg::Vector3D dimensions;
@@ -245,15 +250,18 @@ void ALSM::Update() {
 
       tl_state = {vehicle_ptr->GetTrafficLightState(), vehicle_ptr->IsAtTrafficLight()};
 
+      vl_state = vehicle_ptr->GetVehicleLightState();
+
       if (!simulation_state.ContainsActor(actor_id)) {
         dimensions = vehicle_ptr->GetBoundingBox().extent;
         actor_type = ActorType::Vehicle;
         StaticAttributes attributes {actor_type, dimensions.x, dimensions.y, dimensions.z};
 
-        simulation_state.AddActor(actor_id, kinematic_state, attributes, tl_state);
+        simulation_state.AddActor(actor_id, kinematic_state, attributes, tl_state, vl_state);
       } else {
         simulation_state.UpdateKinematicState(actor_id, kinematic_state);
         simulation_state.UpdateTrafficLightState(actor_id, tl_state);
+        simulation_state.UpdateVehicleLightState(actor_id, vl_state);
       }
     }
     else if (type_id.front() == 'w') {

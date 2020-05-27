@@ -14,6 +14,7 @@
 #include "carla/Memory.h"
 #include "carla/rpc/ActorId.h"
 #include "carla/rpc/TrafficLightState.h"
+#include "carla/rpc/VehicleLightState.h"
 #include "boost/pointer_cast.hpp"
 
 #include "carla/trafficmanager/AtomicActorSet.h"

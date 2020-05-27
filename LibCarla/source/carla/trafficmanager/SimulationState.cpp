@@ -9,11 +9,13 @@ SimulationState::SimulationState() {}
 void SimulationState::AddActor(ActorId actor_id,
                                KinematicState kinematic_state,
                                StaticAttributes attributes,
-                               TrafficLightState tl_state) {
+                               TrafficLightState tl_state
+                               VLS vl_state) {
   actor_set.insert(actor_id);
   kinematic_state_map.insert({actor_id, kinematic_state});
   static_attribute_map.insert({actor_id, attributes});
   tl_state_map.insert({actor_id, tl_state});
+  vl_state_map.insert({actor_id, vl_state});
 }
 
 bool SimulationState::ContainsActor(ActorId actor_id) const {
@@ -25,6 +27,7 @@ void SimulationState::RemoveActor(ActorId actor_id) {
   kinematic_state_map.erase(actor_id);
   static_attribute_map.erase(actor_id);
   tl_state_map.erase(actor_id);
+  vl_state_map.erase(actor_id);
 }
 
 void SimulationState::Reset() {
@@ -32,6 +35,7 @@ void SimulationState::Reset() {
   kinematic_state_map.clear();
   static_attribute_map.clear();
   tl_state_map.clear();
+  vl_state_map.clear();
 }
 
 void SimulationState::UpdateKinematicState(ActorId actor_id, KinematicState state) {
@@ -40,6 +44,10 @@ void SimulationState::UpdateKinematicState(ActorId actor_id, KinematicState stat
 
 void SimulationState::UpdateTrafficLightState(ActorId actor_id, TrafficLightState state) {
   tl_state_map.at(actor_id) = state;
+}
+
+void SimulationState::UpdateVehicleLightState(ActorId actor_id, VLS state) {
+  vl_state_map.at(actor_id) = state;
 }
 
 cg::Location SimulationState::GetLocation(ActorId actor_id) const {
@@ -68,6 +76,10 @@ bool SimulationState::IsPhysicsEnabled(ActorId actor_id) const {
 
 TrafficLightState SimulationState::GetTLS(ActorId actor_id) const {
   return tl_state_map.at(actor_id);
+}
+
+VLS SimulationState::GetVLS(ActorId actor_id) const {
+  return vl_state_map.at(actor_id);
 }
 
 ActorType SimulationState::GetType(ActorId actor_id) const {

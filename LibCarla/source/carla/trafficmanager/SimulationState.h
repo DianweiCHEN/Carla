@@ -26,6 +26,9 @@ private:
   StaticAttributeMap static_attribute_map;
   // Structure containing dynamic traffic light related state of actors.
   TrafficLightStateMap tl_state_map;
+  // Structure containing dynamic vehicle light related state of actors.
+  TrafficLightStateMap vl_state_map;
+
 
 public :
   SimulationState(/* args */);
@@ -34,7 +37,8 @@ public :
   void AddActor(ActorId actor_id,
                 KinematicState kinematic_state,
                 StaticAttributes attributes,
-                TrafficLightState tl_state);
+                TrafficLightState tl_state,
+                VLS vl_state);
 
   // Method to verify if an actor is present currently present in the simulation state.
   bool ContainsActor(ActorId actor_id) const;
@@ -62,6 +66,8 @@ public :
   bool IsPhysicsEnabled(const ActorId actor_id) const;
 
   TrafficLightState GetTLS(const ActorId actor_id) const;
+
+  VLS GetVLS(const ActorId actor_id) const;
 
   ActorType GetType(const ActorId actor_id) const;
 

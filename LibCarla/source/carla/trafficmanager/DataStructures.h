@@ -34,6 +34,7 @@ using BufferMap = std::unordered_map<carla::ActorId, Buffer>;
 using BufferMapPtr = std::shared_ptr<BufferMap>;
 using TimeInstance = chr::time_point<chr::system_clock, chr::nanoseconds>;
 using TLS = carla::rpc::TrafficLightState;
+using VLS = carla::rpc::VehicleLightState;
 
 struct KinematicState {
   bool physics_enabled;

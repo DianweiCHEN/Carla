@@ -223,6 +223,16 @@ void MotionPlanStage::Update(const unsigned long index) {
     }
   }
 
+  // Set the Vehicle Lights accordingly
+  if (vehicle_lights_enabled)
+    VLS current_lights = simulation_state.GetVLS(actor_id);
+      if (actuation_signal.brake > 0.0f) {
+        current_lights = current_lights | carla::rpc::VehicleLightState::LightState::Brake
+      } else {
+        current_lights = current_lights & (carla::rpc::VehicleLightState::LightState::All ^ carla::rpc::VehicleLightState::LightState::Brake)
+      }
+
+
   // Updating PID state.
   StateEntry &state = pid_state_map.at(actor_id);
   state = current_state;
