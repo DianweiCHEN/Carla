@@ -26,6 +26,8 @@ public:
 
   void BeginPlay() override;
 
+  void EndPlay (const EEndPlayReason::Type EndPlayReason) override;
+
 /*
 protected:
 
@@ -34,9 +36,19 @@ protected:
 
 private:
 
-  void CreateTextures();
+  void CreateTextures(); // TODO: change name for initialize or something similar
   void Capture();
+  void EnqueueCopy(FRHICommandListImmediate& RHICmdList);
 
-  FTexture2DRHIRef ReadbackTexture;
+  bool IsReady() {
+    return !GPUFence || GPUFence->Poll();
+  }
+
+
+  FTexture2DRHIRef ReadbackTexture[MaxNumTextures];
+  FGPUFenceRHIRef GPUFence;
+  FResolveParams ResolveParams;
+
+  TArray<FColor> Pixels[MaxNumTextures];
 
 };
