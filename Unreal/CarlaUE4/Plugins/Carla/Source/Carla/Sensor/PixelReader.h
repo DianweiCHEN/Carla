@@ -15,8 +15,6 @@
 #include <carla/sensor/SensorRegistry.h>
 #include <compiler/enable-ue4-macros.h>
 
-#include "RHIResources.h"
-
 // =============================================================================
 // -- FPixelReader -------------------------------------------------------------
 // =============================================================================
@@ -64,7 +62,7 @@ public:
   ///
   /// @pre To be called from game-thread.
   template <typename TSensor>
-  static void SendPixelsInRenderThread(TSensor &Sensor, FTexture2DRHIRef ReadbackTexture = nullptr);
+  static void SendPixelsInRenderThread(TSensor &Sensor);
 
 private:
 
@@ -75,8 +73,7 @@ private:
       UTextureRenderTarget2D &RenderTarget,
       carla::Buffer &Buffer,
       uint32 Offset,
-      FRHICommandListImmediate &InRHICmdList,
-      FTexture2DRHIRef ReadbackTexture);
+      FRHICommandListImmediate &InRHICmdList);
 
 };
 
@@ -85,7 +82,7 @@ private:
 // =============================================================================
 
 template <typename TSensor>
-void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, FTexture2DRHIRef ReadbackTexture)
+void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
 {
   check(Sensor.CaptureRenderTarget != nullptr);
 
@@ -94,7 +91,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, FTexture2DRHIRef Re
   // game-thread.
   ENQUEUE_RENDER_COMMAND(FWritePixels_SendPixelsInRenderThread)
   (
-    [&Sensor, &ReadbackTexture, Stream=Sensor.GetDataStream(Sensor)](auto &InRHICmdList) mutable
+    [&Sensor, Stream=Sensor.GetDataStream(Sensor)](auto &InRHICmdList) mutable
     {
       /// @todo Can we make sure the sensor is not going to be destroyed?
       if (!Sensor.IsPendingKill())
@@ -104,13 +101,8 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, FTexture2DRHIRef Re
             *Sensor.CaptureRenderTarget,
             Buffer,
             carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
-            InRHICmdList,
-            ReadbackTexture);
-
-        {
-          SCOPE_CYCLE_COUNTER(STAT_CaptureCameraStreamSend);
-          Stream.Send(Sensor, std::move(Buffer));
-        }
+            InRHICmdList);
+        Stream.Send(Sensor, std::move(Buffer));
       }
     }
   );
