@@ -22,33 +22,26 @@ public:
 
   static FActorDefinition GetSensorDefinition();
 
+  ASceneCaptureCamera();
+
   ASceneCaptureCamera(const FObjectInitializer &ObjectInitializer);
 
   void BeginPlay() override;
 
   void EndPlay (const EEndPlayReason::Type EndPlayReason) override;
 
-/*
-protected:
-
-  void Tick(float DeltaTime) override;
-*/
-
 private:
 
-  void CreateTextures(); // TODO: change name for initialize or something similar
   void Capture();
-  void EnqueueCopy(FRHICommandListImmediate& RHICmdList);
 
-  bool IsReady() {
-    return !GPUFence || GPUFence->Poll();
-  }
+  void CopyTexture(FRHICommandListImmediate& RHICmdList, carla::Buffer& Buffer);
 
+  FDelegateHandle CaptureDelegate;
 
-  FTexture2DRHIRef ReadbackTexture[MaxNumTextures];
-  FGPUFenceRHIRef GPUFence;
-  FResolveParams ResolveParams;
+  static TArray<ASceneCaptureCamera*> CameraSensors;
+  TArray<FColor> Pixels;
 
-  TArray<FColor> Pixels[MaxNumTextures];
-
+  static int32 NumCameras;
+  int32 CurrentTexture = 0;
+  int32 PreviousTexture = 0;
 };

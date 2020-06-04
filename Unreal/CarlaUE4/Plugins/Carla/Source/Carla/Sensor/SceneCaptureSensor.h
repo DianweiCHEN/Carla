@@ -267,7 +267,7 @@ protected:
 
   virtual void SetUpSceneCaptureComponent(USceneCaptureComponent2D &SceneCapture) {}
 
-private:
+protected:
 
   /// Image width in pixels.
   UPROPERTY(EditAnywhere)
