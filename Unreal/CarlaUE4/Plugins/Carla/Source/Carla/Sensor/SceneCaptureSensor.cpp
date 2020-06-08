@@ -43,6 +43,9 @@ namespace SceneCaptureSensor_local_ns {
 // -- ASceneCaptureSensor ------------------------------------------------------
 // =============================================================================
 
+TArray<ASceneCaptureSensor*> ASceneCaptureSensor::CaptureSensors = {};
+int32 ASceneCaptureSensor::NumCaptureSensors = 0;
+
 ASceneCaptureSensor::ASceneCaptureSensor(const FObjectInitializer &ObjectInitializer)
   : Super(ObjectInitializer)
 {
@@ -462,6 +465,15 @@ void ASceneCaptureSensor::BeginPlay()
       bEnablePostProcessingEffects);
 
   Super::BeginPlay();
+
+  CaptureSensors.Add(this);
+
+  for(int32 i = 0; i < MaxNumTextures; i++)
+  {
+    Pixels[i].Reserve(ImageWidth * ImageHeight);
+  }
+
+  CaptureDelegate = FCoreDelegates::OnEndFrame.AddUObject(this, &ASceneCaptureCamera::Capture);
 }
 
 void ASceneCaptureSensor::Tick(float DeltaTime)
@@ -473,13 +485,88 @@ void ASceneCaptureSensor::Tick(float DeltaTime)
       CaptureComponent2D->GetComponentLocation(),
       ImageWidth,
       ImageWidth / FMath::Tan(CaptureComponent2D->FOVAngle));
+
+  PreviousTexture = CurrentTexture;
+  CurrentTexture = (CurrentTexture + 1) & ~MaxNumTextures;
 }
 
 void ASceneCaptureSensor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
   Super::EndPlay(EndPlayReason);
   SCENE_CAPTURE_COUNTER = 0u;
+
+  CaptureSensors.Remove(this);
+
+  FCoreDelegates::OnEndFrame.Remove(CaptureDelegate);
 }
+
+void ASceneCaptureSensor::Capture()
+{
+
+  check(CaptureRenderTarget != nullptr);
+
+  ASceneCaptureSensor* This = this;
+  ENQUEUE_RENDER_COMMAND(ASceneCaptureSensor_SendPixelsInRenderThread)
+  (
+    [This, Sensors=CaptureSensors](FRHICommandListImmediate& RHICmdList) mutable
+    {
+
+      NumCaptureSensors++;
+
+      if( NumCaptureSensors < Sensors.Num() )
+      {
+        return;
+      }
+
+      for(ASceneCaptureSensor* Camera : Sensors)
+      {
+        if (Camera && Camera-> HasActorBegunPlay() && !Camera->IsPendingKill())
+        {
+          SCOPE_CYCLE_COUNTER(STAT_CarlaSensorReadRT);
+
+          ASceneCaptureSensor& CameraRef = *Camera;
+          FPixelReader::WritePixelsToArray(
+            *(CameraRef.CaptureRenderTarget),
+            CameraRef.Pixels[CameraRef.PreviousTexture],
+            RHICmdList);
+
+        }
+      }
+      NumCaptureSensors=0;
+    }
+  );
+}
+
+/*
+void ASceneCaptureSensor::CopyTexture(FRHICommandListImmediate& RHICmdList, carla::Buffer& Buffer)
+{
+  auto RenderResource = static_cast<const FTextureRenderTarget2DResource *>(CaptureRenderTarget->Resource);
+  FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
+  if (!Texture)
+  {
+    UE_LOG(LogCarla, Error, TEXT("ASceneCaptureSensor::Capture: UTextureRenderTarget2D missing render target texture"));
+    return;
+  }
+
+  TArray<FColor>& PixelsData = Pixels;
+
+  FIntPoint Rect = Texture->GetSizeXY();
+  {
+    SCOPE_CYCLE_COUNTER(STAT_CarlaSensorReadRT);
+    RHICmdList.ReadSurfaceData(
+      Texture,
+      FIntRect(0, 0, Rect.X, Rect.Y),
+      PixelsData,
+      FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
+  }
+
+  {
+    SCOPE_CYCLE_COUNTER(STAT_CarlaSensorBufferCopy);
+    Buffer.copy_from(Offset, PixelsData);
+  }
+
+}
+*/
 
 // =============================================================================
 // -- Local static functions implementations -----------------------------------

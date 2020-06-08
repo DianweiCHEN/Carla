@@ -22,26 +22,10 @@ public:
 
   static FActorDefinition GetSensorDefinition();
 
-  ASceneCaptureCamera();
-
   ASceneCaptureCamera(const FObjectInitializer &ObjectInitializer);
 
-  void BeginPlay() override;
+protected:
 
-  void EndPlay (const EEndPlayReason::Type EndPlayReason) override;
+  void Tick(float DeltaTime) override;
 
-private:
-
-  void Capture();
-
-  void CopyTexture(FRHICommandListImmediate& RHICmdList, carla::Buffer& Buffer);
-
-  FDelegateHandle CaptureDelegate;
-
-  static TArray<ASceneCaptureCamera*> CameraSensors;
-  TArray<FColor> Pixels;
-
-  static int32 NumCameras;
-  int32 CurrentTexture = 0;
-  int32 PreviousTexture = 0;
 };

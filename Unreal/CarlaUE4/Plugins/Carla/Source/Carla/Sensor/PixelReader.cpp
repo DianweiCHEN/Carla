@@ -61,15 +61,40 @@ static void WritePixelsToBuffer_Vulkan(
     return;
   }
 
+  FIntPoint Rect = RenderResource->GetSizeXY();
   // NS: Extra copy here, don't know how to avoid it.
   TArray<FColor> Pixels;
   InRHICmdList.ReadSurfaceData(
       Texture,
-      FIntRect(0, 0, RenderResource->GetSizeXY().X, RenderResource->GetSizeXY().Y),
+      FIntRect(0, 0, Rect.X, Rect.Y),
       Pixels,
       FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
 
   Buffer.copy_from(Offset, Pixels);
+}
+
+static void WritePixelsToArray_Vulkan(
+    const UTextureRenderTarget2D &RenderTarget,
+    TArray<FColor>& Pixels,
+    FRHICommandListImmediate &InRHICmdList)
+{
+  check(IsInRenderingThread());
+  auto RenderResource =
+      static_cast<const FTextureRenderTarget2DResource *>(RenderTarget.Resource);
+  FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
+  if (!Texture)
+  {
+    UE_LOG(LogCarla, Error, TEXT("FPixelReader: UTextureRenderTarget2D missing render target texture"));
+    return;
+  }
+
+  FIntPoint Rect = RenderResource->GetSizeXY();
+
+  InRHICmdList.ReadSurfaceData(
+      Texture,
+      FIntRect(0, 0, Rect.X, Rect.Y),
+      Pixels,
+      FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
 }
 
 #endif // CARLA_WITH_VULKAN_SUPPORT
@@ -183,4 +208,76 @@ void FPixelReader::WritePixelsToBuffer(
     const uint8 *Source = Lock.Source;
     Buffer.copy_from(Offset, Source, ExpectedStride * Height);
   }
+}
+
+// TODO: test on windows
+void FPixelReader::WritePixelsToArray(
+    UTextureRenderTarget2D &RenderTarget,
+    TArray<FColor>& Pixels,
+    FRHICommandListImmediate &
+//#if CARLA_WITH_VULKAN_SUPPORT == 1
+    InRHICmdList
+//#endif // CARLA_WITH_VULKAN_SUPPORT
+    )
+{
+
+check(IsInRenderingThread());
+
+
+check(IsInRenderingThread());
+  auto RenderResource =
+      static_cast<const FTextureRenderTarget2DResource *>(RenderTarget.Resource);
+  FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
+  if (!Texture)
+  {
+    UE_LOG(LogCarla, Error, TEXT("FPixelReader: UTextureRenderTarget2D missing render target texture"));
+    return;
+  }
+
+  FIntPoint Rect = RenderResource->GetSizeXY();
+
+  InRHICmdList.ReadSurfaceData(
+      Texture,
+      FIntRect(0, 0, Rect.X, Rect.Y),
+      Pixels,
+      FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
+
+
+//#if CARLA_WITH_VULKAN_SUPPORT == 1
+  //if (IsVulkanPlatform(GMaxRHIShaderPlatform))
+  //{
+    //WritePixelsToArray_Vulkan(RenderTarget, PixelsData, InRHICmdList);
+    //return;
+  //}
+//#endif // CARLA_WITH_VULKAN_SUPPORT
+/*
+  FRHITexture2D *Texture = RenderTarget.GetRenderTargetResource()->GetRenderTargetTexture();
+  checkf(Texture != nullptr, TEXT("FPixelReader: UTextureRenderTarget2D missing render target texture"));
+
+  const uint32 BytesPerPixel = 4u; // PF_R8G8B8A8
+  const uint32 Width = Texture->GetSizeX();
+  const uint32 Height = Texture->GetSizeY();
+  const uint32 ExpectedStride = Width * BytesPerPixel;
+
+  uint32 SrcStride;
+  LockTexture Lock(Texture, SrcStride);
+
+#ifdef PLATFORM_WINDOWS
+  // JB: Direct 3D uses additional rows in the buffer, so we need check the
+  // result stride from the lock:
+  if (IsD3DPlatform(GMaxRHIShaderPlatform, false) && (ExpectedStride != SrcStride))
+  {
+    Buffer.reset(Offset + ExpectedStride * Height);
+    auto DstRow = Buffer.begin() + Offset;
+    const uint8 *SrcRow = Lock.Source;
+    for (uint32 Row = 0u; Row < Height; ++Row)
+    {
+      FMemory::Memcpy(DstRow, SrcRow, ExpectedStride);
+      DstRow += ExpectedStride;
+      SrcRow += SrcStride;
+    }
+  }
+  else
+#endif // PLATFORM_WINDOWS
+*/
 }

@@ -64,8 +64,6 @@ public:
   template <typename TSensor>
   static void SendPixelsInRenderThread(TSensor &Sensor);
 
-private:
-
   /// Copy the pixels in @a RenderTarget into @a Buffer.
   ///
   /// @pre To be called from render-thread.
@@ -73,6 +71,11 @@ private:
       UTextureRenderTarget2D &RenderTarget,
       carla::Buffer &Buffer,
       uint32 Offset,
+      FRHICommandListImmediate &InRHICmdList);
+
+  static void WritePixelsToArray(
+      UTextureRenderTarget2D &RenderTarget,
+      TArray<FColor>& Pixels,
       FRHICommandListImmediate &InRHICmdList);
 
 };
@@ -102,7 +105,10 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
             Buffer,
             carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
             InRHICmdList);
-        Stream.Send(Sensor, std::move(Buffer));
+        {
+          SCOPE_CYCLE_COUNTER(STAT_CarlaSensorStreamSend);
+          Stream.Send(Sensor, std::move(Buffer));
+        }
       }
     }
   );
