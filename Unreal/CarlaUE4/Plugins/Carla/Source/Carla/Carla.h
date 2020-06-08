@@ -18,9 +18,9 @@ DECLARE_STATS_GROUP(TEXT("CarlaSensor"), STATGROUP_CarlaSensor, STATCAT_Advanced
 
 //DECLARE_MEMORY_STAT(TEXT("CARLAMEMORY"), STATGROUP_CARLAMEMORY, STATCAT_Advanced)
 
-DECLARE_CYCLE_STAT(TEXT("CaptureCamera (Read RT)"),     STAT_CaptureCameraReadRT,     STATGROUP_CarlaSensor);
-DECLARE_CYCLE_STAT(TEXT("CaptureCamera (Buffer Copy)"), STAT_CaptureCameraBufferCopy, STATGROUP_CarlaSensor);
-DECLARE_CYCLE_STAT(TEXT("CaptureCamera (Stream Send)"), STAT_CaptureCameraStreamSend, STATGROUP_CarlaSensor);
+DECLARE_CYCLE_STAT(TEXT("Read RT"),     STAT_CarlaSensorReadRT,     STATGROUP_CarlaSensor);
+DECLARE_CYCLE_STAT(TEXT("Buffer Copy"), STAT_CarlaSensorBufferCopy, STATGROUP_CarlaSensor);
+DECLARE_CYCLE_STAT(TEXT("Stream Send"), STAT_CarlaSensorStreamSend, STATGROUP_CarlaSensor);
 
 // Options to compile with extra debug log.
 #if WITH_EDITOR
