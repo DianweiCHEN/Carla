@@ -44,6 +44,9 @@
 
 #include <vector>
 #include <map>
+#include <fstream>
+#include <chrono>
+#include "Carla/TickTimes.h"
 
 template <typename T>
 using R = carla::rpc::Response<T>;
@@ -209,6 +212,31 @@ void FCarlaServer::FPimpl::BindActions()
   BIND_SYNC(tick_cue) << [this]() -> R<uint64_t>
   {
     ++TickCuesReceived;
+    // SetTickTime1(GFrameCounter, std::chrono::steady_clock::now());
+    // static std::vector<std::chrono::time_point<std::chrono::steady_clock>> tickTimestamps;
+    // static std::vector<int> tickTotal;
+    // static std::vector<uint64_t> tickFrame;
+    // tickTimestamps.push_back(std::chrono::steady_clock::now());
+    // tickTotal.push_back(TickCuesReceived);
+    // tickFrame.push_back(GFrameCounter);
+    // if (tickTimestamps.size() >= 250) 
+    // {
+    //   // flush
+    //   std::ofstream file("/home/bernat/tickTimestamps.txt", std::ios::app);
+    //   for (int i=1; i<tickTimestamps.size(); ++i)
+    //   {
+    //     file << tickFrame[i] << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(tickTimestamps[i] - tickTimestamps[i-1]).count() << ", " << tickTotal[i] << "\n";
+    //   }
+    //   file << "-----------------------\n";
+    //   file.close();
+      
+    //   tickTimestamps.empty();
+    //   tickTotal.empty();
+    //   tickTimestamps.push_back(std::chrono::steady_clock::now());
+    //   tickTotal.push_back(TickCuesReceived);
+    //   tickFrame.push_back(GFrameCounter);
+    // }
+
     return GFrameCounter + 1u;
   };
 
@@ -1171,9 +1199,11 @@ void FCarlaServer::RunSome(uint32 Milliseconds)
 
 bool FCarlaServer::TickCueReceived()
 {
+
   if (Pimpl->TickCuesReceived > 0u)
   {
     --(Pimpl->TickCuesReceived);
+    SetTickTime(GFrameCounter, 0, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     return true;
   }
   return false;

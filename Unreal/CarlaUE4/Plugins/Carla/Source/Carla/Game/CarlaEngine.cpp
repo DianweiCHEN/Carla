@@ -16,6 +16,9 @@
 #include "Runtime/Core/Public/Misc/App.h"
 
 #include <thread>
+#include <fstream>
+#include <chrono>
+#include "Carla/TickTimes.h"
 
 // =============================================================================
 // -- Static local methods -----------------------------------------------------
@@ -89,6 +92,7 @@ void FCarlaEngine::NotifyEndEpisode()
 {
   Server.NotifyEndEpisode();
   CurrentEpisode = nullptr;
+  TickTimesFlush();
 }
 
 void FCarlaEngine::OnPreTick(UWorld *World, ELevelTick TickType, float DeltaSeconds)
@@ -115,11 +119,23 @@ void FCarlaEngine::OnPreTick(UWorld *World, ELevelTick TickType, float DeltaSeco
 
 void FCarlaEngine::OnPostTick(UWorld *, ELevelTick, float)
 {
+  int loops = 0;
+  // if (bSynchronousMode)
+  //   SetTickTime(GFrameCounter, 0, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
   do
   {
     Server.RunSome(10u);
+    ++loops;
   }
   while (bSynchronousMode && !Server.TickCueReceived());
+  if (bSynchronousMode)
+  {
+    SetTickTime(GFrameCounter, 1, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    SetTickTime(GFrameCounter, 2, loops);
+  }
+
+  // if (bSynchronousMode)
+  //   SetTickTime2(GFrameCounter, std::chrono::steady_clock::now());
 }
 
 void FCarlaEngine::OnEpisodeSettingsChanged(const FEpisodeSettings &Settings)
