@@ -390,8 +390,8 @@ namespace detail {
     // =========================================================================
     /// @{
 
-    std::string StartRecorder(std::string name) {
-      return _client.StartRecorder(std::move(name));
+    std::string StartRecorder(std::string name, bool additional_data) {
+      return _client.StartRecorder(std::move(name), additional_data);
     }
 
     void StopRecorder(void) {
@@ -460,6 +460,10 @@ namespace detail {
       _client.FreezeTrafficLight(trafficLight.GetId(), freeze);
     }
 
+    void ResetTrafficLightGroup(TrafficLight &trafficLight) {
+      _client.ResetTrafficLightGroup(trafficLight.GetId());
+    }
+
     std::vector<ActorId> GetGroupTrafficLights(TrafficLight &trafficLight) {
       return _client.GetGroupTrafficLights(trafficLight.GetId());
     }
@@ -517,6 +521,8 @@ namespace detail {
       DEBUG_ASSERT(_episode != nullptr);
       _episode->RemoveLightUpdateChangeEvent(id);
     }
+
+    void FreezeAllTrafficLights(bool frozen);
 
     /// @}
 

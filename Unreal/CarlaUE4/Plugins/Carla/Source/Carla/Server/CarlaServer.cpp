@@ -69,7 +69,7 @@ public:
   FPimpl(uint16_t RPCPort, uint16_t StreamingPort)
     : Server(RPCPort),
       StreamingServer(StreamingPort),
-      BroadcastStream(StreamingServer.MakeMultiStream())
+      BroadcastStream(StreamingServer.MakeStream())
   {
     BindActions();
   }
@@ -81,7 +81,7 @@ public:
 
   carla::streaming::Server StreamingServer;
 
-  carla::streaming::MultiStream BroadcastStream;
+  carla::streaming::Stream BroadcastStream;
 
   UCarlaEpisode *Episode = nullptr;
 
@@ -875,6 +875,38 @@ void FCarlaServer::FPimpl::BindActions()
     return R<void>::Success();
   };
 
+  BIND_SYNC(reset_traffic_light_group) << [this](
+      cr::ActorId ActorId) -> R<void>
+  {
+    REQUIRE_CARLA_EPISODE();
+    auto ActorView = Episode->GetActorRegistry().Find(ActorId);
+    if (!ActorView.IsValid() || ActorView.GetActor()->IsPendingKill())
+    {
+      RESPOND_ERROR("unable to reset traffic lights: actors not found");
+    }
+    auto TrafficLight = Cast<ATrafficLightBase>(ActorView.GetActor());
+    if (TrafficLight == nullptr)
+    {
+      RESPOND_ERROR("unable to reset traffic lights: actor is not a traffic light");
+    }
+    TrafficLight->GetTrafficLightComponent()->GetGroup()->ResetGroup();
+    return R<void>::Success();
+  };
+
+  BIND_SYNC(freeze_all_traffic_lights) << [this]
+      (bool frozen) -> R<void>
+  {
+    REQUIRE_CARLA_EPISODE();
+    auto* GameMode = UCarlaStatics::GetGameMode(Episode->GetWorld());
+    if (!GameMode)
+    {
+      RESPOND_ERROR("unable to find CARLA game mode");
+    }
+    auto* TraffiLightManager = GameMode->GetTrafficLightManager();
+    TraffiLightManager->SetFrozen(frozen);
+    return R<void>::Success();
+  };
+
   BIND_SYNC(get_vehicle_light_states) << [this]() -> R<cr::VehicleLightStateList>
   {
     REQUIRE_CARLA_EPISODE();
@@ -924,10 +956,10 @@ void FCarlaServer::FPimpl::BindActions()
 
   // ~~ Logging and playback ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  BIND_SYNC(start_recorder) << [this](std::string name) -> R<std::string>
+  BIND_SYNC(start_recorder) << [this](std::string name, bool AdditionalData) -> R<std::string>
   {
     REQUIRE_CARLA_EPISODE();
-    return R<std::string>(Episode->StartRecorder(name));
+    return R<std::string>(Episode->StartRecorder(name, AdditionalData));
   };
 
   BIND_SYNC(stop_recorder) << [this]() -> R<void>
