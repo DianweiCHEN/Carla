@@ -258,9 +258,7 @@ public:
     FPixelReader::SavePixelsToDisk(*CaptureRenderTarget, FilePath);
   }
 
-  void CopyTextureFromAtlas(
-    const TArray<FColor>& AtlasImage,
-    uint32 AtlasTextureWidth );
+  void CopyTextureFromAtlas(const TArray<FColor>& AtlasImage);
 
   template <typename TSensor>
   void SendPixelsInStream(TSensor &Sensor)
@@ -274,8 +272,6 @@ public:
         Buffer.copy_from(Offset, ImageToSend);
         Stream.Send(Sensor, std::move(Buffer));
       }
-      // TODO: remove
-      ImageToSend.Init(FColor(), ImageWidth * ImageHeight);
     }
   }
 
