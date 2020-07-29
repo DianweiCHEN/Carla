@@ -498,7 +498,7 @@ void ACarlaGameModeBase::SendAtlas()
     AtlasCopyRequestQueue.Peek(AtlasCopyRequest);
 
     // Be sure that the request has finished
-    
+
     if( AtlasCopyRequest && AtlasCopyRequest->IsComplete() )
     {
       //UE_LOG(LogCarla, Warning, TEXT("ACarlaGameModeBase::SendAtlas: DONE"));
@@ -520,7 +520,7 @@ void ACarlaGameModeBase::SendAtlas()
       for(int32 Index = 0; Index < SceneCaptureSensors.Num(); Index++)
       {
         ASceneCaptureSensor* Sensor = SceneCaptureSensors[Index];
-        Sensor->CopyTextureFromAtlas(AtlasCopyRequest->AtlasImage);
+        Sensor->CopyTextureFromAtlas(AtlasCopyRequest->AtlasImage, AtlasTextureWidth);
       }
       //);
 
