@@ -184,7 +184,7 @@ void ACarlaGameModeBase::BeginPlay()
 
   // OnBeginFrame
   // OnEndFrame
-  CaptureAtlasDelegate = FCoreDelegates::OnEndFrame.AddUObject(this, &ACarlaGameModeBase::CaptureAtlas);
+  CaptureAtlasDelegate = FCoreDelegates::OnBeginFrame.AddUObject(this, &ACarlaGameModeBase::CaptureAtlas);
   // SendAtlasDelegate = FCoreDelegates::OnEndFrame.AddUObject(this, &ACarlaGameModeBase::SendAtlas);
 
 }
@@ -198,7 +198,6 @@ void ACarlaGameModeBase::Tick(float DeltaSeconds)
   {
     Recorder->Tick(DeltaSeconds);
   }
-
 }
 
 void ACarlaGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -214,6 +213,7 @@ void ACarlaGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
   }
 
   // TODO: improve this delete processs; not multithread friendly
+  /*
   while(!AtlasCopyRequestQueue.IsEmpty())
   {
     delete AtlasCopyRequestQueue.Peek();
@@ -225,6 +225,7 @@ void ACarlaGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
     delete AtlasCopyRequestsQueuePool.Peek();
     AtlasCopyRequestsQueuePool.Pop();
   }
+  */
 
 
   // OnEndFrame
@@ -384,7 +385,7 @@ void ACarlaGameModeBase::DebugShowSignals(bool enable)
   }
 
 }
-
+/* 
 FAtlasCopyRequest* ACarlaGameModeBase::GetAtlasCopyRequest()
 {
   if(AtlasCopyRequestsQueuePool.IsEmpty()) {
@@ -395,7 +396,7 @@ FAtlasCopyRequest* ACarlaGameModeBase::GetAtlasCopyRequest()
   AtlasCopyRequestsQueuePool.Dequeue(AtlasCopyRequest);
   return AtlasCopyRequest;
 }
-
+ */
 void ACarlaGameModeBase::CreateAtlasTextures()
 {
   if(AtlasTextureWidth > 0 && AtlasTextureHeight > 0)
@@ -403,17 +404,19 @@ void ACarlaGameModeBase::CreateAtlasTextures()
     UE_LOG(LogCarla, Warning, TEXT("ACarlaGameModeBase::CreateAtlasTextures %d %dx%d"), SceneCaptureSensors.Num(), AtlasTextureWidth, AtlasTextureHeight);
 
     FRHIResourceCreateInfo CreateInfo;
+    CamerasAtlasTexture = RHICreateTexture2D(AtlasTextureWidth, AtlasTextureHeight, PF_B8G8R8A8, 1, 1, TexCreate_CPUReadback, CreateInfo);
+    
     for(int i = 0; i < kMaxNumTextures; i++)
     {
-      CamerasAtlasTexture[i] = RHICreateTexture2D(AtlasTextureWidth, AtlasTextureHeight, PF_B8G8R8A8, 1, 1, TexCreate_CPUReadback, CreateInfo);
+      AtlasImage[i].Init(FColor(), AtlasTextureWidth * AtlasTextureHeight);
       // Prepare some AtlasCopyRequests
-      AtlasCopyRequestQueue.Enqueue(new FAtlasCopyRequest());
+      //AtlasCopyRequestQueue.Enqueue(new FAtlasCopyRequest());
     }
     IsAtlasTextureValid = true;
   }
 }
 
-extern FDynamicRHI* GDynamicRHI;
+//extern FDynamicRHI* GDynamicRHI;
 
 void ACarlaGameModeBase::CaptureAtlas()
 {
@@ -441,15 +444,15 @@ void ACarlaGameModeBase::CaptureAtlas()
   //}
   //UE_LOG(LogCarla, Warning, TEXT("ACarlaGameModeBase::CaptureAtlas: creating request"));
 
-  FAtlasCopyRequest* AtlasCopyRequest = GetAtlasCopyRequest();
-  AtlasCopyRequest->ResizeBuffer(AtlasTextureWidth, AtlasTextureHeight);
+  //FAtlasCopyRequest* AtlasCopyRequest = GetAtlasCopyRequest();
+  //AtlasCopyRequest->ResizeBuffer(AtlasTextureWidth, AtlasTextureHeight);
 
   // Download Atlas texture
   ENQUEUE_RENDER_COMMAND(ACarlaGameModeBase_CaptureAtlas)
   (
-    [This, &CurrentAtlasPixels = AtlasCopyRequest->AtlasImage](FRHICommandListImmediate& RHICmdList) mutable
+    [This](FRHICommandListImmediate& RHICmdList) mutable
     {
-      FTexture2DRHIRef AtlasTexture = This->CamerasAtlasTexture[This->PreviousAtlas];
+      FTexture2DRHIRef AtlasTexture = This->CamerasAtlasTexture;
 
       if (!AtlasTexture)
       {
@@ -460,9 +463,7 @@ void ACarlaGameModeBase::CaptureAtlas()
       FIntRect Rect = FIntRect(0, 0, This->AtlasTextureWidth, This->AtlasTextureHeight);
 
 #if !UE_BUILD_SHIPPING
-      if(This->ReadSurfaceMode == 2) {
-        Rect = FIntRect(0, 0, This->SurfaceW, This->SurfaceH);
-      }
+      if(This->ReadSurfaceMode == 2) Rect = FIntRect(0, 0, This->SurfaceW, This->SurfaceH);
 #endif
       // GDynamicRHI->RHIReadSurfaceData(AtlasTexture, Rect, CurrentAtlasPixels, FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
 
@@ -474,17 +475,17 @@ void ACarlaGameModeBase::CaptureAtlas()
       RHICmdList.ReadSurfaceData(
         AtlasTexture,
         Rect,
-        CurrentAtlasPixels,
+        This->AtlasImage[This->CurrentAtlas],
         FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
 
-        // This->PreviousAtlas = This->CurrentAtlas;
-        // This->CurrentAtlas = (This->CurrentAtlas + 1) & ~kMaxNumTextures;
+        This->PreviousAtlas = This->CurrentAtlas;
+        This->CurrentAtlas = (This->CurrentAtlas + 1) & ~kMaxNumTextures;
     }
   );
 
-  AtlasCopyRequest->Start();
+  //AtlasCopyRequest->Start();
   // AtlasCopyRequest->Wait();
-  AtlasCopyRequestQueue.Enqueue(AtlasCopyRequest);
+  //AtlasCopyRequestQueue.Enqueue(AtlasCopyRequest);
 
   SendAtlas();
 
@@ -492,21 +493,21 @@ void ACarlaGameModeBase::CaptureAtlas()
 
 void ACarlaGameModeBase::SendAtlas()
 {
-  if(!AtlasCopyRequestQueue.IsEmpty())
+  //if(!AtlasCopyRequestQueue.IsEmpty())
   {
-    FAtlasCopyRequest* AtlasCopyRequest = nullptr;
-    AtlasCopyRequestQueue.Peek(AtlasCopyRequest);
+    //FAtlasCopyRequest* AtlasCopyRequest = nullptr;
+    //AtlasCopyRequestQueue.Peek(AtlasCopyRequest);
 
     // Be sure that the request has finished
 
-    if( AtlasCopyRequest && AtlasCopyRequest->IsComplete() )
+    //if( AtlasCopyRequest && AtlasCopyRequest->IsComplete() )
     {
       //UE_LOG(LogCarla, Warning, TEXT("ACarlaGameModeBase::SendAtlas: DONE"));
 #if !UE_BUILD_SHIPPING
       if(!AtlasCopyToCamera)
       {
-        AtlasCopyRequestQueue.Pop();
-        AtlasCopyRequestsQueuePool.Enqueue(AtlasCopyRequest);
+        //AtlasCopyRequestQueue.Pop();
+        //AtlasCopyRequestsQueuePool.Enqueue(AtlasCopyRequest);
         return;
       }
 #endif
@@ -520,16 +521,18 @@ void ACarlaGameModeBase::SendAtlas()
       for(int32 Index = 0; Index < SceneCaptureSensors.Num(); Index++)
       {
         ASceneCaptureSensor* Sensor = SceneCaptureSensors[Index];
-        Sensor->CopyTextureFromAtlas(AtlasCopyRequest->AtlasImage, AtlasTextureWidth);
+        // TODO: merge this functions and avoid double copy
+        Sensor->CopyTextureFromAtlas(AtlasImage[PreviousAtlas], AtlasTextureWidth);
+        Sensor->SendPixels();
       }
       //);
 
       // Remove from pending queue ...
-      AtlasCopyRequestQueue.Pop();
+      //AtlasCopyRequestQueue.Pop();
       // ... add to pool
-      AtlasCopyRequestsQueuePool.Enqueue(AtlasCopyRequest);
+      //AtlasCopyRequestsQueuePool.Enqueue(AtlasCopyRequest);
     }
-    else
+    //else
     {
       //UE_LOG(LogCarla, Error, TEXT("ACarlaGameModeBase::SendAtlas: request didn't finish"));
     }
