@@ -16,6 +16,9 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "HighResScreenshot.h"
 #include "ContentStreaming.h"
+#include "Async/Async.h"
+#include "RHICommandList.h"
+#include "HAL/UnrealMemory.h"
 
 static auto SCENE_CAPTURE_COUNTER = 0u;
 
@@ -54,12 +57,14 @@ ASceneCaptureSensor::ASceneCaptureSensor(const FObjectInitializer &ObjectInitial
   CaptureRenderTarget->CompressionSettings = TextureCompressionSettings::TC_Default;
   CaptureRenderTarget->SRGB = false;
   CaptureRenderTarget->bAutoGenerateMips = false;
+  CaptureRenderTarget->bGPUSharedFlag = true;
   CaptureRenderTarget->AddressX = TextureAddress::TA_Clamp;
   CaptureRenderTarget->AddressY = TextureAddress::TA_Clamp;
 
   CaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(
       FName(*FString::Printf(TEXT("SceneCaptureComponent2D_%d"), SCENE_CAPTURE_COUNTER)));
   CaptureComponent2D->SetupAttachment(RootComponent);
+  CaptureComponent2D->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_RenderScenePrimitives;
 
   SceneCaptureSensor_local_ns::SetCameraDefaultOverrides(*CaptureComponent2D);
 
@@ -426,10 +431,10 @@ float ASceneCaptureSensor::GetChromAberrIntensity() const
   return CaptureComponent2D->PostProcessSettings.SceneFringeIntensity;
 }
 
-void ASceneCaptureSensor::SetChromAberrOffset(float Offset)
+void ASceneCaptureSensor::SetChromAberrOffset(float ChromAberrOffset)
 {
   check(CaptureComponent2D != nullptr);
-  CaptureComponent2D->PostProcessSettings.ChromaticAberrationStartOffset = Offset;
+  CaptureComponent2D->PostProcessSettings.ChromaticAberrationStartOffset = ChromAberrOffset;
 }
 
 float ASceneCaptureSensor::GetChromAberrOffset() const
@@ -442,10 +447,7 @@ void ASceneCaptureSensor::BeginPlay()
 {
   using namespace SceneCaptureSensor_local_ns;
 
-  // Setup render target.
-
   // Determine the gamma of the player.
-
   const bool bInForceLinearGamma = !bEnablePostProcessingEffects;
 
   CaptureRenderTarget->InitCustomFormat(ImageWidth, ImageHeight, PF_B8G8R8A8, bInForceLinearGamma);
@@ -481,23 +483,112 @@ void ASceneCaptureSensor::BeginPlay()
   GetEpisode().GetWeather()->NotifyWeather();
 
   Super::BeginPlay();
+
+  ACarlaGameModeBase* GameMode = Cast<ACarlaGameModeBase>(GetWorld()->GetAuthGameMode());
+  GameMode->AddSceneCaptureSensor(this);
+
 }
 
 void ASceneCaptureSensor::Tick(float DeltaTime)
 {
   Super::Tick(DeltaTime);
+
   // Add the view information every tick. Its only used for one tick and then
   // removed by the streamer.
   IStreamingManager::Get().AddViewInformation(
       CaptureComponent2D->GetComponentLocation(),
       ImageWidth,
       ImageWidth / FMath::Tan(CaptureComponent2D->FOVAngle));
+
 }
 
 void ASceneCaptureSensor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
   Super::EndPlay(EndPlayReason);
   SCENE_CAPTURE_COUNTER = 0u;
+
+  ACarlaGameModeBase* GameMode = Cast<ACarlaGameModeBase>(GetWorld()->GetAuthGameMode());
+  GameMode->RemoveSceneCaptureSensor(this);
+}
+
+void ASceneCaptureSensor::CopyTextureToAtlas()
+{
+
+  check(CaptureRenderTarget != nullptr);
+
+  ASceneCaptureSensor* This = this;
+
+  ACarlaGameModeBase* GameMode = Cast<ACarlaGameModeBase>(GetWorld()->GetAuthGameMode());
+  if(!GameMode->IsCameraAtlasTextureValid()) return;
+
+#if !UE_BUILD_SHIPPING
+  if(!GameMode->IsCameraCopyToAtlasEnabled()) return;
+#endif
+
+  ENQUEUE_RENDER_COMMAND(ASceneCaptureSensor_CopyTextureToAtlas)
+  (
+    [This, GameMode](FRHICommandListImmediate& RHICmdList) mutable
+    {
+      FTexture2DRHIRef AtlasTexture = GameMode->GetCurrentCamerasAtlasTexture();
+
+      if (AtlasTexture.IsValid() && This && This->HasActorBegunPlay() && !This->IsPendingKill())
+      {
+          SCOPE_CYCLE_COUNTER(STAT_CarlaSensorCopyText);
+
+          const FTextureRenderTarget2DResource* RenderResource =
+            static_cast<const FTextureRenderTarget2DResource *>(This->CaptureRenderTarget->Resource);
+          FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
+          if (!Texture)
+          {
+            UE_LOG(LogCarla, Error, TEXT("ASceneCaptureSensor::Capture: UTextureRenderTarget2D missing render target texture"));
+            return;
+          }
+
+          // Prepare copy information
+          FRHICopyTextureInfo CopyInfo;
+          CopyInfo.Size = FIntVector(This->ImageWidth, This->ImageHeight, 0); // Size of the camera
+          CopyInfo.DestPosition = This->PositionInAtlas; // Where to copy the texture
+
+          RHICmdList.CopyTexture(Texture, AtlasTexture, CopyInfo);
+      }
+    }
+  );
+}
+
+bool ASceneCaptureSensor::CopyTextureFromAtlas(
+    carla::Buffer &Buffer,
+    const TArray<FColor>& AtlasImage,
+    uint32 AtlasTextureWidth)
+{
+
+  Buffer.reset(Offset + ImageWidth * ImageHeight * sizeof(FColor));
+
+  // Check that the atlas alreay contains our texture
+  // and our image has been initialized
+  uint32 ExpectedSize = (uint32)(PositionInAtlas.Y * AtlasTextureWidth + ImageWidth * ImageHeight);
+  uint32 TotalSize = (uint32)AtlasImage.Num();
+  if(AtlasImage.GetData() && TotalSize < ExpectedSize)
+  {
+    return false;
+  }
+
+  SCOPE_CYCLE_COUNTER(STAT_CarlaSensorBufferCopy);
+
+  const FColor* SourceFColor = AtlasImage.GetData() + PositionInAtlas.Y * AtlasTextureWidth;
+  const uint8* Source = (uint8*)SourceFColor;
+  uint32 Dest = Offset;
+
+  const uint32 DstStride = ImageWidth * sizeof(FColor);
+  const uint32 SrcStride = AtlasTextureWidth * sizeof(FColor);
+
+  for(uint32 i = 0; i < ImageHeight; i++)
+  {
+    Buffer.copy_from(Dest, Source, DstStride);
+    Source += SrcStride;
+    Dest += DstStride;
+  }
+
+  return true;
 }
 
 // =============================================================================
