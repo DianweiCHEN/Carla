@@ -6,6 +6,7 @@
   * Changed frozen behavior for traffic lights. It now affects to all traffic lights at the same time
   * Added API function `freeze_all_traffic_lights` and `reset_group`
   * Fixed recorder determinism problems
+  * Added function to stop the replayer
   * Added Light ids
   * Added vehicle light and street light data to recorder
   * Added API function `add_angular_impulse()` to add angular impulse to any actor
@@ -18,7 +19,7 @@
   * All sensors are now multi-stream, that means that the same sensor can be listened from different clients
   * Fixed point cloud of LiDAR. Now the points are given correctly in the sensor's coordinate system.
   * Fixed light intensity and camera parameters to match
-  * New Lidar sensor ('lidar.ray_cast_raw') that returns the point cloud with information regarding to the object that have collided: incident angle, idx of collided actor and it semantic tag. 
+  * New Lidar sensor ('lidar.ray_cast_semantic') that returns the point cloud with information regarding to the object that have collided: incident angle, idx of collided actor and it semantic tag. 
   * Added `opend3D.py`, a more friendly LiDAR visualizer
   * Exposed matrix form of transformation to the client and Python API.
   * Added make command to download contributions as plugins (`make plugins`)
@@ -31,6 +32,7 @@
   * Added Dynamic Vision Sensor (DVS) camera based on ESIM simulation http://rpg.ifi.uzh.ch/esim.html
   * Improved LiDAR and radar to better match the shape of the vehicles
   * Added support for additional TraCI clients in Sumo co-simulation
+  * Added script example to syncronize the gathering of sensor data in client
   * Added API functions `get_right_vector` and `get_up_vector`
   * Added default values and a warning message for lanes missing the width parameter in OpenDRIVE
   * Added parameter to enable/disable pedestrian navigation in standalone mode

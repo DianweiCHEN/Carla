@@ -15,26 +15,26 @@
 #include "Carla/Actor/ActorBlueprintFunctionLibrary.h"
 
 #include <compiler/disable-ue4-macros.h>
-#include <carla/sensor/data/LidarRawData.h>
+#include <carla/sensor/data/SemanticLidarData.h>
 #include <compiler/enable-ue4-macros.h>
 
-#include "RayCastRawLidar.generated.h"
+#include "RayCastSemanticLidar.generated.h"
 
 /// A ray-cast based Lidar sensor.
 UCLASS()
-class CARLA_API ARayCastRawLidar : public ASensor
+class CARLA_API ARayCastSemanticLidar : public ASensor
 {
   GENERATED_BODY()
 
 protected:
 
-  using FLidarRawData = carla::sensor::data::LidarRawData;
-  using FRawDetection = carla::sensor::data::LidarRawDetection;
+  using FSemanticLidarData = carla::sensor::data::SemanticLidarData;
+  using FSemanticDetection = carla::sensor::data::SemanticLidarDetection;
 
 public:
   static FActorDefinition GetSensorDefinition();
 
-  ARayCastRawLidar(const FObjectInitializer &ObjectInitializer);
+  ARayCastSemanticLidar(const FObjectInitializer &ObjectInitializer);
 
   virtual void Set(const FActorDescription &Description) override;
   virtual void Set(const FLidarDescription &LidarDescription);
@@ -49,7 +49,7 @@ protected:
   void SimulateLidar(float DeltaTime);
 
   /// Shoot a laser ray-trace, return whether the laser hit something.
-  bool ShootLaser(const float VerticalAngle, float HorizontalAngle, FHitResult &RawData) const;
+  bool ShootLaser(const float VerticalAngle, float HorizontalAngle, FHitResult &HitResult) const;
 
   /// Method that allow to preprocess the ray before shoot it
   virtual bool PreprocessRay() const {
@@ -59,7 +59,7 @@ protected:
   }
 
   /// Compute all raw detection information
-  void ComputeRawDetection(const FHitResult &HitInfo, const FTransform &SensorTransf, FRawDetection &Detection) const;
+  void ComputeRawDetection(const FHitResult &HitInfo, const FTransform &SensorTransf, FSemanticDetection &Detection) const;
 
   /// Saving the hits the raycast returns per channel
   void WritePointAsync(uint32_t Channel, FHitResult &Detection);
@@ -80,6 +80,6 @@ protected:
   std::vector<uint32_t> PointsPerChannel;
 
 private:
-  FLidarRawData LidarRawData;
+  FSemanticLidarData SemanticLidarData;
 
 };
