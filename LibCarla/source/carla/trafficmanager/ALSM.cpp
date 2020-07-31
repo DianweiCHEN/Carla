@@ -99,7 +99,8 @@ void ALSM::Update() {
   UpdateRegisteredActorsData(hybrid_physics_mode, max_idle_time);
 
   // Destroy registered vehicle if stuck at a location for too long.
-  if (IsVehicleStuck(max_idle_time.first)
+  if (hero_actors.find(max_idle_time.first) == hero_actors.end()
+      && IsVehicleStuck(max_idle_time.first)
       && (current_timestamp.elapsed_seconds - elapsed_last_actor_destruction) > DELTA_TIME_BETWEEN_DESTRUCTIONS) {
     registered_vehicles.Destroy(max_idle_time.first);
     RemoveActor(max_idle_time.first, true);
@@ -168,11 +169,6 @@ void ALSM::UpdateRegisteredActorsData(const bool hybrid_physics_mode, ALSM::Idle
     cg::Rotation vehicle_rotation = vehicle_transform.rotation;
     cg::Vector3D vehicle_velocity = vehicle->GetVelocity();
 
-    // Initializing idle times.
-    if (idle_time.find(actor_id) == idle_time.end() && current_timestamp.elapsed_seconds != 0.0) {
-      idle_time.insert({actor_id, current_timestamp.elapsed_seconds});
-    }
-
     // Check if current actor is in range of hero actor and enable physics in hybrid mode.
     bool in_range_of_hero_actor = false;
     if (hero_actor_present) {
@@ -223,8 +219,15 @@ void ALSM::UpdateRegisteredActorsData(const bool hybrid_physics_mode, ALSM::Idle
       simulation_state.AddActor(actor_id, kinematic_state, attributes, tl_state);
     }
 
-    // Updating idle time when necessary.
-    UpdateIdleTime(max_idle_time, actor_id);
+    if (hero_actors.find(actor_id) == hero_actors.end()) {
+      // Initializing idle times.
+      if (idle_time.find(actor_id) == idle_time.end() && current_timestamp.elapsed_seconds != 0.0) {
+        idle_time.insert({actor_id, current_timestamp.elapsed_seconds});
+      }
+
+      // Updating idle time when necessary.
+      UpdateIdleTime(max_idle_time, actor_id);
+    }
   }
 }
 
