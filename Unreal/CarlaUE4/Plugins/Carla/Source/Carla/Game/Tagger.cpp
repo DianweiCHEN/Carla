@@ -33,6 +33,9 @@ ECityObjectLabel ATagger::GetLabelByFolderName(const FString &String) {
   else if (String == "Vegetation")      return ECityObjectLabel::Vegetation;
   else if (String == "Vehicles")        return ECityObjectLabel::Vehicles;
   else if (String == "Walls")           return ECityObjectLabel::Walls;
+  else if (String == "Sky")             return ECityObjectLabel::Sky;
+  else if (String == "Ground")          return ECityObjectLabel::Ground;
+  else if (String == "Bridge")          return ECityObjectLabel::Bridge;
   else                                  return ECityObjectLabel::None;
 }
 
@@ -120,6 +123,9 @@ FString ATagger::GetTagAsString(const ECityObjectLabel Label)
     CARLA_GET_LABEL_STR(Vegetation)
     CARLA_GET_LABEL_STR(Vehicles)
     CARLA_GET_LABEL_STR(Walls)
+    CARLA_GET_LABEL_STR(Sky)
+    CARLA_GET_LABEL_STR(Ground)
+    CARLA_GET_LABEL_STR(Bridge)
 #undef CARLA_GET_LABEL_STR
   }
 }
