@@ -4,6 +4,8 @@
 // This work is licensed under the terms of the MIT license.
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
+#include <thread>
+
 #include "carla/client/detail/Simulator.h"
 
 #include "carla/trafficmanager/TrafficManagerLocal.h"
@@ -107,6 +109,12 @@ void TrafficManagerLocal::Start() {
   worker_thread = std::make_unique<std::thread>(&TrafficManagerLocal::Run, this);
 }
 
+void TrafficManagerLocal::CollisionThread(unsigned long begin_index, unsigned long end_index) {
+  for (unsigned long index = begin_index; index < end_index; ++index) {
+    collision_stage.Update(index);
+  }
+}
+
 void TrafficManagerLocal::Run() {
 
   localization_frame.reserve(INITIAL_SIZE);
@@ -173,19 +181,36 @@ void TrafficManagerLocal::Run() {
     control_frame.resize(number_of_vehicles);
 
     // Run core operation stages.
+    snippet_profiler.MeasureExecutionTime("Localization", true);
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       localization_stage.Update(index);
     }
-    for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
-      collision_stage.Update(index);
+    snippet_profiler.MeasureExecutionTime("Localization", false);
+
+    std::vector<std::shared_ptr<std::thread>> threads;
+
+    snippet_profiler.MeasureExecutionTime("Collision", true);
+    for (unsigned long part = 0u; part < 4u; ++part) {
+      // collision_stage.Update(index);
+      threads.push_back(std::make_shared<std::thread>(&TrafficManagerLocal::CollisionThread,
+                                                      this,
+                                                      static_cast<unsigned long>(part * vehicle_id_list.size()/4u),
+                                                      static_cast<unsigned long>((part +1 ) * vehicle_id_list.size()/4u)));
+    }
+    for (unsigned long part = 0u; part < 4u; ++part) {
+      threads.at(part)->join();
     }
     collision_stage.ClearCycleCache();
+    snippet_profiler.MeasureExecutionTime("Collision", false);
 
+    snippet_profiler.MeasureExecutionTime("TL & MP", true);
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       traffic_light_stage.Update(index);
       motion_plan_stage.Update(index);
     }
+    snippet_profiler.MeasureExecutionTime("TL & MP", false);
 
+    snippet_profiler.MeasureExecutionTime("Send Command", true);
     // Building the command array for current cycle.
     std::vector<carla::rpc::Command> batch_command(number_of_vehicles);
     for (unsigned long i = 0u; i < number_of_vehicles; ++i) {
@@ -200,6 +225,8 @@ void TrafficManagerLocal::Run() {
     } else {
       episode_proxy.Lock()->ApplyBatch(std::move(batch_command), false);
     }
+    snippet_profiler.MeasureExecutionTime("Send Command", false);
+
   }
 }
 

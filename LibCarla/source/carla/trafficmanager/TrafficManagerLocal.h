@@ -32,6 +32,8 @@
 #include "carla/trafficmanager/TrafficLightStage.h"
 #include "carla/trafficmanager/MotionPlanStage.h"
 
+#include "carla/trafficmanager/SnippetProfiler.h"
+
 namespace carla {
 namespace traffic_manager {
 
@@ -110,8 +112,13 @@ private:
   /// Single worker thread for sequential execution of sub-components.
   std::unique_ptr<std::thread> worker_thread;
 
+  /// Snippet profiler
+  SnippetProfiler snippet_profiler;
+
   /// Method to check if all traffic lights are frozen in a group.
   bool CheckAllFrozen(TLGroup tl_to_freeze);
+
+  void CollisionThread(unsigned long begin_index, unsigned long end_index);
 
 public:
   /// Private constructor for singleton lifecycle management.
