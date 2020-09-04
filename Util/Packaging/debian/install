@@ -1,0 +1,8 @@
+CarlaUE4.sh /opt/carla-simulator
+ImportAssets.sh /opt/carla-simulator
+CarlaUE4 /opt/carla-simulator
+Engine /opt/carla-simulator
+Import /opt/carla-simulator
+PythonAPI /opt/carla-simulator
+Co-Simulation /opt/carla-simulator
+Tools /opt/carla-simulator

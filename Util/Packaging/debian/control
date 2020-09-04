@@ -1,0 +1,22 @@
+Source: carla-simulator
+Section: simulator
+Priority: optional
+Maintainer: Carla Simulator Team <carla.simulator@gmail.com>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.1.2
+Homepage: http://carla.org/
+
+Package: carla-simulator
+Architecture: amd64
+Depends: python,
+  python-numpy,
+  python-pygame,
+  libpng16-16,
+  libjpeg8,
+  libtiff5
+Description: Open-source simulator for autonomous driving research
+ CARLA has been developed from the ground up to support development, training, and validation
+ of autonomous driving systems. In addition to open-source code and protocols, CARLA provides
+ open digital assets (urban layouts, buildings, vehicles) that were created for this purpose
+ and can be used freely. The simulation platform supports flexible specification of sensor suites,
+ environmental conditions, full control of all static and dynamic actors, maps generation and much more.
