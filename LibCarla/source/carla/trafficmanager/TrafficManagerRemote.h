@@ -105,6 +105,9 @@ public:
   /// Method to set Open Street Map mode.
   void SetOSMMode(const bool mode_switch);
 
+  /// Method to check if traffic manager is running.
+  bool IsRunning() const;
+
   /// Method to provide synchronous tick
   bool SynchronousTick();
 

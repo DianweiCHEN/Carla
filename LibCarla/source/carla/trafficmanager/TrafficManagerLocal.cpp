@@ -181,9 +181,18 @@ void TrafficManagerLocal::Run() {
     control_frame.resize(number_of_vehicles);
 
     // Run core operation stages.
-    for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
-      localization_stage.Update(index);
+
+    try {
+      for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
+        localization_stage.Update(index);
+      }
+    } catch (std::invalid_argument osm_exception) {
+      std::cout << osm_exception.what() << std::endl;
+      abort = true;
+      Release();
+      break;
     }
+
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       collision_stage.Update(index);
     }
@@ -226,15 +235,18 @@ bool TrafficManagerLocal::SynchronousTick() {
 void TrafficManagerLocal::Stop() {
 
   run_traffic_manger.store(false);
-  if (parameters.GetSynchronousMode()) {
-    step_begin_trigger.notify_one();
-  }
 
-  if (worker_thread) {
-    if (worker_thread->joinable()) {
-      worker_thread->join();
+  if (!abort) {
+    if (parameters.GetSynchronousMode()) {
+      step_begin_trigger.notify_one();
     }
-    worker_thread.release();
+
+    if (worker_thread) {
+      if (worker_thread->joinable()) {
+        worker_thread->join();
+      }
+      worker_thread.release();
+    }
   }
 
   vehicle_id_list.clear();
@@ -257,7 +269,6 @@ void TrafficManagerLocal::Stop() {
   tl_frame.clear();
   control_frame.clear();
 
-  run_traffic_manger.store(true);
   step_begin.store(false);
   step_end.store(false);
 }
@@ -276,6 +287,10 @@ void TrafficManagerLocal::Reset() {
   world = cc::World(episode_proxy);
   SetupLocalMap();
   Start();
+}
+
+bool TrafficManagerLocal::IsRunning() const {
+  return run_traffic_manger.load();
 }
 
 void TrafficManagerLocal::RegisterVehicles(const std::vector<ActorPtr> &vehicle_list) {

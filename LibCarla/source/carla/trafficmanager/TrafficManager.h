@@ -57,6 +57,16 @@ public:
     return (_port > 1023);
   }
 
+  /// Method to check if traffic manager is running.
+  bool IsRunning() {
+    TrafficManagerBase* tm_ptr = GetTM(_port);
+    bool is_running = false;
+    if (tm_ptr != nullptr) {
+      is_running = tm_ptr->IsRunning();
+    }
+    return is_running;
+  }
+
   /// Method to set Open Street Map mode.
   void SetOSMMode(const bool mode_switch) {
     TrafficManagerBase* tm_ptr = GetTM(_port);

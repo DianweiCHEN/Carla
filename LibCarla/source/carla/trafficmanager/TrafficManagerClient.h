@@ -205,6 +205,12 @@ public:
     _client->call("set_osm_mode", mode_switch);
   }
 
+  /// Method to check if traffic manager is running.
+  bool IsRunning() const {
+    DEBUG_ASSERT(_client != nullptr);
+    return _client->call("is_running").as<bool>();
+  }
+
 private:
 
   /// RPC client.

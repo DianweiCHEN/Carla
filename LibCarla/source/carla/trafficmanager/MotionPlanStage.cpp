@@ -147,7 +147,7 @@ void MotionPlanStage::Update(const unsigned long index) {
     if (!emergency_stop && (parameters.GetSynchronousMode() || elapsed_time > HYBRID_MODE_DT)) {
 
       // Target displacement magnitude to achieve target velocity.
-      const float target_displacement = dynamic_target_velocity * HYBRID_MODE_DT;
+      const float target_displacement = static_cast<float>(dynamic_target_velocity * HYBRID_MODE_DT);
       const SimpleWaypointPtr teleport_target_waypoint = GetTargetWaypoint(waypoint_buffer, target_displacement).first;
 
       // Construct target transform to accurately achieve desired velocity.

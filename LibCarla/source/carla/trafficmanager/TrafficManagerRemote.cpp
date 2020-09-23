@@ -185,6 +185,10 @@ void TrafficManagerRemote::SetOSMMode(const bool mode_switch) {
   client.SetOSMMode(mode_switch);
 }
 
+bool TrafficManagerRemote::IsRunning() const {
+  return client.IsRunning();
+}
+
 void TrafficManagerRemote::ResetAllTrafficLights() {
   client.ResetAllTrafficLights();
 }

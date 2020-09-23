@@ -89,6 +89,10 @@ def main():
         type=int,
         help='Random device seed')
     argparser.add_argument(
+        '--osm',
+        action='store_true',
+        help='Open Street Map mode')
+    argparser.add_argument(
         '--car-lights-on',
         action='store_true',
         default=False,
@@ -110,6 +114,8 @@ def main():
 
         traffic_manager = client.get_trafficmanager(args.tm_port)
         traffic_manager.set_global_distance_to_leading_vehicle(1.0)
+        if args.osm:
+            traffic_manager.set_osm_mode(True)
         if args.hybrid:
             traffic_manager.set_hybrid_physics_mode(True)
         if args.seed is not None:
@@ -269,7 +275,7 @@ def main():
         # example of how to use parameters
         traffic_manager.global_percentage_speed_difference(30.0)
 
-        while True:
+        while traffic_manager.is_running():
             if args.sync and synchronous_master:
                 world.tick()
             else:

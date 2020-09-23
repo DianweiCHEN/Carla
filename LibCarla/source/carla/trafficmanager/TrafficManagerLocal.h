@@ -115,6 +115,8 @@ private:
   /// Randomization seed.
   uint64_t seed {static_cast<uint64_t>(time(NULL))};
   std::vector<ActorId> marked_for_removal;
+  /// Flag to abort execution of worker thread due to an exception.
+  bool abort {false};
 
   /// Method to check if all traffic lights are frozen in a group.
   bool CheckAllFrozen(TLGroup tl_to_freeze);
@@ -149,6 +151,9 @@ public:
 
   /// To reset the traffic manager.
   void Reset();
+
+  /// Method to check if traffic manager is running.
+  bool IsRunning() const;
 
   /// This method registers a vehicle with the traffic manager.
   void RegisterVehicles(const std::vector<ActorPtr> &actor_list);

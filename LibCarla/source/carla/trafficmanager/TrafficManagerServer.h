@@ -193,6 +193,11 @@ public:
         tm->ResetAllTrafficLights();
       });
 
+      /// Method to reset all traffic lights.
+      server->bind("is_running", [=]() -> bool {
+        return tm->IsRunning();
+      });
+
       /// Method to check server is alive or not.
       server->bind("health_check_remote_TM", [=](){});
 

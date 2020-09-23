@@ -109,6 +109,9 @@ public:
   /// Method to set Open Street Map mode.
   virtual void SetOSMMode(const bool mode_switch) = 0;
 
+  /// Method to check if traffic manager is running.
+  virtual bool IsRunning() const = 0;
+
 protected:
 
 };
