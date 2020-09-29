@@ -23,25 +23,13 @@ then
   exit 1
 fi
 
-#VERSION=$1
-#PATCH_VERSION=4
-VERSION=0.9.10-Pre_Ubuntu16
-PATCH_VERSION=0
-#CARLA_VERSION=${VERSION}.${PATCH_VERSION}
-CARLA_VERSION=${VERSION}
-DEBIAN_REVISION=$((${PATCH_VERSION} + 1))
+CARLA_VERSION=$1
+DEBIAN_REVISION=$2
 
-REF=0
-
-DEB_NAME=carla-simulator-${VERSION}-${DEBIAN_REVISION}
+DEB_NAME=carla-simulator-${CARLA_VERSION}-${DEBIAN_REVISION}
 
 CARLA_RELEASE_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_${CARLA_VERSION}.tar.gz
 ADDITIONAL_MAPS_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/AdditionalMaps_${CARLA_VERSION}.tar.gz
-
-#https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_0.9.10-Pre_Ubuntu18.tar.gz
-#https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/AdditionalMaps_0.9.10-Pre_Ubuntu18.tar.gz
-#CARLA_RELEASE_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_${CARLA_VERSION}.tar.gz
-#ADDITIONAL_MAPS_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/AdditionalMaps_${CARLA_VERSION}.tar.gz
 
 mkdir -p build/${DEB_NAME} && cd build/${DEB_NAME}
 cp -r ../../debian .
@@ -55,8 +43,10 @@ FILE=$(pwd)/ImportAssets.sh
 if [ -f "$FILE" ]; then
   echo "Package already downloaded!"
 else
+  echo "Downloading CARLA package from ${CARLA_RELEASE_URL}"
   curl "${CARLA_RELEASE_URL}" | tar xz
 
+  echo "Downloading Additional Maps from ${ADDITIONAL_MAPS_URL}"
   wget "${ADDITIONAL_MAPS_URL}"
   mv AdditionalMaps_"${CARLA_VERSION}".tar.gz Import/
 fi

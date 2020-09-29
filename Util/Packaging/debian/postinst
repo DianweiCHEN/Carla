@@ -18,15 +18,31 @@ set -e
 # the debian-policy package
 
 # Adding carla PythonAPI to site-packages (carla.pth)
-SITEDIR=$(python3 -c 'import site; site._script()' --user-site)
-mkdir -p "$SITEDIR"
-PYTHON3_EGG=$(ls /opt/carla-simulator/PythonAPI/carla/dist | grep py3.)
-echo "/opt/carla-simulator/PythonAPI/carla/dist/$PYTHON3_EGG\n/opt/carla-simulator/PythonAPI/carla/" > "$SITEDIR/carla.pth"
+for egg_file in /opt/carla-simulator/PythonAPI/carla/dist/*
+do
+  case "$egg_file" in
+    *py3.*)
+    PYTHON3_EGG=$(basename $egg_file) ;;
+    *py2.*)
+    PYTHON2_EGG=$(basename $egg_file) ;;
+    *)
+    ;;
+  esac
+done
 
-SITEDIR=$(python2 -c 'import site; site._script()' --user-site)
-mkdir -p "$SITEDIR"
-PYTHON2_EGG=$(ls /opt/carla-simulator/PythonAPI/carla/dist | grep py2.)
-echo "/opt/carla-simulator/PythonAPI/carla/dist/$PYTHON2_EGG\n/opt/carla-simulator/PythonAPI/carla/" > "$SITEDIR/carla.pth"
+if [ ! -z $PYTHON3_EGG ]
+then
+  SITEDIR=$(python3 -c 'import site; site._script()' --user-site)
+  mkdir -p "$SITEDIR"
+  echo "/opt/carla-simulator/PythonAPI/carla/dist/$PYTHON3_EGG\n/opt/carla-simulator/PythonAPI/carla/" > "$SITEDIR/carla.pth"
+fi
+
+if [ ! -z $PYTHON2_EGG ]
+then
+  SITEDIR=$(python2 -c 'import site; site._script()' --user-site)
+  mkdir -p "$SITEDIR"
+  echo "/opt/carla-simulator/PythonAPI/carla/dist/$PYTHON2_EGG\n/opt/carla-simulator/PythonAPI/carla/" > "$SITEDIR/carla.pth"
+fi
 
 chmod +x /opt/carla-simulator/CarlaUE4.sh
 

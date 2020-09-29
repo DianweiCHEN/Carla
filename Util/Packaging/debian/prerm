@@ -18,10 +18,10 @@ set -e
 
 # Removing carla PythonAPI from site-packages,
 SITEDIR=$(python3 -c 'import site; site._script()' --user-site)
-rm "$SITEDIR/carla.pth"
+rm -f "$SITEDIR/carla.pth"
 
 SITEDIR=$(python2 -c 'import site; site._script()' --user-site)
-rm "$SITEDIR/carla.pth"
+rm -f "$SITEDIR/carla.pth"
 
 case "$1" in
     remove|upgrade|deconfigure)
