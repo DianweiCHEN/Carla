@@ -7,7 +7,42 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 """
-Test lidar example for CARLA
+
+Lidar/BB check for CARLA
+This script obtains the LiDAR's point cloud corresponding to all the vehicles
+of the scene and make sure that they are inside the bounding box of the 
+corresponding actor.
+This is done in a predefined route in Town03 with a high speed and several agressive 
+turns.
+
+In a nutshell, the script have a queue that is filled in each frame with a lidar point 
+cloud and an structure for storing the Bounding Boxes. This last one is emulated as a 
+sensor filling the queue in the on_tick callback of the carla.world. In this way, we make
+sure that we are correctly syncronizing the lidar point cloud and BB/actor transformations.
+Then, we select the points corresponding to each actor (car) in the scene and check they
+are inside the bounding boxes of that actor, all in each vehicle frame of reference.
+
+Important Data structure description:
+  + Lidar data structure: four element tuple with:
+      - [0] Frame
+      - [1] Sensor name: 'semlidar'
+      - [2] Point cloud in the form of a numpy dictionary with all semantic lidar information
+      - [3] Global transformation of the sensor
+  + Bounding box data structure: four element tuple with:
+      - [0] Frame
+      - [1] Sensor name: 'bb'
+      - [2] List of actor information: each a tuple with:
+            - [0] Actor id
+            - [1] Actor type (blueprint's name)
+            - [0] Actor's global transformation
+            - [0] Actor's bounding box
+ + ActorTrace class: Takes the Lidar data structure and one actor information and
+    check if all the data points related with this actor are inside its BB.
+    This is done in the local coordinate frame of the actor and should be done like:
+        trace = ActorTrace(actor_info, lidar_data)
+        trace.process()
+        trace.check_lidar_data()
+
 
 """
 
@@ -29,22 +64,18 @@ except IndexError:
 import carla
 
 
-class ActorSnapshot(object):
-    """Class that store and process information about the actor at some step."""
+class ActorTrace(object):
+    """Class that store and process information about an actor at certain moment."""
     def __init__(self, actor, lidar):
-        self._frame = lidar[0]
-        self._lidar_data = lidar[2][0]
-        self._lidar_transf = lidar[3][0]
-        self._actor_id = actor[0]
-        self._actor_type = actor[1]
-        self._actor_transf = actor[2]
-        self._actor_bb = actor[3]
+        self.set_lidar(lidar)
+        self.set_actor(actor)
         self._lidar_pc_local = np.array([])
         self._bb_vertices = np.array([])
         self._bb_minlimits = [0, 0, 0]
         self._bb_maxlimits = [0, 0, 0]
 
     def set_lidar(self, lidar):
+        self._frame = lidar[0]
         self._lidar_data = lidar[2][0]
         self._lidar_transf = lidar[3][0]
 
@@ -58,14 +89,18 @@ class ActorSnapshot(object):
         # Filter lidar points that correspond to my actor id
         data_actor = self._lidar_data[self._lidar_data['ObjIdx'] == self._actor_id]
 
+        # Take the xyz point cloud data and transform it to actor's frame
         points = np.array([data_actor['x'], data_actor['y'], data_actor['z']]).T
         points = np.append(points, np.ones((points.shape[0], 1)), axis=1)
-        points = np.dot(self._lidar_transf.get_matrix(), points.T).T  # sensor -> world
-        points = np.dot(self._actor_transf.get_inverse_matrix(), points.T).T # world -> vehicle
+        points = np.dot(self._lidar_transf.get_matrix(), points.T).T         # sensor -> world
+        points = np.dot(self._actor_transf.get_inverse_matrix(), points.T).T # world -> actor
         points = points[:, :-1]
 
+        # Saving the points in 'local' coordinates
         self._lidar_pc_local = points
 
+        # We compute the limits in the local frame of reference using the
+        # vertices of the bounding box
         vertices = self._actor_bb.get_local_vertices()
         ver_py = []
         for v in vertices:
@@ -74,9 +109,8 @@ class ActorSnapshot(object):
 
         self._bb_vertices = ver_np
 
-        self._bb_minlimits = ver_np.min(axis=0) - 0.001
-        self._bb_maxlimits = ver_np.max(axis=0) + 0.001
-
+        self._bb_minlimits = ver_np.min(axis=0) - 0.0 * 0.001
+        self._bb_maxlimits = ver_np.max(axis=0) + 0.0 * 0.001
 
     def print(self, print_if_empty = False):
         if self._lidar_pc_local.shape[0] > 0 or print_if_empty:
@@ -119,7 +153,6 @@ class ActorSnapshot(object):
             return False
         else:
             return True
-        
 
 def wait(world, frames=100, queue = None, slist = None):
     for i in range(0, frames):
@@ -146,24 +179,15 @@ def lidar_callback(sensor_data, sensor_queue, sensor_name):
     data_array.append(sensor_pc_local)
     transf_array = []
     transf_array.append(sensor_transf)
-    #sensor_data.save_to_disk('data_%d' % sensor_data.frame)
 
     sensor_queue.put((sensor_data.frame, sensor_name, data_array, transf_array))
 
 def bb_callback(snapshot, world, sensor_queue, sensor_name):
     data_array = []
 
-    #print("Actors in get actors")
     vehicles = world.get_actors().filter('vehicle.*')
     for actor in vehicles:
-        #print("Actor id: %d : %s" % (actor.id, actor.type_id))
         data_array.append((actor.id, actor.type_id, actor.get_transform(), actor.bounding_box))
-
-    #print("Walkers in get actors")
-    walkers = world.get_actors().filter('walker.*')
-    #for actor in walkers:
-    #    #print("Actor id: %d : %s" % (actor.id, actor.type_id))
-    #    data_array.append((actor.id, actor.get_transform(), actor.bounding_box))
 
     sensor_queue.put((snapshot.frame, sensor_name, data_array))
 
@@ -206,12 +230,12 @@ def process_sensors(w_frame, sensor_queue, sensor_number):
     if sl_data == None or bb_data == None:
         print("Error!!! Missmatch for sensor %s in the frame timestamp (w: %d, s: %d)" % (s_frame[1], w_frame, s_frame[0]))
 
-    for bb_data in bb_data[2]:
-        snapshot_vehicle = ActorSnapshot(bb_data, sl_data)
-        snapshot_vehicle.process()
-        snapshot_vehicle.check_lidar_data()
+    for actor_data in bb_data[2]:
+        trace_vehicle = ActorTrace(actor_data, sl_data)
+        trace_vehicle.process()
+        trace_vehicle.check_lidar_data()
 
-class InitSpawnCar(object):
+class SpawnCar(object):
     def __init__(self, location, rotation, filter="vehicle.*", autopilot = False, velocity = None):
         self._filter = filter
         self._transform = carla.Transform(location, rotation)
@@ -233,53 +257,44 @@ class InitSpawnCar(object):
             self._actor.destroy()
 
 
-#(X=243,Y=100,Z=2)
-#carla.Location(x=235.75, y=125, z=3), carla.Rotation(yaw=-88.5)
-
-#-210
-TestList = [
-    #InitSpawnCar(carla.Location(x=83, y= -50, z=5), carla.Rotation(yaw=-90), filter= "*jeep*", autopilot=True),
-    InitSpawnCar(carla.Location(x=83, y= -40, z=5), carla.Rotation(yaw=-90), filter= "*lincoln*", autopilot=True),
-    InitSpawnCar(carla.Location(x=83, y= -30, z=3), carla.Rotation(yaw=-90), filter= "*micra*", autopilot=True),
-    InitSpawnCar(carla.Location(x=83, y= -20, z=3), carla.Rotation(yaw=-90), filter= "*etron*", autopilot=True),
-    InitSpawnCar(carla.Location(x=120, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*isetta*", autopilot=True),
-    InitSpawnCar(carla.Location(x=100, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*etron*", autopilot=True),
-    InitSpawnCar(carla.Location(x=140, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*model3*", autopilot=True),
-    InitSpawnCar(carla.Location(x=160, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*impala*", autopilot=False),
-    InitSpawnCar(carla.Location(x=180, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*a2*", autopilot=True),
-    InitSpawnCar(carla.Location(x=60, y= +6, z=2), carla.Rotation(yaw=+00), filter= "*model3*", autopilot=True),
-    InitSpawnCar(carla.Location(x=80, y= +6, z=2), carla.Rotation(yaw=+00), filter= "*etron*", autopilot=True),
-    InitSpawnCar(carla.Location(x=100, y= +6, z=2), carla.Rotation(yaw=+00), filter= "*mustan*", autopilot=True),
-    InitSpawnCar(carla.Location(x=120, y= +6, z=2), carla.Rotation(yaw=+00), filter= "*isetta*", autopilot=True),
-    InitSpawnCar(carla.Location(x=140, y= +6, z=2), carla.Rotation(yaw=+00), filter= "*impala*", autopilot=True),
-    InitSpawnCar(carla.Location(x=160, y= +6, z=2), carla.Rotation(yaw=+00), filter= "*prius*", autopilot=True),
-    InitSpawnCar(carla.Location(x=234, y= +20,z=2), carla.Rotation(yaw=+90), filter= "*dodge*", autopilot=True),
-    InitSpawnCar(carla.Location(x=234, y= +40,z=2), carla.Rotation(yaw=+90), filter= "*isetta*", autopilot=True),
-    InitSpawnCar(carla.Location(x=234, y= +60,z=2), carla.Rotation(yaw=+90), filter= "*impala*", autopilot=True),
-    InitSpawnCar(carla.Location(x=234, y= +80,z=2), carla.Rotation(yaw=+90), filter= "*tt*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= -40,z=2), carla.Rotation(yaw=-90), filter= "*etron*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= -20,z=2), carla.Rotation(yaw=-90), filter= "*mkz2017*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= +00,z=2), carla.Rotation(yaw=-90), filter= "*mustan*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= +20,z=2), carla.Rotation(yaw=-90), filter= "*dodge*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= +40,z=2), carla.Rotation(yaw=-90), filter= "*isetta*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= +60,z=2), carla.Rotation(yaw=-90), filter= "*impala*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y= +80,z=2), carla.Rotation(yaw=-90), filter= "*tt*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y=+100,z=2), carla.Rotation(yaw=-90), filter= "*a2*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y=+120,z=2), carla.Rotation(yaw=-90), filter= "*wrangler_rubicon*", autopilot=True),
-    InitSpawnCar(carla.Location(x=243, y=+140,z=2), carla.Rotation(yaw=-90), filter= "*c3*", autopilot=True)
+CarPropList = [
+    SpawnCar(carla.Location(x=83,  y= -40, z=5),  carla.Rotation(yaw=-90),  filter= "*lincoln*", autopilot=True),
+    SpawnCar(carla.Location(x=83,  y= -30, z=3),  carla.Rotation(yaw=-90),  filter= "*micra*", autopilot=True),
+    SpawnCar(carla.Location(x=83,  y= -20, z=3),  carla.Rotation(yaw=-90),  filter= "*etron*", autopilot=True),
+    SpawnCar(carla.Location(x=120, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*isetta*", autopilot=True),
+    SpawnCar(carla.Location(x=100, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*etron*", autopilot=True),
+    SpawnCar(carla.Location(x=140, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*model3*", autopilot=True),
+    SpawnCar(carla.Location(x=160, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*impala*", autopilot=False),
+    SpawnCar(carla.Location(x=180, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*a2*", autopilot=True),
+    SpawnCar(carla.Location(x=60,  y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*model3*", autopilot=True),
+    SpawnCar(carla.Location(x=80,  y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*etron*", autopilot=True),
+    SpawnCar(carla.Location(x=100, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*mustan*", autopilot=True),
+    SpawnCar(carla.Location(x=120, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*isetta*", autopilot=True),
+    SpawnCar(carla.Location(x=140, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*impala*", autopilot=True),
+    SpawnCar(carla.Location(x=160, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*prius*", autopilot=True),
+    SpawnCar(carla.Location(x=234, y= +20,z=2),   carla.Rotation(yaw=+90),  filter= "*dodge*", autopilot=True),
+    SpawnCar(carla.Location(x=234, y= +40,z=2),   carla.Rotation(yaw=+90),  filter= "*isetta*", autopilot=True),
+    SpawnCar(carla.Location(x=234, y= +60,z=2),   carla.Rotation(yaw=+90),  filter= "*impala*", autopilot=True),
+    SpawnCar(carla.Location(x=234, y= +80,z=2),   carla.Rotation(yaw=+90),  filter= "*tt*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= -40,z=2),   carla.Rotation(yaw=-90),  filter= "*etron*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= -20,z=2),   carla.Rotation(yaw=-90),  filter= "*mkz2017*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +00,z=2),   carla.Rotation(yaw=-90),  filter= "*mustan*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +20,z=2),   carla.Rotation(yaw=-90),  filter= "*dodge*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +40,z=2),   carla.Rotation(yaw=-90),  filter= "*isetta*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +60,z=2),   carla.Rotation(yaw=-90),  filter= "*impala*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +80,z=2),   carla.Rotation(yaw=-90),  filter= "*tt*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y=+100,z=2),   carla.Rotation(yaw=-90),  filter= "*a2*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y=+120,z=2),   carla.Rotation(yaw=-90),  filter= "*wrangler_rubicon*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y=+140,z=2),   carla.Rotation(yaw=-90),  filter= "*c3*", autopilot=True)
 ]
 
-
 def spawn_prop_vehicles(world):
-
-    for car in TestList:
+    for car in CarPropList:
         car.spawn(world)
 
 def destroy_prop_vehicles():
-    for car in TestList:
+    for car in CarPropList:
         car.destroy()
-
-
 
 
 def main():
@@ -320,7 +335,6 @@ def main():
         wait(world, 80)
 
 
-
         # We create all the sensors and keep them in a list for convenience.
         sensor_list = []
 
@@ -343,24 +357,13 @@ def main():
         control = carla.VehicleControl()
         control.throttle = 1
         actor.apply_control(control)
-        #actor.set_target_velocity(actor.get_transform().get_forward_vector()*40)
 
         actor.enable_constant_velocity(carla.Vector3D(40, 0, 0))
-        #actor.set_autopilot(True)
-        #clean queue
-        #for _i in range (0, len(sensor_queue)):
-        #    sensor_queue.get(True, 1.0)
-        #sensor_queue.queue.clear()
-        # Main loop
-        #while True:
-        #for _i in range(0, 200):
+
         for _i in range(0, 50):
             # Tick the server
             world.tick()
-
             w_frame = world.get_snapshot().frame
-            #print("World's frame: %d" % w_frame)
-
             process_sensors(w_frame, sensor_queue, len(sensor_list))
 
         print("Steer!!!!")
