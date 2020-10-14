@@ -42,8 +42,6 @@ Important Data structure description:
         trace = ActorTrace(actor_info, lidar_data)
         trace.process()
         trace.check_lidar_data()
-
-
 """
 
 import glob
@@ -76,8 +74,8 @@ class ActorTrace(object):
 
     def set_lidar(self, lidar):
         self._frame = lidar[0]
-        self._lidar_data = lidar[2][0]
-        self._lidar_transf = lidar[3][0]
+        self._lidar_data = lidar[2]
+        self._lidar_transf = lidar[3]
 
     def set_actor(self, actor):
         self._actor_id = actor[0]
@@ -109,8 +107,8 @@ class ActorTrace(object):
 
         self._bb_vertices = ver_np
 
-        self._bb_minlimits = ver_np.min(axis=0) - 0.0 * 0.001
-        self._bb_maxlimits = ver_np.max(axis=0) + 0.0 * 0.001
+        self._bb_minlimits = ver_np.min(axis=0) - 0.001
+        self._bb_maxlimits = ver_np.max(axis=0) + 0.001
 
     def print(self, print_if_empty = False):
         if self._lidar_pc_local.shape[0] > 0 or print_if_empty:
@@ -148,7 +146,8 @@ class ActorTrace(object):
     
     def check_lidar_data(self):
         if self.lidar_is_outside_bb():
-            print("Error!!! Points of lidar point cloud are outside its BB for car %d: %s " % (self._actor_id, self._actor_type))
+            print("%d: Error!! Points of lidar point cloud are outside its BB for car %d: %s " 
+                    % (self._frame, self._actor_id, self._actor_type))
             self.print()
             return False
         else:
@@ -173,14 +172,8 @@ def lidar_callback(sensor_data, sensor_queue, sensor_name):
     sensor_pc_local = np.frombuffer(sensor_data.raw_data, dtype=np.dtype([
         ('x', np.float32), ('y', np.float32), ('z', np.float32),
         ('CosAngle', np.float32), ('ObjIdx', np.uint32), ('ObjTag', np.uint32)]))
-
     sensor_transf = sensor_data.transform
-    data_array = []
-    data_array.append(sensor_pc_local)
-    transf_array = []
-    transf_array.append(sensor_transf)
-
-    sensor_queue.put((sensor_data.frame, sensor_name, data_array, transf_array))
+    sensor_queue.put((sensor_data.frame, sensor_name, sensor_pc_local, sensor_transf))
 
 def bb_callback(snapshot, world, sensor_queue, sensor_name):
     data_array = []
@@ -259,7 +252,7 @@ class SpawnCar(object):
 
 CarPropList = [
     SpawnCar(carla.Location(x=83,  y= -40, z=5),  carla.Rotation(yaw=-90),  filter= "*lincoln*", autopilot=True),
-    SpawnCar(carla.Location(x=83,  y= -30, z=3),  carla.Rotation(yaw=-90),  filter= "*micra*", autopilot=True),
+    SpawnCar(carla.Location(x=83,  y= -30, z=3),  carla.Rotation(yaw=-90),  filter= "*a2*", autopilot=True),
     SpawnCar(carla.Location(x=83,  y= -20, z=3),  carla.Rotation(yaw=-90),  filter= "*etron*", autopilot=True),
     SpawnCar(carla.Location(x=120, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*isetta*", autopilot=True),
     SpawnCar(carla.Location(x=100, y= -3.5, z=2), carla.Rotation(yaw=+180), filter= "*etron*", autopilot=True),
@@ -269,7 +262,7 @@ CarPropList = [
     SpawnCar(carla.Location(x=60,  y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*model3*", autopilot=True),
     SpawnCar(carla.Location(x=80,  y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*etron*", autopilot=True),
     SpawnCar(carla.Location(x=100, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*mustan*", autopilot=True),
-    SpawnCar(carla.Location(x=120, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*isetta*", autopilot=True),
+    SpawnCar(carla.Location(x=120, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*yamaha*", autopilot=True),
     SpawnCar(carla.Location(x=140, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*impala*", autopilot=True),
     SpawnCar(carla.Location(x=160, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*prius*", autopilot=True),
     SpawnCar(carla.Location(x=234, y= +20,z=2),   carla.Rotation(yaw=+90),  filter= "*dodge*", autopilot=True),
@@ -281,9 +274,9 @@ CarPropList = [
     SpawnCar(carla.Location(x=243, y= +00,z=2),   carla.Rotation(yaw=-90),  filter= "*mustan*", autopilot=True),
     SpawnCar(carla.Location(x=243, y= +20,z=2),   carla.Rotation(yaw=-90),  filter= "*dodge*", autopilot=True),
     SpawnCar(carla.Location(x=243, y= +40,z=2),   carla.Rotation(yaw=-90),  filter= "*isetta*", autopilot=True),
-    SpawnCar(carla.Location(x=243, y= +60,z=2),   carla.Rotation(yaw=-90),  filter= "*impala*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +60,z=2),   carla.Rotation(yaw=-90),  filter= "*crossbike*", autopilot=True),
     SpawnCar(carla.Location(x=243, y= +80,z=2),   carla.Rotation(yaw=-90),  filter= "*tt*", autopilot=True),
-    SpawnCar(carla.Location(x=243, y=+100,z=2),   carla.Rotation(yaw=-90),  filter= "*a2*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y=+100,z=2),   carla.Rotation(yaw=-90),  filter= "*gazelle*", autopilot=True),
     SpawnCar(carla.Location(x=243, y=+120,z=2),   carla.Rotation(yaw=-90),  filter= "*wrangler_rubicon*", autopilot=True),
     SpawnCar(carla.Location(x=243, y=+140,z=2),   carla.Rotation(yaw=-90),  filter= "*c3*", autopilot=True)
 ]
