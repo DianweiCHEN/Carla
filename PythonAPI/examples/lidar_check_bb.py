@@ -250,7 +250,7 @@ class SpawnCar(object):
             self._actor.destroy()
 
 
-CarPropList = [
+CarList = [
     SpawnCar(carla.Location(x=83,  y= -40, z=5),  carla.Rotation(yaw=-90),  filter= "*lincoln*", autopilot=True),
     SpawnCar(carla.Location(x=83,  y= -30, z=3),  carla.Rotation(yaw=-90),  filter= "*a2*", autopilot=True),
     SpawnCar(carla.Location(x=83,  y= -20, z=3),  carla.Rotation(yaw=-90),  filter= "*etron*", autopilot=True),
@@ -262,7 +262,7 @@ CarPropList = [
     SpawnCar(carla.Location(x=60,  y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*model3*", autopilot=True),
     SpawnCar(carla.Location(x=80,  y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*etron*", autopilot=True),
     SpawnCar(carla.Location(x=100, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*mustan*", autopilot=True),
-    SpawnCar(carla.Location(x=120, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*yamaha*", autopilot=True),
+    SpawnCar(carla.Location(x=120, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*lincoln*", autopilot=True),
     SpawnCar(carla.Location(x=140, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*impala*", autopilot=True),
     SpawnCar(carla.Location(x=160, y= +6, z=2),   carla.Rotation(yaw=+00),  filter= "*prius*", autopilot=True),
     SpawnCar(carla.Location(x=234, y= +20,z=2),   carla.Rotation(yaw=+90),  filter= "*dodge*", autopilot=True),
@@ -274,19 +274,19 @@ CarPropList = [
     SpawnCar(carla.Location(x=243, y= +00,z=2),   carla.Rotation(yaw=-90),  filter= "*mustan*", autopilot=True),
     SpawnCar(carla.Location(x=243, y= +20,z=2),   carla.Rotation(yaw=-90),  filter= "*dodge*", autopilot=True),
     SpawnCar(carla.Location(x=243, y= +40,z=2),   carla.Rotation(yaw=-90),  filter= "*isetta*", autopilot=True),
-    SpawnCar(carla.Location(x=243, y= +60,z=2),   carla.Rotation(yaw=-90),  filter= "*crossbike*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y= +60,z=2),   carla.Rotation(yaw=-90),  filter= "*a2*", autopilot=True),
     SpawnCar(carla.Location(x=243, y= +80,z=2),   carla.Rotation(yaw=-90),  filter= "*tt*", autopilot=True),
-    SpawnCar(carla.Location(x=243, y=+100,z=2),   carla.Rotation(yaw=-90),  filter= "*gazelle*", autopilot=True),
+    SpawnCar(carla.Location(x=243, y=+100,z=2),   carla.Rotation(yaw=-90),  filter= "*etron*", autopilot=True),
     SpawnCar(carla.Location(x=243, y=+120,z=2),   carla.Rotation(yaw=-90),  filter= "*wrangler_rubicon*", autopilot=True),
     SpawnCar(carla.Location(x=243, y=+140,z=2),   carla.Rotation(yaw=-90),  filter= "*c3*", autopilot=True)
 ]
 
 def spawn_prop_vehicles(world):
-    for car in CarPropList:
+    for car in CarList:
         car.spawn(world)
 
 def destroy_prop_vehicles():
-    for car in CarPropList:
+    for car in CarList:
         car.destroy()
 
 
