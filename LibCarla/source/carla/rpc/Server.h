@@ -8,6 +8,7 @@
 
 #include "carla/MoveHandler.h"
 #include "carla/Time.h"
+#include "carla/rpc/ClientSessions.h"
 #include "carla/rpc/Metadata.h"
 #include "carla/rpc/Response.h"
 
@@ -20,6 +21,8 @@
 
 namespace carla {
 namespace rpc {
+
+  class ::rpc::detail::server_session;
 
   // ===========================================================================
   // -- Server -----------------------------------------------------------------
@@ -60,11 +63,25 @@ namespace rpc {
       _server.stop();
     }
 
+    void OnConnection(std::shared_ptr<::rpc::detail::server_session> session) {
+      _clients.Add(reinterpret_cast<std::uintptr_t>(session.get()));
+    }
+
+    void OnDisconnection(std::shared_ptr<::rpc::detail::server_session> session) {
+      _clients.Remove(reinterpret_cast<std::uintptr_t>(session.get()));
+    }
+
+    ClientSessions &GetClients() {
+      return _clients;
+    }
+
   private:
 
     boost::asio::io_context _sync_io_context;
 
     ::rpc::server _server;
+
+    ClientSessions _clients;
   };
 
   // ===========================================================================
@@ -141,6 +158,9 @@ namespace detail {
   inline Server::Server(Args && ... args)
     : _server(std::forward<Args>(args) ...) {
     _server.suppress_exceptions(true);
+    // set the callbacks
+    _server.set_on_connection([this](std::shared_ptr<::rpc::detail::server_session> session) { OnConnection(session); });
+    _server.set_on_disconnection([this](std::shared_ptr<::rpc::detail::server_session> session) { OnDisconnection(session); });
   }
 
   template <typename FunctorT>

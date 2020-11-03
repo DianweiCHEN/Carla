@@ -48,6 +48,8 @@
 #include <carla/streaming/Server.h>
 #include <compiler/enable-ue4-macros.h>
 
+#include <rpc/this_session.h>
+
 #include <vector>
 #include <map>
 #include <tuple>
@@ -215,6 +217,9 @@ void FCarlaServer::FPimpl::BindActions()
 
   BIND_SYNC(tick_cue) << [this]() -> R<uint64_t>
   {
+    // mark client as doing tick this frame
+    Server.GetClients().Tick(::rpc::this_session().id());
+
     ++TickCuesReceived;
     return GFrameCounter + 1u;
   };
