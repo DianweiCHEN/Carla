@@ -474,7 +474,7 @@ void ACarlaGameModeBase::ConvertMapLayerMaskToMapNames(int32 MapLayer, TArray<FN
   for(ULevelStreaming* Level : Levels)
   {
     TArray<FString> StringArray;
-    FString FullSubMapName = Level->PackageNameToLoad.ToString();
+    FString FullSubMapName = Level->GetWorldAssetPackageFName().ToString();
     // Discard full path, we just need the umap name
     FullSubMapName.ParseIntoArray(StringArray, TEXT("/"), false);
     FString SubMapName = StringArray[StringArray.Num() - 1];
