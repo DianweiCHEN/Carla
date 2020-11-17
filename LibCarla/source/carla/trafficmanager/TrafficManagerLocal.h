@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -33,6 +34,8 @@
 #include "carla/trafficmanager/CollisionStage.h"
 #include "carla/trafficmanager/TrafficLightStage.h"
 #include "carla/trafficmanager/MotionPlanStage.h"
+
+#include "carla/trafficmanager/SnippetProfiler.h"
 
 namespace carla {
 namespace traffic_manager {
@@ -93,7 +96,7 @@ private:
   uint64_t current_reserved_capacity {0u};
   /// Various stages representing core operations of traffic manager.
   LocalizationStage localization_stage;
-  CollisionStage collision_stage;
+  std::shared_ptr<CollisionStage> collision_stage_ptr;
   TrafficLightStage traffic_light_stage;
   MotionPlanStage motion_plan_stage;
   ALSM alsm;
@@ -118,6 +121,8 @@ private:
   std::vector<ActorId> marked_for_removal;
   /// Mutex to prevent vehicle registration during frame array re-allocation.
   std::mutex registration_mutex;
+
+  SnippetProfiler snippet_profiler;
 
   /// Method to check if all traffic lights are frozen in a group.
   bool CheckAllFrozen(TLGroup tl_to_freeze);

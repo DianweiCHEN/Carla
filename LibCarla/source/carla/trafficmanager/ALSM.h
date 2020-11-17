@@ -57,7 +57,7 @@ private:
   const LocalMapPtr &local_map;
   SimulationState &simulation_state;
   LocalizationStage &localization_stage;
-  CollisionStage &collision_stage;
+  std::shared_ptr<CollisionStage> collision_stage_ptr;
   TrafficLightStage &traffic_light_stage;
   MotionPlanStage &motion_plan_stage;
   // Time elapsed since last vehicle destruction due to being idle for too long.
@@ -96,7 +96,7 @@ public:
        const LocalMapPtr &local_map,
        SimulationState &simulation_state,
        LocalizationStage &localization_stage,
-       CollisionStage &collision_stage,
+       std::shared_ptr<CollisionStage> &collision_stage_ptr,
        TrafficLightStage &traffic_light_stage,
        MotionPlanStage &motion_plan_stage,
        RandomGeneratorMap &random_devices);

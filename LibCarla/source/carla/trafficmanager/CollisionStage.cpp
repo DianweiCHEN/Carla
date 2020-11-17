@@ -1,4 +1,6 @@
 
+#include <thread>
+
 #include "carla/geom/Math.h"
 
 #include "carla/trafficmanager/Constants.h"
@@ -101,11 +103,51 @@ void CollisionStage::Update(const unsigned long index) {
   output_element.available_distance_margin = available_distance_margin;
 }
 
+void CollisionStage::Worker(std::queue<uint64_t> &job_queue) {
+  bool keep_running = true;
+
+  while (keep_running) {
+    std::unique_lock<std::mutex> job_acquisition_lock (job_allocation_mutex);
+    uint64_t job_index = 0u;
+    if (!job_queue.empty()) {
+      job_index = job_queue.front();
+      job_queue.pop();
+      job_acquisition_lock.unlock();
+
+      Update(job_index);
+
+    } else {
+      job_acquisition_lock.unlock();
+      keep_running = false;
+    }
+  }
+}
+
+void CollisionStage::ComputeFrame() {
+  std::queue<uint64_t> job_queue;
+  uint64_t queue_size = vehicle_id_list.size();
+  for (uint64_t i = 0u; i < queue_size; ++i) {
+    job_queue.push(i);
+  }
+
+  std::thread worker_1(&CollisionStage::Worker, this, std::ref(job_queue));
+  std::thread worker_2(&CollisionStage::Worker, this, std::ref(job_queue));
+  std::thread worker_3(&CollisionStage::Worker, this, std::ref(job_queue));
+  std::thread worker_4(&CollisionStage::Worker, this, std::ref(job_queue));
+
+  worker_1.join();
+  worker_2.join();
+  worker_3.join();
+  worker_4.join();
+}
+
 void CollisionStage::RemoveActor(const ActorId actor_id) {
+  std::lock_guard<std::mutex> lock(collision_lock_mutex);
   collision_locks.erase(actor_id);
 }
 
 void CollisionStage::Reset() {
+  std::lock_guard<std::mutex> lock(collision_lock_mutex);
   collision_locks.clear();
 }
 
@@ -116,12 +158,13 @@ float CollisionStage::GetBoundingBoxExtention(const ActorId actor_id) {
   // Using a linear function to calculate boundary length.
   bbox_extension = BOUNDARY_EXTENSION_RATE * velocity + BOUNDARY_EXTENSION_MINIMUM;
   // If a valid collision lock present, change boundary length to maintain lock.
+  std::lock_guard<std::mutex> lock(collision_lock_mutex);
   if (collision_locks.find(actor_id) != collision_locks.end()) {
-    const CollisionLock &lock = collision_locks.at(actor_id);
-    float lock_boundary_length = static_cast<float>(lock.distance_to_lead_vehicle + LOCKING_DISTANCE_PADDING);
+    const CollisionLock c_lock = collision_locks.at(actor_id);
+    float lock_boundary_length = static_cast<float>(c_lock.distance_to_lead_vehicle + LOCKING_DISTANCE_PADDING);
     // Only extend boundary track vehicle if the leading vehicle
     // if it is not further than velocity dependent extension by MAX_LOCKING_EXTENSION.
-    if ((lock_boundary_length - lock.initial_lock_distance) < MAX_LOCKING_EXTENSION) {
+    if ((lock_boundary_length - c_lock.initial_lock_distance) < MAX_LOCKING_EXTENSION) {
       bbox_extension = lock_boundary_length;
     }
   }
@@ -162,10 +205,12 @@ LocationVector CollisionStage::GetBoundary(const ActorId actor_id) {
 
 LocationVector CollisionStage::GetGeodesicBoundary(const ActorId actor_id) {
   LocationVector geodesic_boundary;
-
+  std::unique_lock<std::mutex> lock(geodesic_boundary_mutex);
   if (geodesic_boundary_map.find(actor_id) != geodesic_boundary_map.end()) {
     geodesic_boundary = geodesic_boundary_map.at(actor_id);
+    lock.unlock();
   } else {
+    lock.unlock();
     const LocationVector bbox = GetBoundary(actor_id);
 
     if (buffer_map.find(actor_id) != buffer_map.end()) {
@@ -227,6 +272,7 @@ LocationVector CollisionStage::GetGeodesicBoundary(const ActorId actor_id) {
       geodesic_boundary = bbox;
     }
 
+    std::lock_guard<std::mutex> insert_lock(geodesic_boundary_mutex);
     geodesic_boundary_map.insert({actor_id, geodesic_boundary});
   }
 
@@ -262,13 +308,16 @@ GeometryComparison CollisionStage::GetGeometryBetweenActors(const ActorId refere
 
   GeometryComparison comparision_result{-1.0, -1.0, -1.0, -1.0};
 
+  std::unique_lock<std::mutex> lock(geometry_cache_mutex);
   if (geometry_cache.find(actor_id_key) != geometry_cache.end()) {
 
     comparision_result = geometry_cache.at(actor_id_key);
+    lock.unlock();
     double mref_veh_other = comparision_result.reference_vehicle_to_other_geodesic;
     comparision_result.reference_vehicle_to_other_geodesic = comparision_result.other_vehicle_to_reference_geodesic;
     comparision_result.other_vehicle_to_reference_geodesic = mref_veh_other;
   } else {
+    lock.unlock();
 
     const Polygon reference_polygon = GetPolygon(GetBoundary(reference_vehicle_id));
     const Polygon other_polygon = GetPolygon(GetBoundary(other_actor_id));
@@ -287,6 +336,7 @@ GeometryComparison CollisionStage::GetGeometryBetweenActors(const ActorId refere
               inter_geodesic_distance,
               inter_bbox_distance};
 
+    std::lock_guard<std::mutex> insert_lock(geometry_cache_mutex);
     geometry_cache.insert({actor_id_key, comparision_result});
   }
 
@@ -376,21 +426,22 @@ std::pair<bool, float> CollisionStage::NegotiateCollision(const ActorId referenc
       // This enables us to smoothly approach the lead vehicle.
 
       // When possible collision found, check if an entry for collision lock present.
+      std::lock_guard<std::mutex> lock(collision_lock_mutex);
       if (collision_locks.find(reference_vehicle_id) != collision_locks.end()) {
-        CollisionLock &lock = collision_locks.at(reference_vehicle_id);
+        CollisionLock &c_lock = collision_locks.at(reference_vehicle_id);
         // Check if the same vehicle is under lock.
-        if (other_actor_id == lock.lead_vehicle_id) {
+        if (other_actor_id == c_lock.lead_vehicle_id) {
           // If the body of the lead vehicle is touching the reference vehicle bounding box.
           if (geometry_comparison.other_vehicle_to_reference_geodesic < 0.1) {
             // Distance between the bodies of the vehicles.
-            lock.distance_to_lead_vehicle = geometry_comparison.inter_bbox_distance;
+            c_lock.distance_to_lead_vehicle = geometry_comparison.inter_bbox_distance;
           } else {
             // Distance from reference vehicle body to other vehicle path polygon.
-            lock.distance_to_lead_vehicle = geometry_comparison.reference_vehicle_to_other_geodesic;
+            c_lock.distance_to_lead_vehicle = geometry_comparison.reference_vehicle_to_other_geodesic;
           }
         } else {
           // If possible collision with a new vehicle, re-initialize with new lock entry.
-          lock = {geometry_comparison.inter_bbox_distance, geometry_comparison.inter_bbox_distance, other_actor_id};
+          c_lock = {geometry_comparison.inter_bbox_distance, geometry_comparison.inter_bbox_distance, other_actor_id};
         }
       } else {
         // Insert and initialize lock entry if not present.
@@ -403,6 +454,7 @@ std::pair<bool, float> CollisionStage::NegotiateCollision(const ActorId referenc
   }
 
   // If no collision hazard detected, then flush collision lock held by the vehicle.
+  std::lock_guard<std::mutex> lock(collision_lock_mutex);
   if (!hazard && collision_locks.find(reference_vehicle_id) != collision_locks.end()) {
     collision_locks.erase(reference_vehicle_id);
   }
@@ -411,7 +463,9 @@ std::pair<bool, float> CollisionStage::NegotiateCollision(const ActorId referenc
 }
 
 void CollisionStage::ClearCycleCache() {
+  std::lock_guard<std::mutex> boundary_lock(geodesic_boundary_mutex);
   geodesic_boundary_map.clear();
+  std::lock_guard<std::mutex> geometry_lock(geometry_cache_mutex);
   geometry_cache.clear();
 }
 

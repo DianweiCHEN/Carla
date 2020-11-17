@@ -2,6 +2,8 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
+#include <queue>
 
 #include "boost/geometry.hpp"
 #include "boost/geometry/geometries/geometries.hpp"
@@ -53,37 +55,46 @@ private:
   const Parameters &parameters;
   CollisionFrame &output_array;
   cc::DebugHelper &debug_helper;
-  // Structure keeping track of blocking lead vehicles.
+  /// Structure keeping track of blocking lead vehicles.
   CollisionLockMap collision_locks;
-  // Structures to cache geodesic boundaries of vehicle and
-  // comparision between vehicle boundaries
-  // to avoid repeated computation within a cycle.
+  /// Structures to cache geodesic boundaries of vehicle and
+  /// comparision between vehicle boundaries
+  /// to avoid repeated computation within a cycle.
   GeometryComparisonMap geometry_cache;
   GeodesicBoundaryMap geodesic_boundary_map;
   RandomGeneratorMap &random_devices;
+  /// Mutex used to allocate tasks to worker threads.
+  std::mutex job_allocation_mutex;
+  /// Mutexes to manage access to object state among worker threads.
+  std::mutex collision_lock_mutex;
+  std::mutex geometry_cache_mutex;
+  std::mutex geodesic_boundary_mutex;
 
-  // Method to determine if a vehicle is on a collision path to another.
+  /// Method to determine if a vehicle is on a collision path to another.
   std::pair<bool, float> NegotiateCollision(const ActorId reference_vehicle_id,
                                             const ActorId other_actor_id,
                                             const uint64_t reference_junction_look_ahead_index);
 
-  // Method to calculate bounding box extention length ahead of the vehicle.
+  /// Method to calculate bounding box extention length ahead of the vehicle.
   float GetBoundingBoxExtention(const ActorId actor_id);
 
-  // Method to calculate polygon points around the vehicle's bounding box.
+  /// Method to calculate polygon points around the vehicle's bounding box.
   LocationVector GetBoundary(const ActorId actor_id);
 
-  // Method to construct polygon points around the path boundary of the vehicle.
+  /// Method to construct polygon points around the path boundary of the vehicle.
   LocationVector GetGeodesicBoundary(const ActorId actor_id);
 
   Polygon GetPolygon(const LocationVector &boundary);
 
-  // Method to compare path boundaries, bounding boxes of vehicles
-  // and cache the results for reuse in current update cycle.
+  /// Method to compare path boundaries, bounding boxes of vehicles
+  /// and cache the results for reuse in current update cycle.
   GeometryComparison GetGeometryBetweenActors(const ActorId reference_vehicle_id,
                                               const ActorId other_actor_id);
 
-  // Method to draw path boundary.
+  /// Method used to create worker threads for computing collision negotiation.
+  void Worker(std::queue<uint64_t> &job_queue);
+
+  /// Method to draw path boundary.
   void DrawBoundary(const LocationVector &boundary);
 
 public:
@@ -95,6 +106,9 @@ public:
                  CollisionFrame &output_array,
                  cc::DebugHelper& debug_helper,
                  RandomGeneratorMap &random_devices);
+
+  /// Method to compute collision negotiation for the current frame.
+  void ComputeFrame();
 
   void Update (const unsigned long index) override;
 

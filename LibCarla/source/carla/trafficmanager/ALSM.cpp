@@ -25,7 +25,7 @@ ALSM::ALSM(
   const LocalMapPtr &local_map,
   SimulationState &simulation_state,
   LocalizationStage &localization_stage,
-  CollisionStage &collision_stage,
+  std::shared_ptr<CollisionStage> &collision_stage_ptr,
   TrafficLightStage &traffic_light_stage,
   MotionPlanStage &motion_plan_stage,
   RandomGeneratorMap &random_devices)
@@ -38,7 +38,7 @@ ALSM::ALSM(
     local_map(local_map),
     simulation_state(simulation_state),
     localization_stage(localization_stage),
-    collision_stage(collision_stage),
+    collision_stage_ptr(collision_stage_ptr),
     traffic_light_stage(traffic_light_stage),
     motion_plan_stage(motion_plan_stage),
     random_devices(random_devices) {}
@@ -334,7 +334,7 @@ void ALSM::RemoveActor(const ActorId actor_id, const bool registered_actor) {
     idle_time.erase(actor_id);
     random_devices.erase(actor_id);
     localization_stage.RemoveActor(actor_id);
-    collision_stage.RemoveActor(actor_id);
+    collision_stage_ptr->RemoveActor(actor_id);
     traffic_light_stage.RemoveActor(actor_id);
     motion_plan_stage.RemoveActor(actor_id);
   }

@@ -44,14 +44,15 @@ TrafficManagerLocal::TrafficManagerLocal(
                                          debug_helper,
                                          random_devices)),
 
-    collision_stage(CollisionStage(vehicle_id_list,
-                                   simulation_state,
-                                   buffer_map,
-                                   track_traffic,
-                                   parameters,
-                                   collision_frame,
-                                   debug_helper,
-                                   random_devices)),
+    collision_stage_ptr(std::make_shared<CollisionStage>(
+                          vehicle_id_list,
+                          simulation_state,
+                          buffer_map,
+                          track_traffic,
+                          parameters,
+                          collision_frame,
+                          debug_helper,
+                          random_devices)),
 
     traffic_light_stage(TrafficLightStage(vehicle_id_list,
                                           simulation_state,
@@ -85,7 +86,7 @@ TrafficManagerLocal::TrafficManagerLocal(
               local_map,
               simulation_state,
               localization_stage,
-              collision_stage,
+              collision_stage_ptr,
               traffic_light_stage,
               motion_plan_stage,
               random_devices)),
@@ -126,7 +127,6 @@ void TrafficManagerLocal::Run() {
   current_reserved_capacity = INITIAL_SIZE;
 
   while (run_traffic_manger.load()) {
-
     bool synchronous_mode = parameters.GetSynchronousMode();
     bool hybrid_physics_mode = parameters.GetHybridPhysicsMode();
 
@@ -150,7 +150,9 @@ void TrafficManagerLocal::Run() {
 
     std::unique_lock<std::mutex> registration_lock(registration_mutex);
     // Updating simulation state, actor life cycle and performing necessary cleanup.
+    // snippet_profiler.MeasureExecutionTime("ALSM", true);
     alsm.Update();
+    // snippet_profiler.MeasureExecutionTime("ALSM", false);
 
     // Re-allocating inter-stage communication frames based on changed number of registered vehicles.
     int current_registered_vehicles_state = registered_vehicles.GetState();
@@ -188,18 +190,21 @@ void TrafficManagerLocal::Run() {
     control_frame.resize(number_of_vehicles);
 
     // Run core operation stages.
+    // snippet_profiler.MeasureExecutionTime("Localization", true);
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       localization_stage.Update(index);
     }
-    for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
-      collision_stage.Update(index);
-    }
-    collision_stage.ClearCycleCache();
-
+    // snippet_profiler.MeasureExecutionTime("Localization", false);
+    snippet_profiler.MeasureExecutionTime("Collision", true);
+    collision_stage_ptr->ComputeFrame();
+    collision_stage_ptr->ClearCycleCache();
+    snippet_profiler.MeasureExecutionTime("Collision", false);
+    // snippet_profiler.MeasureExecutionTime("TL and MP", true);
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       traffic_light_stage.Update(index);
       motion_plan_stage.Update(index);
     }
+    // snippet_profiler.MeasureExecutionTime("TL and MP", false);
 
     // Sending the current cycle's batch command to the simulator.
     if (synchronous_mode) {
@@ -248,7 +253,7 @@ void TrafficManagerLocal::Stop() {
 
   simulation_state.Reset();
   localization_stage.Reset();
-  collision_stage.Reset();
+  collision_stage_ptr->Reset();
   traffic_light_stage.Reset();
   motion_plan_stage.Reset();
 
