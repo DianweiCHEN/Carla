@@ -6,6 +6,7 @@
 #include "carla/client/ActorList.h"
 #include "carla/client/Timestamp.h"
 #include "carla/client/World.h"
+#include "carla/client/WorldSnapshot.h"
 #include "carla/Memory.h"
 
 #include "carla/trafficmanager/AtomicActorSet.h"
@@ -73,12 +74,12 @@ private:
 
   using ActorVector = std::vector<ActorPtr>;
   // Method to identify actors newly spawned in the simulation since last tick.
-  ActorVector IdentifyNewActors(const ActorList &actor_list);
+  ActorVector IdentifyNewActors(const cc::WorldSnapshot &snapshot);
 
   using DestroyeddActors = std::pair<ActorIdSet, ActorIdSet>;
   // Method to identify actors deleted in the last frame.
   // Arrays of registered and unregistered actors are returned separately.
-  DestroyeddActors IdentifyDestroyedActors(const ActorList &actor_list);
+  DestroyeddActors IdentifyDestroyedActors(const cc::WorldSnapshot &snapshot);
 
   using IdleInfo = std::pair<ActorId, double>;
   void UpdateRegisteredActorsData(const bool hybrid_physics_mode, IdleInfo &max_idle_time);

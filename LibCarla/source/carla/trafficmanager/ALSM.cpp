@@ -2,6 +2,7 @@
 #include "boost/pointer_cast.hpp"
 
 #include "carla/client/Actor.h"
+#include "carla/client/ActorSnapshot.h"
 #include "carla/client/Vehicle.h"
 #include "carla/client/Walker.h"
 
@@ -46,15 +47,11 @@ void ALSM::Update() {
 
   bool hybrid_physics_mode = parameters.GetHybridPhysicsMode();
 
-  std::set<ActorId> world_vehicle_ids;
-  std::set<ActorId> world_pedestrian_ids;
-  std::vector<ActorId> unregistered_list_to_be_deleted;
-
-  current_timestamp = world.GetSnapshot().GetTimestamp();
-  ActorList world_actors = world.GetActors();
+  cc::WorldSnapshot snapshot = world.GetSnapshot();
+  current_timestamp = snapshot.GetTimestamp();
 
   // Find destroyed actors and perform clean up.
-  const ALSM::DestroyeddActors destroyed_actors = IdentifyDestroyedActors(world_actors);
+  const ALSM::DestroyeddActors destroyed_actors = IdentifyDestroyedActors(snapshot);
 
   const ActorIdSet &destroyed_registered = destroyed_actors.first;
   for (const auto &deletion_id: destroyed_registered) {
@@ -81,7 +78,7 @@ void ALSM::Update() {
   }
 
   // Scan for new unregistered actors.
-  ALSM::ActorVector new_actors = IdentifyNewActors(world_actors);
+  ALSM::ActorVector new_actors = IdentifyNewActors(snapshot);
   for (const ActorPtr &actor: new_actors) {
     unregistered_actors.insert({actor->GetId(), actor});
 
@@ -123,35 +120,29 @@ void ALSM::Update() {
   UpdateUnregisteredActorsData();
 }
 
-std::vector<ActorPtr> ALSM::IdentifyNewActors(const ActorList &actor_list) {
+std::vector<ActorPtr> ALSM::IdentifyNewActors(const cc::WorldSnapshot &snapshot) {
   std::vector<ActorPtr> new_actors;
-  for  (auto iter = actor_list->begin(); iter != actor_list->end(); ++iter) {
-    ActorPtr actor = *iter;
-    ActorId actor_id = actor->GetId();
+  for  (auto iter = snapshot.begin(); iter != snapshot.end(); ++iter) {
+    cc::ActorSnapshot actor_snapshot = *iter;
+    ActorId actor_id = actor_snapshot.id;
     if (!registered_vehicles.Contains(actor_id)
         && unregistered_actors.find(actor_id) == unregistered_actors.end()) {
-      new_actors.push_back(actor);
+      new_actors.push_back(world.GetActor(actor_id));
     }
   }
   return new_actors;
 }
 
-ALSM::DestroyeddActors ALSM::IdentifyDestroyedActors(const ActorList &actor_list) {
+ALSM::DestroyeddActors ALSM::IdentifyDestroyedActors(const cc::WorldSnapshot &snapshot) {
 
   ALSM::DestroyeddActors destroyed_actors;
   ActorIdSet &deleted_registered = destroyed_actors.first;
   ActorIdSet &deleted_unregistered = destroyed_actors.second;
 
-  // Building hash set of actors present in current frame.
-  ActorIdSet current_actors;
-  for  (auto iter = actor_list->begin(); iter != actor_list->end(); ++iter) {
-    current_actors.insert((*iter)->GetId());
-  }
-
   // Searching for destroyed registered actors.
   std::vector<ActorId> registered_ids = registered_vehicles.GetIDList();
   for (const ActorId &actor_id : registered_ids) {
-    if (current_actors.find(actor_id) == current_actors.end()) {
+    if (!snapshot.Contains(actor_id)) {
       deleted_registered.insert(actor_id);
     }
   }
@@ -159,7 +150,7 @@ ALSM::DestroyeddActors ALSM::IdentifyDestroyedActors(const ActorList &actor_list
   // Searching for destroyed unregistered actors.
   for (const auto &actor_info: unregistered_actors) {
     const ActorId &actor_id = actor_info.first;
-     if (current_actors.find(actor_id) == current_actors.end()
+     if (!snapshot.Contains(actor_id)
          || registered_vehicles.Contains(actor_id)) {
       deleted_unregistered.insert(actor_id);
     }
