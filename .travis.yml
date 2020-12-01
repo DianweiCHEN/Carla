@@ -13,7 +13,7 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-xenial-8
+            - llvm-toolchain-xenial-9
           packages:
             - g++-7 # we need this one for the libstdc++.
             - clang-8
