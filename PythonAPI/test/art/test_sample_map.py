@@ -91,24 +91,21 @@ class Camera(object):
         img2_arr = pygame.PixelArray(surface)
         # This returns a grayscale image
         # white means same images are equal
-        diff_arr = img2_arr.compare(img1_arr, distance=0.05)
+        diff_arr = img2_arr.compare(img1_arr, distance=0.075, weights=(0.5, 0.5, 0.5))
 
         # Check failure
         array = np.array(pygame.surfarray.array3d(diff_arr.surface))
-        print(array)
-        print("Sum:", array.sum())
-        total = self.sum_all_white - array.sum()
+        total = 1.0 - (array.sum()/self.sum_all_white)
 
-        if total < (self.sum_all_white * tolerance) or True:
-            print("total =",total,"->", self.sum_all_white - total)
+        if total >= tolerance:
             path = img_path.split("/")
+            print("total = {:.2f} - {}".format(100.0 * total, path[2]))
             path[0] = "errors"
             full_path = '/'.join(path)
-            print(full_path)
             image.save_to_disk(full_path)
             path[2] = "diff_" + path[2]
             full_path = '/'.join(path)
-            pygame.image.save(diff_arr.surface, full_path)
+            pygame.image.save(diff_arr.surface.copy(), full_path)
 
         img1_arr.close()
         img2_arr.close()
@@ -120,19 +117,21 @@ class Camera(object):
 class TestSampleMap(SyncSmokeTest):
     def test_sample_map(self):
         print("TestSampleMap")
+        pygame.init()
 
         self.record = False
         self.root_output = "map_samples/"
 
-        error = self.unzip_samples()
+        valid_zip = self.unzip_samples()
+
+        if not self.record:
+            self.assertTrue(valid_zip, "Zip samples file is not found or invalid!")
         # TODO: cancel everything if this fails
 
         # get all available maps
         maps = self.client.get_available_maps()
         maps = ["Town03"]
-        print(maps)
         for m in maps:
-            print("Loading", m)
             # load the map
             self.client.load_world(m)
             self.world = self.client.get_world()
@@ -148,7 +147,7 @@ class TestSampleMap(SyncSmokeTest):
 
             # get all spawn points
             spawn_points = self.world.get_map().get_spawn_points()
-            spawn_points = [spawn_points[i] for i in range(1)]
+            # spawn_points = [spawn_points[i] for i in range(1)]
             print("Num spawn_points:", len(spawn_points))
 
             # Spawn cameras
@@ -159,51 +158,43 @@ class TestSampleMap(SyncSmokeTest):
             bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
             bp.set_attribute('image_size_x', str(image_size["width"]))
             bp.set_attribute('image_size_y', str(image_size["height"]))
+            bp.set_attribute('exposure_mode', "manual")
             bp.set_attribute('fov', "90.0")
 
-            self.cameras.append(Camera(
-                self.world.spawn_actor(bp, carla.Transform(rotation = carla.Rotation(yaw = 0.0))),
-                image_size,
-                self.record,
-                self.output
-            ))
-            self.cameras.append(Camera(
-                self.world.spawn_actor(bp, carla.Transform(rotation = carla.Rotation(yaw = 90.0))),
-                image_size,
-                self.record,
-                self.output
-            ))
-            self.cameras.append(Camera(
-                self.world.spawn_actor(bp, carla.Transform(rotation = carla.Rotation(yaw = 180.0))),
-                image_size,
-                self.record,
-                self.output
-            ))
-            self.cameras.append(Camera(
-                self.world.spawn_actor(bp, carla.Transform(rotation = carla.Rotation(yaw = 270.0))),
-                image_size,
-                self.record,
-                self.output
-            ))
+            camera_transform = [
+                carla.Transform(rotation = carla.Rotation(yaw =   0.0)),
+                carla.Transform(rotation = carla.Rotation(yaw =  90.0)),
+                carla.Transform(rotation = carla.Rotation(yaw = 180.0)),
+                carla.Transform(rotation = carla.Rotation(yaw = 270.0))
+            ]
+
+            for i in range(4):
+                self.cameras.append(Camera(
+                    self.world.spawn_actor(bp, camera_transform[i]),
+                    image_size,
+                    self.record,
+                    self.output
+                ))
 
             # Apply sync mode
             settings = self.world.get_settings()
-            settings = carla.WorldSettings(
-                no_rendering_mode=False,
-                synchronous_mode=False,
-                fixed_delta_seconds=0.05)
+            settings.synchronous_mode=True
+            settings.fixed_delta_seconds=0.05
             self.world.apply_settings(settings)
 
+            current_sp = 0
             for spawn_point in spawn_points:
+                current_sp += 1
+                print("{} {:0.2f} % ({}/{})".format(m, 100.0 * current_sp/len(spawn_points), current_sp, len(spawn_points)), end="\r")
+
                 spawn_point.location.z += 1.5
                 # Reallocate cameras
                 for camera in self.cameras:
                     camera.sensor.set_location(spawn_point.location)
 
-                # Discard some images
-                self.tick()
-                self.tick()
-                self.tick()
+                # Discard some images to avoid some artifacts
+                for i in range(10):
+                    self.tick()
 
                 for camera in self.cameras:
                     camera.image_ready = False # reset sync flag
@@ -212,6 +203,7 @@ class TestSampleMap(SyncSmokeTest):
                     continue
 
                 self.tick()
+            print("{} {:0.2f} % ({}/{})".format(m, 100.0 * current_sp/len(spawn_points), current_sp, len(spawn_points)))
 
         # Wait until is job pending
         while(self.calculate_camera_diff()):
@@ -221,7 +213,6 @@ class TestSampleMap(SyncSmokeTest):
         settings = self.world.get_settings()
         settings.synchronous_mode = False
         self.world.apply_settings(settings)
-        self.tick()
 
         for camera in self.cameras:
             camera.destroy()
@@ -229,12 +220,14 @@ class TestSampleMap(SyncSmokeTest):
         if self.record:
             self.zip_output()
 
+        pygame.quit()
+
     def tick(self):
         self.world.tick()
         self.calculate_camera_diff()
 
     def calculate_camera_diff(self):
-        error_tolerance = 0.05
+        error_tolerance = 0.01
         job_pending = False
         for camera in self.cameras:
             job_pending |= camera.image_diff(error_tolerance)
@@ -264,7 +257,6 @@ class TestSampleMap(SyncSmokeTest):
         zipf = zipfile.ZipFile('maps_samples.zip', 'w', zipfile.ZIP_DEFLATED)
         for root, dirs, files in os.walk(self.root_output):
             for file in files:
-                print(file)
                 zipf.write(os.path.join(root, file))
         zipf.close()
 
