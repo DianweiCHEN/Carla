@@ -17,11 +17,16 @@ AProceduralBuilding::AProceduralBuilding()
   RootSMComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootComponent"));
   RootComponent = RootSMComp;
   RootComponent->SetMobility(EComponentMobility::Static);
+
+  CarlaLightComp = CreateDefaultSubobject<UCarlaLight>(TEXT("CarlaLight"));
+
 }
 
 UHierarchicalInstancedStaticMeshComponent* AProceduralBuilding::GetHISMComp(
     const UStaticMesh* SM)
 {
+
+  if(!SM) return nullptr;
 
   FString SMName = SM->GetName();
 
@@ -289,7 +294,7 @@ void AProceduralBuilding::CreateFloor(
     {
       AuxiliarPositions = CalculateDoorsIndexInSide(SideLengthAcumulator, SideLength);
     }
-    if(IncludeWalls && UseWallMesh[i])
+    if(IncludeWalls && UseWallMesh.Num() > 0 && UseWallMesh[i])
     {
       AuxiliarPositions = GenerateWallsIndexPositions(SideLength);
     }
@@ -575,7 +580,10 @@ void AProceduralBuilding::AddMeshToBuilding(const UStaticMesh* SM)
 {
 
   UHierarchicalInstancedStaticMeshComponent* HISMComp = GetHISMComp(SM);
-  HISMComp->AddInstance(CurrentTransform);
+  if(HISMComp)
+  {
+    HISMComp->AddInstance(CurrentTransform);
+  }
 }
 
 FVector AProceduralBuilding::GetMeshSize(const UStaticMesh* SM)

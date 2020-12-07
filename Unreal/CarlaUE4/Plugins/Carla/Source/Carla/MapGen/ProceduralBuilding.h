@@ -106,6 +106,9 @@ protected:
   UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="Procedural Building")
   UStaticMeshComponent* RootSMComp = nullptr;
 
+  UPROPERTY(BlueprintReadOnly, EditAnywhere, Category="Procedural Building")
+  UCarlaLight* CarlaLightComp = nullptr;
+
   /**
    *  Base Parameters
    */
