@@ -12,6 +12,9 @@
 
 #include "Weather.generated.h"
 
+// Delegate to define dispatcher
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDayNightDispatcher, bool, IsSunOn);
+
 UCLASS(Abstract)
 class CARLA_API AWeather : public AActor
 {
@@ -43,6 +46,9 @@ protected:
 
   UFUNCTION(BlueprintImplementableEvent)
   void RefreshWeather(const FWeatherParameters &WeatherParameters);
+
+  UPROPERTY(Category = "Weather", BlueprintAssignable, BlueprintCallable)
+  FDayNightDispatcher DayNightDispatcher;
 
 private:
 
