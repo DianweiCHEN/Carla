@@ -20,6 +20,14 @@ AProceduralBuilding::AProceduralBuilding()
 
   CarlaLightComp = CreateDefaultSubobject<UCarlaLight>(TEXT("CarlaLight"));
 
+/*
+  CarlaLightComp->ChangeLightDispatcher.BindRaw([this](){
+    if(RootSMComp && RootSMComp->GetStaticMesh())
+    {
+      //CarlaLightComp->SetEmissive(RootSMComp);
+    }
+  });
+  */
 }
 
 UHierarchicalInstancedStaticMeshComponent* AProceduralBuilding::GetHISMComp(

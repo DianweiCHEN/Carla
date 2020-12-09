@@ -30,6 +30,8 @@ enum class ELightType : uint8
 
 #undef CARLA_ENUM_FROM_RPC
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FChangeLight);
+
 // Class representing a light in the scene
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class CARLA_API UCarlaLight : public UActorComponent
@@ -47,6 +49,9 @@ public:
 
   UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Carla Light")
   void UpdateLights();
+
+  UFUNCTION(BlueprintCallable, Category = "Carla Light")
+  void SetEmissive_C(UStaticMeshComponent* SMComp);
 
   UFUNCTION(BlueprintCallable, Category = "Carla Light")
   void SetLightIntensity(float Intensity);
@@ -83,6 +88,12 @@ public:
 
   UFUNCTION(BlueprintCallable, Category = "Carla Light")
   void SetId(int InId);
+
+  UFUNCTION(BlueprintImplementableEvent, Category = "Carla Light")
+  void SetEmissiveEvent(UStaticMeshComponent* SMComp);
+
+  UPROPERTY(Category = "Carla Light", BlueprintAssignable, BlueprintCallable)
+  FChangeLight ChangeLightDispatcher;
 
 protected:
 

@@ -8,6 +8,8 @@
 #include "CarlaLightSubsystem.h"
 #include "Carla/Game/CarlaStatics.h"
 
+#include "Materials/MaterialInstanceDynamic.h"
+
 UCarlaLight::UCarlaLight()
 {
   PrimaryComponentTick.bCanEverTick = false;
@@ -37,6 +39,35 @@ void UCarlaLight::EndPlay(const EEndPlayReason::Type EndPlayReason)
   {
     UCarlaLightSubsystem* CarlaLightSubsystem = World->GetSubsystem<UCarlaLightSubsystem>();
     CarlaLightSubsystem->UnregisterLight(this);
+  }
+}
+
+void UCarlaLight::SetEmissive_C(UStaticMeshComponent* SMComp)
+{
+
+  SetScalarParameterValueOnMaterials(FName("Intensity"), LightIntensity);
+  SetScalarParameterValueOnMaterials(FName("EmissiveColor"), FVector(LightColor));
+  SetScalarParameterValueOnMaterials(FName("On/Off"), bLightOn ? 1.0f : 0.0f);
+
+
+  const UStaticMesh* SM = SMComp->GetStaticMesh();
+  TArray<FStaticMaterial> Materials = SM->StaticMaterials;
+  int32 NumMaterials = Materials.Num();
+  UE_LOG(LogCarla, Warning, TEXT("NumMaterials %d"), NumMaterials);
+  for(int i = 0; i < NumMaterials; i++)
+  {
+    UMaterialInstanceDynamic* Material = Cast<UMaterialInstanceDynamic>(Materials[i]);
+    if(Material)
+    {
+      UE_LOG(LogCarla, Warning, TEXT("YES %d"), i);
+      Material->SetScalarParameterValue(FName("Intensity"), LightIntensity);
+      Material->SetVectorParameterValue(FName("EmissiveColor"), FVector(LightColor));
+      Material->SetScalarParameterValue(FName("On/Off"), bLightOn ? 1.0f : 0.0f);
+    }
+    else
+    {
+      UE_LOG(LogCarla, Warning, TEXT("NOPE %d"), i);
+    }
   }
 }
 
