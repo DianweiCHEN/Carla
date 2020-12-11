@@ -91,19 +91,30 @@ class Camera(object):
         img2_arr = pygame.PixelArray(surface)
         # This returns a grayscale image
         # white means same images are equal
-        diff_arr = img2_arr.compare(img1_arr, distance=0.075, weights=(0.5, 0.5, 0.5))
+        diff_arr = img2_arr.compare(img1_arr, distance=0.1) #, weights=(1.0, 1.0, 1.0))
 
         # Check failure
         array = np.array(pygame.surfarray.array3d(diff_arr.surface))
         total = 1.0 - (array.sum()/self.sum_all_white)
 
         if total >= tolerance:
+            w, h = surface.get_size()
+            for x in range(w):
+                for y in range(h):
+                    error = diff_arr.surface.get_at((x, y))[0]
+                    r, g, b, a = surface.get_at((x, y))
+                    final_r = r if error > 0 else 255
+                    diff_arr.surface.set_at((x, y), pygame.Color(final_r, g, b, a))
+
+
             path = img_path.split("/")
             print("total = {:.2f} - {}".format(100.0 * total, path[2]))
             path[0] = "errors"
             full_path = '/'.join(path)
             image.save_to_disk(full_path)
-            path[2] = "diff_" + path[2]
+            name_split = path[2].split(".")
+            name_split[len(name_split) - 1] = name_split[len(name_split) - 2] + "_diff"
+            path[2] = '.'.join(name_split)
             full_path = '/'.join(path)
             pygame.image.save(diff_arr.surface.copy(), full_path)
 
@@ -152,7 +163,7 @@ class TestSampleMap(SyncSmokeTest):
 
             # Spawn cameras
             self.cameras = []
-            image_size = {"width":960, "height":540}
+            image_size = {"width":1280, "height":720}
             self.output = self.root_output + m
 
             bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
@@ -227,7 +238,7 @@ class TestSampleMap(SyncSmokeTest):
         self.calculate_camera_diff()
 
     def calculate_camera_diff(self):
-        error_tolerance = 0.01
+        error_tolerance = 0.015
         job_pending = False
         for camera in self.cameras:
             job_pending |= camera.image_diff(error_tolerance)
