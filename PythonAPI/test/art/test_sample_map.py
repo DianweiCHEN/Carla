@@ -136,7 +136,7 @@ class TestSampleMap(SyncSmokeTest):
         print("TestSampleMap")
         pygame.init()
 
-        self.record = True
+        self.record = False
 
         valid_zip = self.unzip_samples()
 
@@ -145,8 +145,16 @@ class TestSampleMap(SyncSmokeTest):
 
         # get all available maps
         maps = self.client.get_available_maps()
-        print(maps)
-        # maps = ["Town03"]
+        maps = ["Town01", "Town01_Opt",
+                "Town02", "Town02_Opt",
+                "Town03", "Town03_Opt",
+                "Town04", "Town04_Opt",
+                "Town05", "Town05_Opt",
+                "Town06", "Town06_Opt",
+                "Town07", "Town07_Opt",
+                "Town08", "Town08_Opt",
+                "Town09", "Town09_Opt",
+                "Town10HD", "Town10HD_Opt"]
         for m in maps:
             # load the map
             self.client.load_world(m)
@@ -221,6 +229,13 @@ class TestSampleMap(SyncSmokeTest):
             else:
                 print("[Error] {} has no reference points".format(m))
 
+            # Wait until is job pending
+            while(self.calculate_camera_diff()):
+                continue
+
+            for camera in self.cameras:
+                camera.destroy()
+
         # Wait until is job pending
         while(self.calculate_camera_diff()):
             continue
@@ -231,11 +246,8 @@ class TestSampleMap(SyncSmokeTest):
             no_rendering_mode=False,
             fixed_delta_seconds=0.0))
 
-        for camera in self.cameras:
-            camera.destroy()
-
         if self.record:
-            self.zip_output('maps_samples.zip', "map_samples/")
+            self.zip_output('map_samples.zip', "map_samples/")
         else:
             self.zip_output('errors.zip', "errors/")
 
@@ -293,8 +305,8 @@ class TestSampleMap(SyncSmokeTest):
             zipf.close()
 
     def unzip_samples(self):
-        if os.path.isfile('maps_samples.zip'):
-            with zipfile.ZipFile('maps_samples.zip', 'r') as zip_ref:
+        if os.path.isfile('map_samples.zip'):
+            with zipfile.ZipFile('map_samples.zip', 'r') as zip_ref:
                 zip_ref.extractall("./")
         elif not self.record:
             print("[ERROR]: Map samples not founded!")
