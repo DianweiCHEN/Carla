@@ -30,6 +30,8 @@ class Camera(object):
         self.output_path = output_path
         self.image_queue = queue.Queue()
         self.sum_all_white = self.size["height"] * self.size["width"] * 255 * 3
+        self.offset = 20
+        self.sum_subarray_white = self.offset * self.offset * 255 * 3
 
         self.sensor.listen(lambda image: self.parse_image(image) )
 
@@ -71,7 +73,7 @@ class Camera(object):
     def destroy(self):
         self.sensor.destroy()
 
-    def image_diff(self, tolerance):
+    def image_diff(self):
         if self.image_queue.empty():
             return False
 
@@ -94,11 +96,16 @@ class Camera(object):
         # white means same images are equal
         diff_arr = img2_arr.compare(img1_arr, distance=0.1) #, weights=(1.0, 1.0, 1.0))
 
-        # Check failure
+        # Check failure (10 x 10 cells)
         array = np.array(pygame.surfarray.array3d(diff_arr.surface))
-        total = 1.0 - (array.sum()/self.sum_all_white)
-
-        if total >= tolerance:
+        total_error = 0
+        for i in range(0, self.size["width"], self.offset):
+            for j in range(0, self.size["height"], self.offset):
+                sub_array = array[i:i+self.offset, j:j+self.offset, :]
+                subtotal = 1.0 - (sub_array.sum() / self.sum_subarray_white)
+                # print("{} / {} = {:.2f} -> {:.2f}".format(sub_array.sum(), self.sum_subarray_white, (sub_array.sum() / self.sum_subarray_white), subtotal))
+                total_error += subtotal if subtotal >= 0.5 else 0.0
+        if total_error > 0.0:
             w, h = surface.get_size()
             for x in range(w):
                 for y in range(h):
@@ -106,10 +113,8 @@ class Camera(object):
                     r, g, b, a = surface.get_at((x, y))
                     final_r = r if error > 0 else 255
                     diff_arr.surface.set_at((x, y), pygame.Color(final_r, g, b, a))
-
-
             path = img_path.split("/")
-            print("total = {:.2f} - {}".format(100.0 * total, path[2]))
+            # print("[Error] ({:.2f}) {}".format(total_error, path[2]))
             path[0] = "errors"
             full_path = '/'.join(path)
             image.save_to_disk(full_path)
@@ -131,18 +136,17 @@ class TestSampleMap(SyncSmokeTest):
         print("TestSampleMap")
         pygame.init()
 
-        self.record = False
-        self.root_output = "map_samples/"
+        self.record = True
 
         valid_zip = self.unzip_samples()
 
         if not self.record:
             self.assertTrue(valid_zip, "Zip samples file is not found or invalid!")
-        # TODO: cancel everything if this fails
 
         # get all available maps
         maps = self.client.get_available_maps()
-        maps = ["Town03"]
+        print(maps)
+        # maps = ["Town03"]
         for m in maps:
             # load the map
             self.client.load_world(m)
@@ -162,7 +166,7 @@ class TestSampleMap(SyncSmokeTest):
             # Spawn cameras
             self.cameras = []
             image_size = {"width":int(1280/2), "height":int(720/2)}
-            self.output = self.root_output + m
+            self.output = "map_samples/" + m
 
             bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
             bp.set_attribute('image_size_x', str(image_size["width"]))
@@ -226,16 +230,14 @@ class TestSampleMap(SyncSmokeTest):
             synchronous_mode=False,
             no_rendering_mode=False,
             fixed_delta_seconds=0.0))
-        print("rollback async mode")
-        self.tick()
-        time.sleep(2.0)
-        print("rollback async mode")
 
         for camera in self.cameras:
             camera.destroy()
 
         if self.record:
-            self.zip_output()
+            self.zip_output('maps_samples.zip', "map_samples/")
+        else:
+            self.zip_output('errors.zip', "errors/")
 
         pygame.quit()
 
@@ -245,7 +247,7 @@ class TestSampleMap(SyncSmokeTest):
 
     def get_reference_points(self):
         spawn_points = self.world.get_map().get_spawn_points()
-        print("spawn_points:", len(spawn_points))
+        # print("spawn_points:", len(spawn_points))
         used_sp = set()
         threshold_dist = 5.0
         ref_points = []
@@ -267,14 +269,13 @@ class TestSampleMap(SyncSmokeTest):
                 if not merged:
                     ref_points.append(i_loc)
 
-        print("ref_points:",len(ref_points))
+        # print("ref_points:",len(ref_points))
         return ref_points
 
     def calculate_camera_diff(self):
-        error_tolerance = 0.015
         job_pending = False
         for camera in self.cameras:
-            job_pending |= camera.image_diff(error_tolerance)
+            job_pending |= camera.image_diff()
         return job_pending
 
     def ready_for_tick(self):
@@ -283,12 +284,13 @@ class TestSampleMap(SyncSmokeTest):
                 return False
         return True
 
-    def zip_output(self):
-        zipf = zipfile.ZipFile('maps_samples.zip', 'w', zipfile.ZIP_DEFLATED)
-        for root, dirs, files in os.walk(self.root_output):
-            for file in files:
-                zipf.write(os.path.join(root, file))
-        zipf.close()
+    def zip_output(self, output_name, path_to_zip):
+        if os.path.exists(path_to_zip):
+            zipf = zipfile.ZipFile(output_name, 'w', zipfile.ZIP_DEFLATED)
+            for root, dirs, files in os.walk(path_to_zip):
+                for file in files:
+                    zipf.write(os.path.join(root, file))
+            zipf.close()
 
     def unzip_samples(self):
         if os.path.isfile('maps_samples.zip'):
