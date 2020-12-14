@@ -5,6 +5,7 @@
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
 import os
+import time
 
 import carla
 import pygame
@@ -156,14 +157,11 @@ class TestSampleMap(SyncSmokeTest):
             weather.fog_distance = 0.0
             self.world.set_weather(weather)
 
-            # get all spawn points
-            spawn_points = self.world.get_map().get_spawn_points()
-            # spawn_points = [spawn_points[i] for i in range(1)]
-            print("Num spawn_points:", len(spawn_points))
+            ref_points = self.get_reference_points()
 
             # Spawn cameras
             self.cameras = []
-            image_size = {"width":1280, "height":720}
+            image_size = {"width":int(1280/2), "height":int(720/2)}
             self.output = self.root_output + m
 
             bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
@@ -188,20 +186,20 @@ class TestSampleMap(SyncSmokeTest):
                 ))
 
             # Apply sync mode
-            settings = self.world.get_settings()
-            settings.synchronous_mode=True
-            settings.fixed_delta_seconds=0.05
-            self.world.apply_settings(settings)
+            self.world.apply_settings(carla.WorldSettings(
+                synchronous_mode=True,
+                no_rendering_mode=False,
+                fixed_delta_seconds=0.05))
 
             current_sp = 0
-            for spawn_point in spawn_points:
+            for ref_point in ref_points:
                 current_sp += 1
-                print("{} {:0.2f} % ({}/{})".format(m, 100.0 * current_sp/len(spawn_points), current_sp, len(spawn_points)), end="\r")
+                print("{} {:0.2f} % ({}/{})".format(m, 100.0 * current_sp/len(ref_points), current_sp, len(ref_points)), end="\r")
 
-                spawn_point.location.z += 1.5
+                ref_point.z += 1.5
                 # Reallocate cameras
                 for camera in self.cameras:
-                    camera.sensor.set_location(spawn_point.location)
+                    camera.sensor.set_location(ref_point)
 
                 # Discard some images to avoid some artifacts
                 for i in range(10):
@@ -214,16 +212,24 @@ class TestSampleMap(SyncSmokeTest):
                     continue
 
                 self.tick()
-            print("{} {:0.2f} % ({}/{})".format(m, 100.0 * current_sp/len(spawn_points), current_sp, len(spawn_points)))
+            if len(ref_points) > 0:
+                print("{} {:0.2f} % ({}/{})".format(m, 100.0 * current_sp/len(ref_points), current_sp, len(ref_points)))
+            else:
+                print("[Error] {} has no reference points".format(m))
 
         # Wait until is job pending
         while(self.calculate_camera_diff()):
             continue
 
         # Apply async mode
-        settings = self.world.get_settings()
-        settings.synchronous_mode = False
-        self.world.apply_settings(settings)
+        self.world.apply_settings(carla.WorldSettings(
+            synchronous_mode=False,
+            no_rendering_mode=False,
+            fixed_delta_seconds=0.0))
+        print("rollback async mode")
+        self.tick()
+        time.sleep(2.0)
+        print("rollback async mode")
 
         for camera in self.cameras:
             camera.destroy()
@@ -237,6 +243,33 @@ class TestSampleMap(SyncSmokeTest):
         self.world.tick()
         self.calculate_camera_diff()
 
+    def get_reference_points(self):
+        spawn_points = self.world.get_map().get_spawn_points()
+        print("spawn_points:", len(spawn_points))
+        used_sp = set()
+        threshold_dist = 5.0
+        ref_points = []
+        for i in range(len(spawn_points)):
+            i_loc = spawn_points[i].location
+            merged = False
+            # if not used yet
+            if not {i}.issubset(used_sp):
+                for j in range(i+1, len(spawn_points)):
+                    # if not used yet
+                    if not {j}.issubset(used_sp):
+                        j_loc = spawn_points[j].location
+                        dist = i_loc.distance(j_loc)
+                        if dist < threshold_dist:
+                            ref_point = (i_loc + j_loc) * 0.5
+                            ref_points.append(ref_point)
+                            used_sp.add(j)
+                            merged = True
+                if not merged:
+                    ref_points.append(i_loc)
+
+        print("ref_points:",len(ref_points))
+        return ref_points
+
     def calculate_camera_diff(self):
         error_tolerance = 0.015
         job_pending = False
@@ -249,20 +282,6 @@ class TestSampleMap(SyncSmokeTest):
             if not camera.image_ready:
                 return False
         return True
-
-    """
-    # Some spawn_points are so close that we can ignore them
-    def filter_spawn_points(self, spawn_points):
-        result = []
-        num_points = len(spawn_points)
-        threshold = 2.5
-        for i in range(num_points):
-            loc1 = spawn_points[i].location
-            for j in range(i+1, num_points):
-                loc2 = spawn_points[i].location
-                dist = (loc2 - loc1).distance()
-                if dist < threshold:
-    """
 
     def zip_output(self):
         zipf = zipfile.ZipFile('maps_samples.zip', 'w', zipfile.ZIP_DEFLATED)
