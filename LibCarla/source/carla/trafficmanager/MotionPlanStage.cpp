@@ -44,7 +44,7 @@ MotionPlanStage::MotionPlanStage(
     world(world),
     output_array(output_array) {}
 
-void MotionPlanStage::Update(const unsigned long index) {
+void MotionPlanStage::Update(const unsigned long index, bool synchronous_mode) {
   const ActorId actor_id = vehicle_id_list.at(index);
   const cg::Location ego_location = simulation_state.GetLocation(actor_id);
   const cg::Vector3D ego_velocity = simulation_state.GetVelocity(actor_id);
@@ -145,7 +145,7 @@ void MotionPlanStage::Update(const unsigned long index) {
     double elapsed_time = current_timestamp.elapsed_seconds - teleportation_instance.at(actor_id).elapsed_seconds;
 
     // Find a location ahead of the vehicle for teleportation to achieve intended velocity.
-    if (!emergency_stop && (parameters.GetSynchronousMode() || elapsed_time > HYBRID_MODE_DT)) {
+    if (!emergency_stop && (synchronous_mode || elapsed_time > HYBRID_MODE_DT)) {
 
       // Target displacement magnitude to achieve target velocity.
       const float target_displacement = dynamic_target_velocity * HYBRID_MODE_DT_FL;

@@ -196,7 +196,7 @@ void TrafficManagerLocal::Run() {
 
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       traffic_light_stage.Update(index);
-      motion_plan_stage.Update(index);
+      motion_plan_stage.Update(index, synchronous_mode);
     }
 
     registration_lock.unlock();
