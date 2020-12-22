@@ -129,13 +129,6 @@ void TrafficManagerLocal::Run() {
 
     bool synchronous_mode = parameters.GetSynchronousMode();
 
-    // Wait for external trigger to initiate cycle in synchronous mode.
-    if (synchronous_mode) {
-      std::unique_lock<std::mutex> lock(step_execution_mutex);
-      step_begin_trigger.wait(lock, [this]() {return step_begin.load() || !run_traffic_manger.load();});
-      step_begin.store(false);
-    }
-
     // Skipping velocity update if elapsed time is less than 0.05s in asynchronous, hybrid mode.
     if (!synchronous_mode) {
       TimePoint current_instance = chr::system_clock::now();
@@ -145,6 +138,14 @@ void TrafficManagerLocal::Run() {
         std::this_thread::sleep_for(time_to_wait);
       }
       previous_update_instance = current_instance;
+    }
+
+    synchronous_mode = parameters.GetSynchronousMode();
+    // Wait for external trigger to initiate cycle in synchronous mode.
+    if (synchronous_mode) {
+      std::unique_lock<std::mutex> lock(step_execution_mutex);
+      step_begin_trigger.wait(lock, [this]() {return step_begin.load() || !run_traffic_manger.load();});
+      step_begin.store(false);
     }
 
     std::unique_lock<std::mutex> registration_lock(registration_mutex);

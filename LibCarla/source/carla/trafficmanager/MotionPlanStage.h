@@ -64,7 +64,7 @@ public:
                   const cc::World &world,
                   ControlFrame &output_array);
 
-  void Update(const unsigned long index){}
+  void Update(const unsigned long /*index*/){}
   void Update(const unsigned long index, bool synchronous_mode);
 
   void RemoveActor(const ActorId actor_id);
