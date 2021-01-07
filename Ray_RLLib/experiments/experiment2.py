@@ -2,40 +2,39 @@ from experiments.base_experiment import *
 from helper.CarlaHelper import spawn_vehicle_at, post_process_image, update_config
 import random
 import numpy as np
-from gym.spaces import  Box
+from gym.spaces import Box
 from itertools import cycle
 import cv2
+import time
+import carla
+import gc
 
 SERVER_VIEW_CONFIG = {
 }
 
 SENSOR_CONFIG = {
-    "CAMERA_NORMALIZED": False,
+    "CAMERA_NORMALIZED": [True], #apparently doesnt work if set to false, its just for the image!
+    "CAMERA_GRAYSCALE": [True],
     "FRAMESTACK": 4,
 }
-OBSERVATION_CONFIG ={
-    "CAMERA_OBSERVATION": True,
+
+OBSERVATION_CONFIG = {
+    "CAMERA_OBSERVATION": [True],
 }
 
 EXPERIMENT_CONFIG = {
     "OBSERVATION_CONFIG": OBSERVATION_CONFIG,
     "Server_View": SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": SENSOR_CONFIG,
-    "number_of_spawning_actors": 10000,
-    "hero_vehicle_model": "vehicle.mini.cooperst",
+    "hero_vehicle_model": "vehicle.lincoln.mkz2017",
 }
 
-ENV_CONFIG = {"RAY": True, "DEBUG_MODE": False}  # Are we running an experiment in Ray
-
+ENV_CONFIG = {"RAY": True, "DEBUG_MODE": False} # Are we running an experiment in Ray
 
 class Experiment(BaseExperiment):
     def __init__(self):
         config=update_config(BASE_EXPERIMENT_CONFIG, EXPERIMENT_CONFIG)
         super().__init__(config)
-
-
-        self.max_actors = 30
-        self.randomized_vehicle_spawn_point = None
 
         self.environment_config = ENV_CONFIG.copy()
 
@@ -54,15 +53,10 @@ class Experiment(BaseExperiment):
         :return:
         """
         self.previous_distance = 0
-        self.base_x = 0
-        self.base_y = 0
-
         self.frame_stack = 4  # can be 1,2,3,4
         self.prev_image_0 = None
         self.prev_image_1 = None
         self.prev_image_2 = None
-        self.start_location = None
-
 
     def set_observation_space(self):
         num_of_channels = 1
@@ -105,10 +99,10 @@ class Experiment(BaseExperiment):
             images = np.concatenate([self.prev_image_2, images], axis=2)
 
         # uncomment to save the observations (Normalized must be False)
-        cv2.imwrite('./input_img0.jpg', image)
-        cv2.imwrite('./input_img1.jpg', self.prev_image_0)
-        cv2.imwrite('./input_img2.jpg', self.prev_image_1)
-        cv2.imwrite('./input_img3.jpg', self.prev_image_2)
+        # cv2.imwrite('./input_img0.jpg', image)
+        # cv2.imwrite('./input_img1.jpg', self.prev_image_0)
+        # cv2.imwrite('./input_img2.jpg', self.prev_image_1)
+        # cv2.imwrite('./input_img3.jpg', self.prev_image_2)
 
         self.prev_image_2 = self.prev_image_1
         self.prev_image_1 = self.prev_image_0
@@ -124,89 +118,48 @@ class Experiment(BaseExperiment):
         :param core:
         :return:
         """
-        c = float(np.sqrt(np.square(self.hero.get_location().x - self.base_x) + \
-                          np.square(self.hero.get_location().y - self.base_y)))
+        c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location_x) + \
+                            np.square(self.hero.get_location().y - self.start_location_y)))
+        # if c > self.previous_distance + 1e-2:
+        #     reward = 1
+        # else:
+        #     reward = 0
+
+        # # print("\n", self.previous_distance)
+        # self.previous_distance = c
+        # # print("\n", c)
+
+        # if c > 20:
+        #     self.base_x = self.hero.get_location().x
+        #     self.base_y = self.hero.get_location().y
+        #     print("Reached the milestone!")
         if c > self.previous_distance + 1e-2:
-            reward = 1
+            if self.observation["collision"]!=False:
+                reward = -0.002*self.observation["collision"]
+            elif self.observation["lane"]!=False:
+                reward = -30*(self.observation["lane"])
+            elif (self.get_speed() > self.hero.get_speed_limit()):
+                reward = self.hero.get_speed_limit() - self.get_speed()
+            else:
+                reward = c - self.previous_distance
         else:
             reward = 0
-
-        # print("\n", self.previous_distance)
         self.previous_distance = c
-        # print("\n", c)
-
-        if c > 50:
-            # print("\n", self.base_x, hero.get_location().x,
-            #      "\n", self.base_y, hero.get_location().y)
-            self.base_x = self.hero.get_location().x
-            self.base_y = self.hero.get_location().y
-            print("Reached the milestone!")
-            self.previous_distance = 0
         return reward
 
-    def spawn_actors(self, core):
-        # Get a list of all the vehicle blueprints
-        world = core.get_core_world()
-        vehicle_blueprints = world.get_blueprint_library().filter("vehicle.*")
-        car_blueprints = [
-            x
-            for x in vehicle_blueprints
-            if int(x.get_attribute("number_of_wheels")) == 4
-        ]
-        # Get all spawn Points
-        spawn_points = list(world.get_map().get_spawn_points())
-
-        # Now we are ready to spawn all the vehicles (except the hero)
-        count = 0  # self.experiment_config["number_of_spawning_actors"]
-
-        self.randomized_vehicle_spawn_point = spawn_points.copy()
-
-        while count > 1:
-            random.shuffle(self.randomized_vehicle_spawn_point, random.random)
-            next_spawn_point = self.randomized_vehicle_spawn_point[count]
-            self.vehicle_list = []
-            self.spawn_point_list = []
-
-            # Try to spawn but if you can't, just move on
-            next_vehicle = spawn_vehicle_at(
-                next_spawn_point,
-                random.choice(car_blueprints),
-                world,
-                autopilot=True,
-                max_time=0.1,
-            )
-            print(count)
-            if next_vehicle is not False:
-                self.spawn_point_list.append(next_spawn_point)
-                self.vehicle_list.append(next_vehicle)
-                count -= 1
-        if len(self.vehicle_list) > self.max_actors:
-            for v in self.vehicle_list:  # do we need this?
-                v.destroy()
-
-        # print(world.get_actors().filter("vehicle.*"))
-        print('number of actors: ', len(self.vehicle_list))
-
-        # spawn hero
-        # self.spawn_hero()
-        # return self.hero
-
     def spawn_hero(self, core, transform, autopilot=False):
-        world = core.get_core_world()
 
+        world = core.get_core_world()
+        self.spawn_points = world.get_map().get_spawn_points()
+        gc.collect()
         self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
         self.hero_blueprints.set_attribute("role_name", "hero")
 
-        random.shuffle(self.randomized_vehicle_spawn_point, random.random)
-        next_spawn_point = self.randomized_vehicle_spawn_point[0]
-        if next_spawn_point in self.spawn_point_list:
-            random.shuffle(self.randomized_vehicle_spawn_point, random.random)
-            next_spawn_point = self.randomized_vehicle_spawn_point[0]
-        # spawn hero
-        # Hamid what's the dif between spawn_vehicle_at and try_spawn_actor
-        super().spawn_hero(core, next_spawn_point, autopilot=False)
+        #random.shuffle(self.randomized_vehicle_spawn_point, random.random)
+        next_spawn_point = self.spawn_points[0]
 
+        super().spawn_hero(core, next_spawn_point, autopilot=False)
+        world.tick()
         print("Hero spawned!")
-        self.base_x = self.hero.get_location().x
-        self.base_y = self.hero.get_location().y
-        self.start_location = next_spawn_point
+        self.start_location_x = self.spawn_points[0].location.x
+        self.start_location_y = self.spawn_points[0].location.y

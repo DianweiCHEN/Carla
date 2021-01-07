@@ -44,7 +44,7 @@ if __name__ == "__main__":
                 "env_config": env_config,
                 "num_gpus_per_worker": 0.3,
                 "num_cpus_per_worker": 3,
-                "num_workers": 2,
+                "num_workers": 1,
                 "gamma": 0.99,  # random.choice([0.5, 0.8, 0.9, 0.95, 0.99]),
 
             },

@@ -15,15 +15,18 @@ SERVER_VIEW_CONFIG = {
 }
 
 SENSOR_CONFIG = {
+    "SENSOR": [SensorsEnum.CAMERA_RGB, SensorsEnum.CAMERA_SEMANTIC_CITYSCAPE],
+    "SENSOR_TRANSFORM": [SensorsTransformEnum.Transform_A, SensorsTransformEnum.Transform_A],
     "CAMERA_X": 84,
     "CAMERA_Y": 84,
-    "CAMERA_NORMALIZED": True,
+    "CAMERA_NORMALIZED": [True, False],
+    "CAMERA_FOV": 60,
     "FRAMESTACK": 2,
 }
 
 
 OBSERVATION_CONFIG ={
-    "CAMERA_OBSERVATION": True,
+    "CAMERA_OBSERVATION": [True, True],
 }
 
 EXPERIMENT_CONFIG = {
@@ -39,13 +42,17 @@ EXPERIMENT_CONFIG = {
 
 
 def preprocess_image(x_res,y_res,image):
-    data = np.asarray(image)
+    # This of course is just a sample. For more than one image, it must be changed accordingly.
+
+    data = np.asarray(image[0])
     data = cv2.resize(data, (x_res, y_res), interpolation=cv2.INTER_AREA)
     data = (data.astype(np.float32) - 128) / 128
+
     return data
 
 
 def plot_observation_space(obs):
+    #https://stackoverflow.com/questions/279561/what-is-the-python-equivalent-of-static-variables-inside-a-function
     if not hasattr(plot_observation_space, "counter"):
         plot_observation_space.counter = 0  # it doesn't exist yet, so initialize it
     plot_observation_space.counter += 1
@@ -70,8 +77,8 @@ class Experiment(BaseExperiment):
 
 
     def set_observation_space(self):
-        num_of_channels = 3
 
+        num_of_channels = 3
         image_space = Box(
             low=-1.0,
             high=1.0,
@@ -115,7 +122,7 @@ class Experiment(BaseExperiment):
         :param core:
         :return:
         """
-        self.previous_distance=None
+        self.previous_distance = None
 
 
     def compute_reward(self, core, observation):
@@ -125,6 +132,7 @@ class Experiment(BaseExperiment):
         :param observation:
         :return:
         """
+
         current_distance_from_start = float(np.linalg.norm(
             [self.hero.get_location().x - self.start_location.location.x,
              self.hero.get_location().y - self.start_location.location.y]) / 100)

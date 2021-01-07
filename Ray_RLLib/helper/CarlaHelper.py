@@ -23,7 +23,7 @@ def add_carla_path(carla_path_config_file):
     carla_main_path = (carla_path_file.readline().split("\n"))[0]
     carla_path_file.close()
     for file in os.listdir(carla_main_path + "/PythonAPI/carla/dist/"):
-        if 'py3.6' in file:
+        if 'py3.8' in file:
             carla_egg_file = os.path.join(carla_main_path + "/PythonAPI/carla/dist/", file)
     sys.path.append(os.path.expanduser(carla_egg_file))
     carla_python_interface = carla_main_path + "/PythonAPI/carla/"
@@ -45,6 +45,8 @@ def post_process_image(image, normalized=True, grayscale=True):
     :param grayscale
     :return: normalized image
     """
+    if isinstance(image, list):
+        image = image[0]
     if grayscale:
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 

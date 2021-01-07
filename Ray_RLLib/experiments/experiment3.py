@@ -15,15 +15,18 @@ SERVER_VIEW_CONFIG = {
 }
 
 SENSOR_CONFIG = {
+    "SENSOR": [SensorsEnum.CAMERA_RGB],
+    "SENSOR_TRANSFORM": [SensorsTransformEnum.Transform_A],
     "CAMERA_X": 84,
     "CAMERA_Y": 84,
-    "CAMERA_NORMALIZED": True,
+    "CAMERA_FOV": 60,
+    "CAMERA_NORMALIZED": [True],
     "FRAMESTACK": 2,
 }
 
 
 OBSERVATION_CONFIG ={
-    "CAMERA_OBSERVATION": True,
+    "CAMERA_OBSERVATION": [True]
 }
 
 EXPERIMENT_CONFIG = {
@@ -39,7 +42,8 @@ EXPERIMENT_CONFIG = {
 
 
 def preprocess_image(x_res,y_res,image):
-    data = np.asarray(image)
+    # This of course is just a sample. For more than one image, it must be changed accordingly.
+    data = np.asarray(image[0])
     data = cv2.resize(data, (x_res, y_res), interpolation=cv2.INTER_AREA)
     data = (data.astype(np.float32) - 128) / 128
     return data
@@ -93,6 +97,7 @@ class Experiment(BaseExperiment):
         :param observation:
         :return:
         """
+
         image = preprocess_image(self.experiment_config["SENSOR_CONFIG"]["CAMERA_X"],
                                  self.experiment_config["SENSOR_CONFIG"]["CAMERA_Y"],
                                  observation['camera'])

@@ -2,7 +2,7 @@ import math
 import weakref
 
 import carla
-
+import numpy as np
 import queue
 
 
@@ -14,10 +14,10 @@ class CollisionSensor(object):
         self.synchronous_mode = synchronous_mode
         self.world = self._parent.get_world()
         self.bp = self.world.get_blueprint_library().find("sensor.other.collision")
-        self.world = self._parent.get_world()
         self.sensor = self.world.spawn_actor(
             self.bp, carla.Transform(), attach_to=self._parent
         )
+
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         if not self.synchronous_mode:
@@ -40,8 +40,6 @@ class CollisionSensor(object):
                     weak_self, self.collision_queue.get(False)
                 )
             except:
-                # print("We could not get collision sensor")
-                # Ignore empty Que
                 pass
 
     def destroy_sensor(self):
@@ -52,7 +50,7 @@ class CollisionSensor(object):
 
     def get_collision_data(self):
         if self.intensity is not False:
-            return True
+            return self.intensity
         else:
             return False
 
@@ -61,7 +59,6 @@ class CollisionSensor(object):
         self = weak_self()
         if not self:
             return
-        # actor_type = get_actor_display_name(event.other_actor)
         impulse = event.normal_impulse
         self.intensity = math.sqrt(impulse.x ** 2 + impulse.y ** 2 + impulse.z ** 2)
 
@@ -71,28 +68,63 @@ class CollisionSensor(object):
 
 
 class LaneInvasionSensor(object):
-    def __init__(self, parent_actor, hud):
+    def __init__(self, parent_actor, synchronous_mode=True):
         self.sensor = None
         self._parent = parent_actor
-        world = self._parent.get_world()
-        bp = world.get_blueprint_library().find('sensor.other.lane_invasion')
-        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        self.lane_markings = []
+        self.synchronous_mode = synchronous_mode
+        self.world = self._parent.get_world()
+        self.bp = self.world.get_blueprint_library().find("sensor.other.lane_invasion")
+        self.sensor = self.world.spawn_actor(
+            self.bp, carla.Transform(), attach_to=self._parent
+        )
+
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
+        if not self.synchronous_mode:
+            weak_self = weakref.ref(self)
+            self.sensor.listen(
+                lambda event: LaneInvasionSensor._on_invasion(weak_self, event)
+            )
+        else:
+            self.lane_queue = None
+            self.lane_queue = queue.Queue()
+            self.sensor.listen(self.lane_queue.put)
+
+    def read_lane_queue(self):
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: LaneInvasionSensor._on_invasion(weak_self, event))
+        if not self.synchronous_mode:
+            return self.get_lane_data()
+        else:
+            try:
+                LaneInvasionSensor._on_invasion(
+                    weak_self, self.lane_queue.get(False)
+                )
+            except:
+                pass
 
     @staticmethod
     def _on_invasion(weak_self, event):
         self = weak_self()
         if not self:
             return
-        #to be added: Identify lanes that shouldnt be crossed.
+        lane_types = set(x.type for x in event.crossed_lane_markings)
+        for x in lane_types:
+            self.lane_markings.append(str(x))
+        return
 
     def destroy_sensor(self):
         if self.sensor is not None:
             self.sensor.destroy()
             self.sensor = None
+
+    def get_lane_data(self):
+        for x in self.lane_markings:
+            if x in ['Solid','SolidSolid','Curb','Grass', 'NONE', 'Broken']:
+                return True
+        else:
+            return False
+
 
 # ==============================================================================
 # -- GnssSensor ----------------------------------------------------------------
@@ -100,14 +132,14 @@ class LaneInvasionSensor(object):
 
 
 class GnssSensor(object):
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor, synchronous_mode=True):
         self.sensor = None
         self._parent = parent_actor
         self.lat = 0.0
         self.lon = 0.0
-        world = self._parent.get_world()
-        bp = world.get_blueprint_library().find('sensor.other.gnss')
-        self.sensor = world.spawn_actor(bp, carla.Transform(carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
+        self.world = self._parent.get_world()
+        self.bp = self.world.get_blueprint_library().find('sensor.other.gnss')
+        self.sensor = self.world.spawn_actor(self.bp, carla.Transform(carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)
@@ -126,13 +158,17 @@ class GnssSensor(object):
             self.sensor.destroy()
             self.sensor = None
 
+    def get_gnss_data(self):
+        return [self.lat, self.lon]
+
+
 # ==============================================================================
 # -- IMUSensor -----------------------------------------------------------------
 # ==============================================================================
 
 
 class IMUSensor(object):
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor, synchronous_mode=True):
         self.sensor = None
         self._parent = parent_actor
         self.accelerometer = (0.0, 0.0, 0.0)
@@ -169,21 +205,25 @@ class IMUSensor(object):
             self.sensor.destroy()
             self.sensor = None
 
+    def get_imu_data(self):
+        return [self.accelerometer, self.gyroscope, self.compass]
+
+
 # ==============================================================================
 # -- RadarSensor ---------------------------------------------------------------
 # ==============================================================================
 
 
 class RadarSensor(object):
-    def __init__(self, parent_actor):
+    def __init__(self, parent_actor, synchronous_mode=True):
         self.sensor = None
         self._parent = parent_actor
         self.velocity_range = 7.5 # m/s
         world = self._parent.get_world()
-        self.debug = world.debug
         bp = world.get_blueprint_library().find('sensor.other.radar')
         bp.set_attribute('horizontal_fov', str(35))
         bp.set_attribute('vertical_fov', str(20))
+        self.points = None
         self.sensor = world.spawn_actor(
             bp,
             carla.Transform(
@@ -201,8 +241,8 @@ class RadarSensor(object):
         if not self:
             return
         # To get a numpy [[vel, altitude, azimuth, depth],...[,,,]]:
-        # points = np.frombuffer(radar_data.raw_data, dtype=np.dtype('f4'))
-        # points = np.reshape(points, (len(radar_data), 4))
+        self.points = np.frombuffer(radar_data.raw_data, dtype=np.dtype('f4'))
+        self.points = np.reshape(self.points, (len(radar_data), 4))
 
         current_rot = radar_data.transform.rotation
         for detect in radar_data:
@@ -218,21 +258,10 @@ class RadarSensor(object):
                     yaw=current_rot.yaw + azi,
                     roll=current_rot.roll)).transform(fw_vec)
 
-            def clamp(min_v, max_v, value):
-                return max(min_v, min(value, max_v))
-
-            norm_velocity = detect.velocity / self.velocity_range # range [-1, 1]
-            r = int(clamp(0.0, 1.0, 1.0 - norm_velocity) * 255.0)
-            g = int(clamp(0.0, 1.0, 1.0 - abs(norm_velocity)) * 255.0)
-            b = int(abs(clamp(- 1.0, 0.0, - 1.0 - norm_velocity)) * 255.0)
-            self.debug.draw_point(
-                radar_data.transform.location + fw_vec,
-                size=0.075,
-                life_time=0.06,
-                persistent_lines=False,
-                color=carla.Color(r, g, b))
-
     def destroy_sensor(self):
         if self.sensor is not None:
             self.sensor.destroy()
             self.sensor = None
+
+    def get_radar_data(self):
+        return self.points
