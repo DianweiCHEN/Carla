@@ -39,7 +39,7 @@ if __name__ == "__main__":
     tf.keras.backend.clear_session()
     while True:
         try:
-            ray.init(memory=8000*1024*1024,redis_max_memory=1024*1024*100, object_store_memory=1024*1024*100,driver_object_store_memory=1000*1024*1024)
+            ray.init()
             run_experiments({
                 "dqn": {
                     "run": "APEX",
