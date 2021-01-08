@@ -10,6 +10,7 @@ from helper.CarlaHelper import update_config
 import carla
 import matplotlib.pyplot as plt
 import random
+import gc
 
 SERVER_VIEW_CONFIG = {
 }
@@ -97,7 +98,7 @@ class Experiment(BaseExperiment):
         :param observation:
         :return:
         """
-
+        self.set_server_view(core)
         image = preprocess_image(self.experiment_config["SENSOR_CONFIG"]["CAMERA_X"],
                                  self.experiment_config["SENSOR_CONFIG"]["CAMERA_Y"],
                                  observation['camera'])
@@ -122,64 +123,87 @@ class Experiment(BaseExperiment):
         :param core:
         :return:
         """
-        self.previous_distance=None
+        self.previous_distance=0
 
 
     def compute_reward(self, core, observation):
         """
         Reward function
-        :param core:
         :param observation:
+        :param core:
         :return:
         """
-        current_distance_from_start = float(np.linalg.norm(
-            [self.hero.get_location().x - self.start_location.location.x,
-             self.hero.get_location().y - self.start_location.location.y]) / 100)
+        c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location_x) + \
+                            np.square(self.hero.get_location().y - self.start_location_y)))
+        # if c > self.previous_distance + 1e-2:
+        #     reward = 1
+        # else:
+        #     reward = 0
 
-        if self.previous_distance is None:
-            reward = 0
+        # # print("\n", self.previous_distance)
+        # self.previous_distance = c
+        # # print("\n", c)
+
+        # if c > 20:
+        #     self.base_x = self.hero.get_location().x
+        #     self.base_y = self.hero.get_location().y
+        #     print("Reached the milestone!")
+
+        if self.observation["collision"]!=False:
+            reward = -0.002*self.observation["collision"]
+        elif self.observation["lane"]!=False:
+            reward = -10*(self.observation["lane"])
+        elif (self.get_speed() > self.hero.get_speed_limit()):
+            reward = 0.1*(self.hero.get_speed_limit() - self.get_speed())
+        elif c > self.previous_distance + 1e-2:
+            reward = c - self.previous_distance
         else:
-            reward = current_distance_from_start - self.previous_distance
-
-        self.previous_distance = current_distance_from_start
-
-        if (random.randint(1, 200) == 50):
-            print("Current Reward is:", reward, "current distance", current_distance_from_start)
-
-        if self.experiment_config["Debug"]:
-            message = " Reward is {reward:.2f}"
-            message = message.format(
-                reward=reward,
-            )
-            print(message)
-
+            reward = 0
+        self.previous_distance = c
         return reward
 
-    def set_server_view(self, core):
-
-        """
-        Apply server view to be in the sky between camera between start and end positions
-        :param core:
-        :return:
-        """
-        # spectator pointing to the sky to reduce rendering impact
-
-        server_view_x = (
-                self.experiment_config["Server_View"]["server_view_x_offset"]
-                + (self.start_location.location.x + self.end_location.location.x) / 2
-        )
-        server_view_y = (
-                self.experiment_config["Server_View"]["server_view_y_offset"]
-                + (self.start_location.location.y + self.end_location.location.y) / 2
-        )
-        server_view_z = self.experiment_config["Server_View"]["server_view_height"]
-        server_view_pitch = self.experiment_config["Server_View"]["server_view_pitch"]
+    def spawn_hero(self, core, transform, autopilot=False):
 
         world = core.get_core_world()
-        self.spectator = world.get_spectator()
-        self.spectator.set_transform(
-            carla.Transform(
-                carla.Location(x=server_view_x, y=server_view_y, z=server_view_z),
-                carla.Rotation(pitch=server_view_pitch),
-            )
-        )
+        self.spawn_points = world.get_map().get_spawn_points()
+        gc.collect()
+        self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
+        self.hero_blueprints.set_attribute("role_name", "hero")
+
+        random.shuffle(self.spawn_points, random.random) #comment this for debugging
+        next_spawn_point = self.spawn_points[0]
+
+        super().spawn_hero(core, next_spawn_point, autopilot=False)
+        world.tick()
+        print("Hero spawned!")
+        self.start_location_x = self.spawn_points[0].location.x
+        self.start_location_y = self.spawn_points[0].location.y
+
+    # def set_server_view(self, core):
+
+    #     """
+    #     Apply server view to be in the sky between camera between start and end positions
+    #     :param core:
+    #     :return:
+    #     """
+    #     # spectator pointing to the sky to reduce rendering impact
+
+    #     server_view_x = (
+    #             self.experiment_config["Server_View"]["server_view_x_offset"]
+    #             + (self.start_location.location.x + self.end_location.location.x) / 2
+    #     )
+    #     server_view_y = (
+    #             self.experiment_config["Server_View"]["server_view_y_offset"]
+    #             + (self.start_location.location.y + self.end_location.location.y) / 2
+    #     )
+    #     server_view_z = self.experiment_config["Server_View"]["server_view_height"]
+    #     server_view_pitch = self.experiment_config["Server_View"]["server_view_pitch"]
+
+    #     world = core.get_core_world()
+    #     self.spectator = world.get_spectator()
+    #     self.spectator.set_transform(
+    #         carla.Transform(
+    #             carla.Location(x=server_view_x, y=server_view_y, z=server_view_z),
+    #             carla.Rotation(pitch=server_view_pitch),
+    #         )
+    #     )

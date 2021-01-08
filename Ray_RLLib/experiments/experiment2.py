@@ -133,15 +133,15 @@ class Experiment(BaseExperiment):
         #     self.base_x = self.hero.get_location().x
         #     self.base_y = self.hero.get_location().y
         #     print("Reached the milestone!")
-        if c > self.previous_distance + 1e-2:
-            if self.observation["collision"]!=False:
-                reward = -0.002*self.observation["collision"]
-            elif self.observation["lane"]!=False:
-                reward = -30*(self.observation["lane"])
-            elif (self.get_speed() > self.hero.get_speed_limit()):
-                reward = self.hero.get_speed_limit() - self.get_speed()
-            else:
-                reward = c - self.previous_distance
+
+        if self.observation["collision"]!=False:
+            reward = -0.002*self.observation["collision"]
+        elif self.observation["lane"]!=False:
+            reward = -10*(self.observation["lane"])
+        elif (self.get_speed() > self.hero.get_speed_limit()):
+            reward = 0.1*(self.hero.get_speed_limit() - self.get_speed())
+        elif c > self.previous_distance + 1e-2:
+            reward = c - self.previous_distance
         else:
             reward = 0
         self.previous_distance = c
@@ -155,7 +155,7 @@ class Experiment(BaseExperiment):
         self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
         self.hero_blueprints.set_attribute("role_name", "hero")
 
-        #random.shuffle(self.randomized_vehicle_spawn_point, random.random)
+        random.shuffle(self.spawn_points, random.random) #comment this for debugging
         next_spawn_point = self.spawn_points[0]
 
         super().spawn_hero(core, next_spawn_point, autopilot=False)

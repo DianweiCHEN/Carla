@@ -32,23 +32,29 @@ env_config.update(
 
 if __name__ == "__main__":
     kill_server()
-    ray.init()
-    run_experiments({
-        "carla-a3c": {
-            "run": "A3C",
-            "env": CarlaEnv,
-            "stop": {"episodes_total":30000000}, #"training_iteration":5000000},
-            "checkpoint_at_end": True,
-            "checkpoint_freq": 1,
-            "config": {
-                "env_config": env_config,
-                "num_gpus_per_worker": 0.3,
-                "num_cpus_per_worker": 3,
-                "num_workers": 1,
-                "gamma": 0.99,  # random.choice([0.5, 0.8, 0.9, 0.95, 0.99]),
+    gc.enable()
+    tf.keras.backend.clear_session()
+    while True:
+        try:
+            ray.init()
+            run_experiments({
+                "carla-a3c": {
+                    "run": "A3C",
+                    "env": CarlaEnv,
+                    "stop": {"episodes_total":30000000}, #"training_iteration":5000000},
+                    "checkpoint_at_end": True,
+                    "checkpoint_freq": 1,
+                    "config": {
+                        "env_config": env_config,
+                        "num_gpus_per_worker": 0,
+                        "num_cpus_per_worker": 6,
+                        "num_workers": 0,
+                        "gamma": 0.99,  # random.choice([0.5, 0.8, 0.9, 0.95, 0.99]),
 
+                    },
+                },
             },
-        },
-    },
-    resume= False,
-    )
+            resume= False,
+            )
+        finally:
+            ray.shutdown()

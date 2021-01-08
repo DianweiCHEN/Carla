@@ -47,7 +47,7 @@ class CarlaEnv(gym.Env):
         self.experiment_config = self.experiment.get_experiment_config()
 
         self.core = CarlaCore(self.environment_config, self.experiment_config)
-        self.experiment.spawn_actors(self.core)
+        #self.experiment.spawn_actors(self.core) #uncomment once can spawn in multi worker
         self.experiment.initialize_reward(self.core)
         self.reset()
 

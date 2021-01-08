@@ -95,12 +95,12 @@ DISCRETE_ACTIONS_SMALLER = {
     1: [0.0, -0.10, 0.0, False, False], # Turn Left
     2: [0.0, 0.10, 0.0, False, False], # Turn Right
     3: [0.05, 0.00, 0.0, False, False], # Accelerate
-    4: [-0.2, 0.00, 0.0, False, False], # Decelerate
+    4: [-0.1, 0.00, 0.0, False, False], # Decelerate
     5: [0.0, 0.00, 1.0, False, False], # Brake
     6: [0.05, 0.10, 0.0, False, False], # Turn Right + Accelerate
     7: [0.05, -0.10, 0.0, False, False], # Turn Left + Accelerate
-    8: [-0.2, 0.10, 0.0, False, False], # Turn Right + Decelerate
-    9: [-0.2, -0.10, 0.0, False, False], # Turn Left + Decelerate
+    8: [-0.1, 0.10, 0.0, False, False], # Turn Right + Decelerate
+    9: [-0.1, -0.10, 0.0, False, False], # Turn Left + Decelerate
 }
 
 DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALLER

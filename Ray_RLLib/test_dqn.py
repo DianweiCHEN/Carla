@@ -39,7 +39,7 @@ if __name__ == "__main__":
     tf.keras.backend.clear_session()
     while True:
         try:
-            ray.init()
+            ray.init(memory=8000*1024*1024,redis_max_memory=1024*1024*100, object_store_memory=1024*1024*100,driver_object_store_memory=1000*1024*1024)
             run_experiments({
                 "dqn": {
                     "run": "APEX",
@@ -51,10 +51,10 @@ if __name__ == "__main__":
                     "config": {
                         #"framework" : "torch",
                         "env_config": env_config,
-                        "num_gpus_per_worker": 0.4,
+                        "num_gpus_per_worker": 0,
                         "num_cpus_per_worker":3,
-                        "buffer_size": 10000,
-                        "num_workers": 0,
+                        "buffer_size": 100,
+                        "num_workers": 2,
                     },
                 },
             },
