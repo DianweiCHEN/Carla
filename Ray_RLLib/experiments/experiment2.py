@@ -42,7 +42,6 @@ class Experiment(BaseExperiment):
             {
                 "RAY": True,  # Are we running an experiment in Ray
                 "DEBUG_MODE": False,
-                "corridor_length": 5,
             }
         )
 

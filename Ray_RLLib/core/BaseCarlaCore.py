@@ -157,7 +157,7 @@ class BaseCarlaCore:
                 settings = world.get_settings()
                 settings.no_rendering_mode = disable_rendering_mode
                 settings.synchronous_mode = sync_mode
-                settings.fixed_delta_seconds = 1
+                settings.fixed_delta_seconds = 0.2
 
                 world.apply_settings(settings)
 
@@ -390,17 +390,16 @@ class BaseCarlaCore:
         :return: True if vehicle was added to world and False otherwise
         """
         world = self.get_core_world()
-        client = world.get_client()
+        client = self.get_core_client()
         traffic_manager = client.get_trafficmanager(self.server_port+50)
-
         if hybrid:
             traffic_manager.set_hybrid_physics_mode(True)
         if seed is not None:
             traffic_manager.set_random_device_seed(seed)
         traffic_manager.set_synchronous_mode(True)
 
-        blueprints = world.get_blueprint_library()
-        blueprintsWalkers = world.get_blueprint_library()
+        blueprints = world.get_blueprint_library().filter("vehicle.*")
+        blueprintsWalkers = world.get_blueprint_library().filter("walker.pedestrian.*")
 
         spawn_points = world.get_map().get_spawn_points()
         number_of_spawn_points = len(spawn_points)
@@ -442,6 +441,7 @@ class BaseCarlaCore:
                 logging.error(response.error)
             else:
                 vehicles_list.append(response.actor_id)
+
         percentagePedestriansRunning = 0.0      # how many pedestrians will run
         percentagePedestriansCrossing = 0.0     # how many pedestrians will walk through the road
         # 1. take all the random locations to spawn
@@ -469,7 +469,6 @@ class BaseCarlaCore:
                     # running
                     walker_speed.append(walker_bp.get_attribute('speed').recommended_values[2])
             else:
-                print("Walker has no speed")
                 walker_speed.append(0.0)
             batch.append(SpawnActor(walker_bp, spawn_point))
         results = client.apply_batch_sync(batch, True)
@@ -498,6 +497,7 @@ class BaseCarlaCore:
             all_id.append(walkers_list[i]["id"])
         all_actors = world.get_actors(all_id)
 
+        # wait for a tick to ensure client receives the last transform of the walkers we have just created
         world.tick()
 
         # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
@@ -512,18 +512,3 @@ class BaseCarlaCore:
             all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
 
         world.tick()
-
-        return vehicles_list, walkers_list, all_id
-
-
-    def destroy_npcs(self, world, vehicles_list, walker_list, controller_list, hybrid=False, seed=None, max_time=0.1):
-        client = world.get_client()
-
-        client.apply_batch([carla.command.DestroyActor(x) for x in vehicles_list])
-
-        # stop walker controllers (list is [controller, actor, controller, actor ...])
-        for i in range(0, len(walker_list), 2):
-            controller_list[i].stop()
-
-        client.apply_batch([carla.command.DestroyActor(x) for x in walker_list])
-

@@ -94,13 +94,13 @@ DISCRETE_ACTIONS_SMALLER = {
     0: [0.0, 0.00, 0.0, False, False], # Coast
     1: [0.0, -0.10, 0.0, False, False], # Turn Left
     2: [0.0, 0.10, 0.0, False, False], # Turn Right
-    3: [0.05, 0.00, 0.0, False, False], # Accelerate
-    4: [-0.1, 0.00, 0.0, False, False], # Decelerate
+    3: [0.1, 0.00, 0.0, False, False], # Accelerate
+    4: [-0.2, 0.00, 0.0, False, False], # Decelerate
     5: [0.0, 0.00, 1.0, False, False], # Brake
-    6: [0.05, 0.10, 0.0, False, False], # Turn Right + Accelerate
-    7: [0.05, -0.10, 0.0, False, False], # Turn Left + Accelerate
-    8: [-0.1, 0.10, 0.0, False, False], # Turn Right + Decelerate
-    9: [-0.1, -0.10, 0.0, False, False], # Turn Left + Decelerate
+    6: [0.1, 0.10, 0.0, False, False], # Turn Right + Accelerate
+    7: [0.1, -0.10, 0.0, False, False], # Turn Left + Accelerate
+    8: [-0.2, 0.10, 0.0, False, False], # Turn Right + Decelerate
+    9: [-0.2, -0.10, 0.0, False, False], # Turn Left + Decelerate
 }
 
 DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALLER
@@ -186,154 +186,6 @@ class BaseExperiment:
             # Reset the autopilot
             self.vehicle_list[i].set_autopilot(False)
             self.vehicle_list[i].set_autopilot(True)
-
-    def spawn_actors(self, core, hybrid=False, seed=None, max_time=0.1):
-
-        """
-        This experiment spawns vehicles randomly on a map based on a pre-set number of vehicles.
-        To spawn, the spawn points and randomized and the vehicles are spawned with a each vehicle occupying a
-        single spawn point to avoid vehicles running on top of each other
-        This experiment does not spawn any vehicle where the actor is to be spawned
-        :param core:
-        :return:
-        """
-
-        world = core.get_core_world()
-        client = core.get_core_client()
-        traffic_manager = client.get_trafficmanager()
-        if hybrid:
-            traffic_manager.set_hybrid_physics_mode(True)
-        if seed is not None:
-            traffic_manager.set_random_device_seed(seed)
-        traffic_manager.set_synchronous_mode(True)
-
-        # Get a list of all the vehicle blueprints
-        vehicle_blueprints = world.get_blueprint_library().filter("vehicle.*")
-        car_blueprints = [
-            x
-            for x in vehicle_blueprints
-            if int(x.get_attribute("number_of_wheels")) == 4
-        ]
-        walker_blueprints = world.get_blueprint_library().filter("walker.*")
-
-        # Now we are ready to spawn all the vehicles (except the hero)
-        n_vehicles = self.experiment_config["n_vehicles"]
-        n_walkers = self.experiment_config["n_walkers"]
-
-        spawn_points = world.get_map().get_spawn_points()
-        number_of_spawn_points = len(spawn_points)
-
-        if n_vehicles < number_of_spawn_points:
-            random.shuffle(spawn_points)
-        elif n_vehicles > number_of_spawn_points:
-            msg = 'requested %d vehicles, but could only find %d spawn points'
-            logging.warning(msg, n_vehicles, number_of_spawn_points)
-            n_vehicles = number_of_spawn_points
-
-        # @todo cannot import these directly.
-        SpawnActor = carla.command.SpawnActor
-        SetAutopilot = carla.command.SetAutopilot
-        FutureActor = carla.command.FutureActor
-
-        walkers_list = []
-        batch = []
-        vehicles_list = []
-        all_id = []
-        for n, transform in enumerate(spawn_points):
-            if n >= n_vehicles:
-                break
-            blueprint = random.choice(car_blueprints)
-            if blueprint.has_attribute('color'):
-                color = random.choice(blueprint.get_attribute('color').recommended_values)
-                blueprint.set_attribute('color', color)
-            if blueprint.has_attribute('driver_id'):
-                driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
-                blueprint.set_attribute('driver_id', driver_id)
-            blueprint.set_attribute('role_name', 'autopilot')
-
-            # spawn the cars and set their autopilot and light state all together
-            batch.append(SpawnActor(blueprint, transform)
-                .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
-
-        for response in client.apply_batch_sync(batch, True):
-            if response.error:
-                logging.error(response.error)
-            else:
-                vehicles_list.append(response.actor_id)
-        percentagePedestriansRunning = 0.0      # how many pedestrians will run
-        percentagePedestriansCrossing = 0.0     # how many pedestrians will walk through the road
-        # 1. take all the random locations to spawn
-        w_spawn_points = []
-        for i in range(n_walkers):
-            spawn_point = carla.Transform()
-            loc = world.get_random_location_from_navigation()
-            if (loc != None):
-                spawn_point.location = loc
-                w_spawn_points.append(spawn_point)
-        # 2. we spawn the walker object
-        batch = []
-        walker_speed = []
-        for spawn_point in w_spawn_points:
-            walker_bp = random.choice(walker_blueprints)
-            # set as not invincible
-            if walker_bp.has_attribute('is_invincible'):
-                walker_bp.set_attribute('is_invincible', 'false')
-            # set the max speed
-            if walker_bp.has_attribute('speed'):
-                if (random.random() > percentagePedestriansRunning):
-                    # walking
-                    walker_speed.append(walker_bp.get_attribute('speed').recommended_values[1])
-                else:
-                    # running
-                    walker_speed.append(walker_bp.get_attribute('speed').recommended_values[2])
-            else:
-                print("Walker has no speed")
-                walker_speed.append(0.0)
-            batch.append(SpawnActor(walker_bp, spawn_point))
-        results = client.apply_batch_sync(batch, True)
-        walker_speed2 = []
-        for i in range(len(results)):
-            if results[i].error:
-                logging.error(results[i].error)
-            else:
-                walkers_list.append({"id": results[i].actor_id})
-                walker_speed2.append(walker_speed[i])
-        walker_speed = walker_speed2
-        # 3. we spawn the walker controller
-        batch = []
-        walker_controller_bp = world.get_blueprint_library().find('controller.ai.walker')
-        for i in range(len(walkers_list)):
-            batch.append(SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
-        results = client.apply_batch_sync(batch, True)
-        for i in range(len(results)):
-            if results[i].error:
-                logging.error(results[i].error)
-            else:
-                walkers_list[i]["con"] = results[i].actor_id
-        # 4. we put altogether the walkers and controllers id to get the objects from their id
-        for i in range(len(walkers_list)):
-            all_id.append(walkers_list[i]["con"])
-            all_id.append(walkers_list[i]["id"])
-        all_actors = world.get_actors(all_id)
-
-        world.tick()
-
-        # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
-        # set how many pedestrians can cross the road
-        world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
-        for i in range(0, len(all_id), 2):
-            # start walker
-            all_actors[i].start()
-            # set walk to random point
-            all_actors[i].go_to_location(world.get_random_location_from_navigation())
-            # max speed
-            all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
-
-        world.tick()
-
-        self.start_location = spawn_points[self.experiment_config["start_pos_spawn_id"]]
-        self.end_location = spawn_points[self.experiment_config["end_pos_spawn_id"]]
-
 
     def set_server_view(self,core):
 

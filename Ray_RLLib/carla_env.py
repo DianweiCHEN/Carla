@@ -47,33 +47,44 @@ class CarlaEnv(gym.Env):
         self.experiment_config = self.experiment.get_experiment_config()
 
         self.core = CarlaCore(self.environment_config, self.experiment_config)
-        #self.experiment.spawn_actors(self.core) #uncomment once can spawn in multi worker
+        CarlaCore.spawn_npcs(self.core, self.experiment_config["n_vehicles"],self.experiment_config["n_walkers"]) #uncomment once can spawn in multi worker
         self.experiment.initialize_reward(self.core)
         self.reset()
 
     def reset(self):
         self.core.reset_sensors(self.experiment_config)
         self.experiment.spawn_hero(self.core, self.experiment.start_location, autopilot=False)
-
+        #print("spawned hero")
         self.core.setup_sensors(
             self.experiment.experiment_config,
             self.experiment.get_hero(),
             self.core.get_core_world().get_settings().synchronous_mode,
         )
+        #print("setup sensors")
         self.experiment.initialize_reward(self.core)
+        #print("ini reward")
         self.experiment.set_server_view(self.core)
+        #print("set server view")
         self.experiment.experiment_tick(self.core, action=None)
+        #print("experiment tick")
         obs, info = self.experiment.get_observation(self.core)
+        #print("get obs")
         obs = self.experiment.process_observation(self.core, obs)
+        #print("process obs")
         return obs
 
     def step(self, action):
         # assert action in [0, 13], action
         self.experiment.experiment_tick(self.core, action)
+        #print("step experiment tick")
         observation, info = self.experiment.get_observation(self.core)
+        #print("step get obs")
         observation = self.experiment.process_observation(self.core, observation)
+        #print("step process obs")
         reward = self.experiment.compute_reward(self.core,observation)
+        #print("step compute reward")
         done = self.experiment.get_done_status()
+        #print("step get done")
         return observation, reward, done, info
 
     def seed(self, seed=None):
