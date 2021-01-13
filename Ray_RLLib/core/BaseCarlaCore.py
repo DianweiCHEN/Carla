@@ -82,13 +82,11 @@ class BaseCarlaCore:
             self.server_port = 2000
         else:
             self.server_port = random.randint(10000, 50000)
-            print(self.server_port)
         # Create a new server process and start the client.
         if self.environment_config["RAY"] is True:
             # Ray tends to start all processes simultaneously. This causes problems
             # => random delay to start individual servers
             delay_sleep = random.uniform(0, ray_delay)
-            print(delay_sleep)
             time.sleep(delay_sleep)
 
         if self.environment_config["DEBUG_MODE"] is True:
@@ -157,7 +155,7 @@ class BaseCarlaCore:
                 settings = world.get_settings()
                 settings.no_rendering_mode = disable_rendering_mode
                 settings.synchronous_mode = sync_mode
-                settings.fixed_delta_seconds = 0.2
+                settings.fixed_delta_seconds = 0.1
 
                 world.apply_settings(settings)
 
@@ -391,7 +389,8 @@ class BaseCarlaCore:
         """
         world = self.get_core_world()
         client = self.get_core_client()
-        traffic_manager = client.get_trafficmanager(self.server_port+50)
+        tm_port = self.server_port//10 + self.server_port%10
+        traffic_manager = client.get_trafficmanager(tm_port)
         if hybrid:
             traffic_manager.set_hybrid_physics_mode(True)
         if seed is not None:
