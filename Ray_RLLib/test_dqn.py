@@ -31,17 +31,13 @@ env_config.update(
     }
 )
 
-def tune_run():
-    print("THIS EXPERIMENT HAS NOT BEEN FULLY TESTED")
-    gc.enable()
-    directory = "/home/jacopobartiromo/ray_results/a_local_dir" #change this and make sure this folder is either empty or non-existing
-    to_ignore = []
+def first_run(directory, name, model):
     try:
         kill_server()
         tf.keras.backend.clear_session()
-        ray.init(object_store_memory=6000*1024*1024)
+        ray.init()
         run_experiments({
-            "dqn": {
+            name: {
                 "run": "DQN",
                 "env": CarlaEnv,
                 "stop": {"perf/ram_util_percent":85.0}, # {"training_iteration":300},
@@ -60,27 +56,31 @@ def tune_run():
         )
         ray.shutdown()
         gc.collect()
+    finally:
+        kill_server()
+        ray.shutdown()
+
+def restore_run(directory, name, model):
+    to_ignore = []
+    try:
         while (True):
             kill_server()
             tf.keras.backend.clear_session()
-            ### Finds checkpoint dir path
-            start = directory+"/dqn"
+            # Finds checkpoint dir path
+            start = directory+"/"+name
             for f in os.listdir(start):
-                time.sleep(1)
-                if "DQN" in f and not(f in to_ignore):
+                if model in f and not(f in to_ignore):
                     start+=("/"+f)
                     to_ignore.append(start)
                     break
             for f in os.listdir(start):
-                time.sleep(1)
                 if "checkpoint" in f:
-                    start+=("/"+f+"/checkpoint-"+f[-1])
+                    start+=("/"+f+"/"+f.replace("_","-"))
                     break
-            ###
-            ray.init(object_store_memory=6000*1024*1024)
+            ray.init()
             run_experiments({
-                "dqn": {
-                    "run": "DQN",
+                name: {
+                    "run": model,
                     "env": CarlaEnv,
                     "stop": {"perf/ram_util_percent":85.0}, # {"training_iteration":300},
                     "checkpoint_at_end":True,
@@ -105,4 +105,11 @@ def tune_run():
         ray.shutdown()
 
 if __name__ == "__main__":
-    tune_run()
+    # If first run: this and make sure this folder is either empty or non-existing
+    # If no first run: make sure that the folder only has one DQN_CarlaEnv_<xxxxx> entry
+    directory = "/home/jacopobartiromo/ray_results/a_local_dir" 
+    name = "dqn"
+    model = "DQN"
+    gc.enable()
+    first_run(directory, name, model)
+    restore_run(directory, name, model)
