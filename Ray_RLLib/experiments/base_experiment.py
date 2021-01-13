@@ -222,7 +222,8 @@ class BaseExperiment:
         return 3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
 
     def get_done_status(self):
-        done = (self.observation["collision"] is not False) or self.observation["lane"] or (self.get_speed() > self.hero.get_speed_limit()+10.0)
+        #done = (self.observation["collision"] is not False) or self.observation["lane"] or (self.get_speed() > self.hero.get_speed_limit()+10.0)
+        done = self.observation["collision"] is not False or self.observation["lane"]
         return done
 
     def process_observation(self, core, observation):
@@ -344,10 +345,11 @@ class BaseExperiment:
         hero_car_blueprint = world.get_blueprint_library().find(self.hero_model)
         hero_car_blueprint.set_attribute("role_name", "hero")
 
-        while self.hero is None:
+        if self.hero is None:
             self.hero = world.try_spawn_actor(hero_car_blueprint, transform)
 
         self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)
+        return self.hero is not None
 
     def get_hero(self):
 

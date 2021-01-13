@@ -120,7 +120,8 @@ class LaneInvasionSensor(object):
 
     def get_lane_data(self):
         for x in self.lane_markings:
-            if x in ['Solid','SolidSolid','Curb','Grass', 'NONE', 'Broken']:
+            #if x in ['Solid','SolidSolid','Curb','Grass', 'NONE', 'Broken']:
+            if x in ['Curb','Grass', 'NONE']:
                 return True
         else:
             return False

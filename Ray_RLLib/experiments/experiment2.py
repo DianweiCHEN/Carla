@@ -13,7 +13,7 @@ SERVER_VIEW_CONFIG = {
 }
 
 SENSOR_CONFIG = {
-    "CAMERA_NORMALIZED": [True], #apparently doesnt work if set to false, its just for the image!
+    "CAMERA_NORMALIZED": [True], # apparently doesnt work if set to false, its just for the image!
     "CAMERA_GRAYSCALE": [True],
     "FRAMESTACK": 4,
 }
@@ -26,6 +26,8 @@ EXPERIMENT_CONFIG = {
     "OBSERVATION_CONFIG": OBSERVATION_CONFIG,
     "Server_View": SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": SENSOR_CONFIG,
+    "n_vehicles": 40,
+    "n_walkers": 15,
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
 }
 
@@ -137,8 +139,8 @@ class Experiment(BaseExperiment):
             reward = -0.002*self.observation["collision"]
         elif self.observation["lane"]!=False:
             reward = -10*(self.observation["lane"])
-        elif (self.get_speed() > self.hero.get_speed_limit()):
-            reward = 0.1*(self.hero.get_speed_limit() - self.get_speed())
+        # elif (self.get_speed() > self.hero.get_speed_limit()):
+        #     reward = 0.1*(self.hero.get_speed_limit() - self.get_speed())
         elif c > self.previous_distance + 1e-2:
             reward = c - self.previous_distance
         else:
@@ -153,11 +155,18 @@ class Experiment(BaseExperiment):
         gc.collect()
         self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
         self.hero_blueprints.set_attribute("role_name", "hero")
+        i = 0
+        random.shuffle(self.spawn_points, random.random)
+        success = False
+        while success is False:
+            next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
+            success = super().spawn_hero(core, next_spawn_point, autopilot=False)
+            if success is True:
+                break
+            else:
+                print("Could not spawn Hero, changing spawn point")
+                i+=1
 
-        random.shuffle(self.spawn_points, random.random) #comment this for debugging
-        next_spawn_point = self.spawn_points[0]
-
-        super().spawn_hero(core, next_spawn_point, autopilot=False)
         world.tick()
         print("Hero spawned!")
         self.start_location_x = self.spawn_points[0].location.x
