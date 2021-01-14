@@ -121,7 +121,7 @@ class LaneInvasionSensor(object):
     def get_lane_data(self):
         for x in self.lane_markings:
             #if x in ['Solid','SolidSolid','Curb','Grass', 'NONE', 'Broken']:
-            if x in ['Curb','Grass', 'NONE']:
+            if x in ['Curb','Grass']:
                 return True
         else:
             return False
@@ -139,12 +139,28 @@ class GnssSensor(object):
         self.lat = 0.0
         self.lon = 0.0
         self.world = self._parent.get_world()
+        self.synchronous_mode = synchronous_mode
         self.bp = self.world.get_blueprint_library().find('sensor.other.gnss')
         self.sensor = self.world.spawn_actor(self.bp, carla.Transform(carla.Location(x=1.0, z=2.8)), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
+        if not self.synchronous_mode:
+            weak_self = weakref.ref(self)
+            self.sensor.listen(lambda event: GnssSensor._on_gnss_event(weak_self, event))
+        else:
+            self.gnss_queue = None
+            self.gnss_queue = queue.Queue()
+            self.sensor.listen(self.gnss_queue.put)
+
+    def read_gnss_queue(self):
         weak_self = weakref.ref(self)
-        self.sensor.listen(lambda event: GnssSensor._on_gnss_event(weak_self, event))
+        if not self.synchronous_mode:
+            return self.get_gnss_data()
+        else:
+            try:
+                GnssSensor._on_gnss_event(weak_self, self.gnss_queue.get(False))
+            except:
+                pass
 
     @staticmethod
     def _on_gnss_event(weak_self, event):
@@ -176,14 +192,30 @@ class IMUSensor(object):
         self.gyroscope = (0.0, 0.0, 0.0)
         self.compass = 0.0
         world = self._parent.get_world()
+        self.synchronous_mode = synchronous_mode
         bp = world.get_blueprint_library().find('sensor.other.imu')
         self.sensor = world.spawn_actor(
             bp, carla.Transform(), attach_to=self._parent)
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
+        if not self.synchronous_mode:
+            weak_self = weakref.ref(self)
+            self.sensor.listen(
+                lambda sensor_data: IMUSensor._IMU_callback(weak_self, sensor_data))
+        else:
+            self.imu_queue = None
+            self.imu_queue = queue.Queue()
+            self.sensor.listen(self.imu_queue.put)
+
+    def read_imu_queue(self):
         weak_self = weakref.ref(self)
-        self.sensor.listen(
-            lambda sensor_data: IMUSensor._IMU_callback(weak_self, sensor_data))
+        if not self.synchronous_mode:
+            return self.get_imu_data()
+        else:
+            try:
+                IMUSensor._IMU_callback(weak_self, self.imu_queue.get(False))
+            except:
+                pass
 
     @staticmethod
     def _IMU_callback(weak_self, sensor_data):
@@ -221,6 +253,7 @@ class RadarSensor(object):
         self._parent = parent_actor
         self.velocity_range = 7.5 # m/s
         world = self._parent.get_world()
+        self.synchronous_mode = synchronous_mode
         bp = world.get_blueprint_library().find('sensor.other.radar')
         bp.set_attribute('horizontal_fov', str(35))
         bp.set_attribute('vertical_fov', str(20))
@@ -232,9 +265,24 @@ class RadarSensor(object):
                 carla.Rotation(pitch=5)),
             attach_to=self._parent)
         # We need a weak reference to self to avoid circular reference.
+        if not self.synchronous_mode:
+            weak_self = weakref.ref(self)
+            self.sensor.listen(
+                lambda radar_data: RadarSensor._Radar_callback(weak_self, radar_data))
+        else:
+            self.radar_queue = None
+            self.radar_queue = queue.Queue()
+            self.sensor.listen(self.radar_queue.put)
+
+    def read_radar_queue(self):
         weak_self = weakref.ref(self)
-        self.sensor.listen(
-            lambda radar_data: RadarSensor._Radar_callback(weak_self, radar_data))
+        if not self.synchronous_mode:
+            return self.get_radar_data()
+        else:
+            try:
+                RadarSensor._Radar_callback(weak_self, self.radar_queue.get(False))
+            except:
+                pass
 
     @staticmethod
     def _Radar_callback(weak_self, radar_data):
