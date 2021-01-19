@@ -4,6 +4,11 @@ import weakref
 import carla
 import numpy as np
 import queue
+import pygame
+from threading import Thread
+import time
+
+from .birdview_sensor import World, MapImage
 
 
 class CollisionSensor(object):
@@ -314,3 +319,56 @@ class RadarSensor(object):
 
     def get_radar_data(self):
         return self.points
+
+
+# ==============================================================================
+# -- BirdViewSensor ---------------------------------------------------------------
+# ==============================================================================
+
+def threaded(fn):
+    def wrapper(*args, **kwargs):
+        thread = Thread(target=fn, args=args, kwargs=kwargs)
+        thread.setDaemon(True)
+        thread.start()
+
+        return thread
+    return wrapper
+
+class BirdViewSensor(object):
+    def __init__(self, host, port, dim, radius, parent_actor, synchronous_mode=True):
+        """Initializes the birdview sensor"""
+        pygame.init()
+        self.image_array = None
+        self.data_ready = False
+        self.running = False
+        self.world = World(host, port, dim, radius, parent_actor, timeout=2.0)
+        self.run()
+
+    @threaded
+    def run(self):
+        self.previous_frame = self.world.world.get_snapshot().frame
+        self.running = True
+
+        while self.running:
+            frame = self.world.world.get_snapshot().frame
+            if frame > self.previous_frame:
+                # Ticks the world to update the actors and renders the image
+                self.image_array = self.world.tick()
+                self.data_ready = True
+                self.previous_frame = frame
+            else:
+                time.sleep(0.005)
+
+    def read_birdview_queue(self):
+        return self.get_birdview_data()
+
+    def destroy_sensor(self):
+        """Shuts down program and PyGame"""
+        self.running = False
+        self.world.destroy()
+
+    def get_birdview_data(self):
+        while not self.data_ready:
+            time.sleep(0.005)
+        self.data_ready = False
+        return self.image_array

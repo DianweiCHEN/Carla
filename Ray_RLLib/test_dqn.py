@@ -49,6 +49,17 @@ def first_run(directory, name, model):
                     "num_cpus_per_worker":4,
                     "buffer_size": 1000,
                     "num_workers": 1,
+                    "model": {
+                        'dim': 284,
+                        'framestack': False,
+                        'no_final_linear': False,
+                        'conv_filters': [
+                            [64,11,1]
+                        ],
+                        'fcnet_hiddens': [256, 256],
+                        'use_lstm': True,
+                        'lstm_cell_size': 256,
+                    },
                 },
             },
         },
@@ -92,6 +103,17 @@ def restore_run(directory, name, model):
                         "num_cpus_per_worker":4,
                         "buffer_size": 1000,
                         "num_workers": 1,
+                        "model": {
+                            'dim': 284,
+                            'framestack': False,
+                            'no_final_linear': False,
+                            'conv_filters': [
+                                [64,11,1]
+                            ],
+                            'fcnet_hiddens': [256, 256],
+                            'use_lstm': True,
+                            'lstm_cell_size': 256,
+                        },
                     },
                 },
             },
@@ -107,7 +129,7 @@ def restore_run(directory, name, model):
 if __name__ == "__main__":
     # If first run: this and make sure this folder is either empty or non-existing
     # If no first run: make sure that the folder only has one DQN_CarlaEnv_<xxxxx> entry
-    directory = os.path.expanduser("~")+"/ray_results/a_local_dir" 
+    directory = os.path.expanduser("~")+"/ray_results/a_local_dir"
     name = "dqn"
     model = "DQN"
     gc.enable()

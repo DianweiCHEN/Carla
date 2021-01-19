@@ -59,6 +59,8 @@ class BaseCarlaCore:
         self.imu_sensor = None
         self.gnss_sensor = None
         self.lane_sensor = None
+        self.birdview_sensor = None
+
     # ==============================================================================
     # -- ServerSetup -----------------------------------------------------------
     # ==============================================================================
@@ -279,6 +281,13 @@ class BaseCarlaCore:
             self.gnss_sensor = GnssSensor(
                 hero, synchronous_mode=synchronous_mode
             )
+        if experiment_config["OBSERVATION_CONFIG"]["BIRDVIEW_OBSERVATION"]:
+            dim = (experiment_config["BIRDVIEW_CONFIG"]["SIZE"], experiment_config["BIRDVIEW_CONFIG"]["SIZE"])
+            radius = experiment_config["BIRDVIEW_CONFIG"]["RADIUS"]
+            self.birdview_sensor = BirdViewSensor(
+                self.core_config["host"], self.server_port, dim, radius,
+                hero, synchronous_mode=synchronous_mode
+            )
 
     def reset_sensors(self, experiment_config):
         """
@@ -304,6 +313,9 @@ class BaseCarlaCore:
         if experiment_config["OBSERVATION_CONFIG"]["GNSS_OBSERVATION"]:
             if self.gnss_sensor is not None:
                 self.gnss_sensor.destroy_sensor()
+        if experiment_config["OBSERVATION_CONFIG"]["BIRDVIEW_OBSERVATION"]:
+            if self.birdview_sensor is not None:
+                self.birdview_sensor.destroy_sensor()
 
     # ==============================================================================
     # -- CameraSensor -----------------------------------------------------------
@@ -371,6 +383,15 @@ class BaseCarlaCore:
     def get_radar_data(self):
         return self.radar_sensor.get_radar_data()
 
+    # ==============================================================================
+    # -- BirdViewSensor -----------------------------------------------------------
+    # ==============================================================================
+
+    def update_birdview(self):
+        self.birdview_sensor.read_birdview_queue()
+
+    def get_birdview_data(self):
+        return self.birdview_sensor.get_birdview_data()
 
     # ==============================================================================
     # -- OtherForNow -----------------------------------------------------------

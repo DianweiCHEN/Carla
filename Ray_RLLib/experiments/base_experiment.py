@@ -46,6 +46,13 @@ BASE_SENSOR_CONFIG = {
     "CAMERA_GRAYSCALE": [True],
     "FRAMESTACK": 1,
 }
+
+BASE_BIRDVIEW_CONFIG = {
+    "SIZE": 84,
+    "RADIUS": 50,
+    "FRAMESTACK": 4
+}
+
 BASE_OBSERVATION_CONFIG = {
     "CAMERA_OBSERVATION": [False],
     "COLLISION_OBSERVATION": True,
@@ -54,11 +61,13 @@ BASE_OBSERVATION_CONFIG = {
     "IMU_OBSERVATION": False,
     "LANE_OBSERVATION": True,
     "GNSS_OBSERVATION": False,
+    "BIRDVIEW_OBSERVATION": False,
 }
 BASE_EXPERIMENT_CONFIG = {
     "OBSERVATION_CONFIG": BASE_OBSERVATION_CONFIG,
     "Server_View": BASE_SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": BASE_SENSOR_CONFIG,
+    "BIRDVIEW_CONFIG": BASE_BIRDVIEW_CONFIG,
     "server_map": "Town03_Opt",
     "quality_level": "Low",  # options are low or Epic #ToDO. This does not do anything + change to enum
     "Disable_Rendering_Mode": False,  # If you disable, you will not get camera images
@@ -239,6 +248,8 @@ class BaseExperiment:
             self.observation["imu"] = core.get_imu_data()
         if self.experiment_config["OBSERVATION_CONFIG"]["RADAR_OBSERVATION"]:
             self.observation["radar"] = core.get_radar_data()
+        if self.experiment_config["OBSERVATION_CONFIG"]["BIRDVIEW_OBSERVATION"]:
+            self.observation["birdview"] = core.get_birdview_data()
 
         info["control"] = {
             "steer": self.action.steer,
