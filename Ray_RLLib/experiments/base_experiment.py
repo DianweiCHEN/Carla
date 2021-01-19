@@ -59,7 +59,7 @@ BASE_EXPERIMENT_CONFIG = {
     "OBSERVATION_CONFIG": BASE_OBSERVATION_CONFIG,
     "Server_View": BASE_SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": BASE_SENSOR_CONFIG,
-    "server_map": "Town02",
+    "server_map": "Town03_Opt",
     "quality_level": "Low",  # options are low or Epic #ToDO. This does not do anything + change to enum
     "Disable_Rendering_Mode": False,  # If you disable, you will not get camera images
     "n_vehicles": 0,
@@ -116,7 +116,6 @@ class BaseExperiment:
 
         self.hero = None
         self.spectator = None
-
         self.spawn_point_list = []
         self.vehicle_list = []
         self.start_location = None
@@ -161,32 +160,6 @@ class BaseExperiment:
         """
         return self.action_space
 
-    def respawn_actors(self, world):
-
-        random_respawn = self.experiment_config["RANDOM_RESPAWN"]
-
-        # Get all spawn points
-        spawn_points = list(world.get_map().get_spawn_points())
-
-        randomized_vehicle_spawn_point = spawn_points.copy()
-        random.shuffle(randomized_vehicle_spawn_point, random.random)
-        randomized_spawn_list = cycle(randomized_vehicle_spawn_point)
-
-        # ToDo remove hero from this list. This should be already done if no random_respawn is False
-        for i in range(len(self.spawn_point_list)):
-            self.vehicle_list[i].set_autopilot(False)
-            self.vehicle_list[i].set_velocity(carla.Vector3D(0, 0, 0))
-
-            if random_respawn is True:
-                next_spawn_point = next(randomized_spawn_list)
-            else:
-                next_spawn_point = self.spawn_point_list[i]
-            self.vehicle_list[i].set_transform(next_spawn_point)
-
-            # Reset the autopilot
-            self.vehicle_list[i].set_autopilot(False)
-            self.vehicle_list[i].set_autopilot(True)
-
     def set_server_view(self,core):
 
         """
@@ -221,9 +194,13 @@ class BaseExperiment:
 
         return 3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
 
-    def get_done_status(self):
-        #done = (self.observation["collision"] is not False) or self.observation["lane"] or (self.get_speed() > self.hero.get_speed_limit()+10.0)
-        done = self.observation["collision"] is not False or self.observation["lane"]
+    def check_lane_type(self, map):
+        current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
+        allowed_types = [carla.LaneType.Driving, carla.LaneType.Parking]
+        return current_w.lane_type in allowed_types
+
+    def get_done_status(self, map):
+        done = self.observation["collision"] is not False or not self.check_lane_type(map)
         return done
 
     def process_observation(self, core, observation):
@@ -255,7 +232,7 @@ class BaseExperiment:
         if self.experiment_config["OBSERVATION_CONFIG"]["LOCATION_OBSERVATION"]:
             self.observation["location"] = self.hero.get_transform()
         if self.experiment_config["OBSERVATION_CONFIG"]["LANE_OBSERVATION"]:
-            self.observation["lane"] = core.get_lane_data()
+            self.observation["lane_invasion"] = core.get_lane_data()
         if self.experiment_config["OBSERVATION_CONFIG"]["GNSS_OBSERVATION"]:
             self.observation["gnss"] = core.get_gnss_data()
         if self.experiment_config["OBSERVATION_CONFIG"]["IMU_OBSERVATION"]:
@@ -327,7 +304,7 @@ class BaseExperiment:
     # ==============================================================================
     # -- Hero -----------------------------------------------------------
     # ==============================================================================
-    def spawn_hero(self, core, transform, autopilot=False):
+    def spawn_hero(self, world, transform, autopilot=False):
 
         """
         This function spawns the hero vehicle. It makes sure that if a hero exists, it destroys the hero and respawn
@@ -336,8 +313,14 @@ class BaseExperiment:
         :param autopilot: Autopilot Status
         :return:
         """
-        world = core.get_core_world()
 
+        self.spawn_points = world.get_map().get_spawn_points()
+
+        self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
+        self.hero_blueprints.set_attribute("role_name", "hero")
+
+        self.start_location = self.spawn_points[self.experiment_config["start_pos_spawn_id"]]
+        self.end_location = self.spawn_points[self.experiment_config["end_pos_spawn_id"]]
         if self.hero is not None:
             self.hero.destroy()
             self.hero = None
@@ -345,11 +328,13 @@ class BaseExperiment:
         hero_car_blueprint = world.get_blueprint_library().find(self.hero_model)
         hero_car_blueprint.set_attribute("role_name", "hero")
 
-        if self.hero is None:
-            self.hero = world.try_spawn_actor(hero_car_blueprint, transform)
+        while self.hero is None:
+            self.hero = world.try_spawn_actor(hero_car_blueprint, self.start_location)
+
+        world.tick()
+        print("Hero spawned!")
 
         self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)
-        return self.hero is not None
 
     def get_hero(self):
 
