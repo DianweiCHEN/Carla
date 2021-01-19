@@ -22,8 +22,6 @@ ENV_CONFIG = {
 CARLA_SERVER_BINARY = add_carla_path(ENV_CONFIG["CARLA_PATH_CONFIG_FILE"])
 ENV_CONFIG.update({"SERVER_BINARY": CARLA_SERVER_BINARY})
 
-import carla
-
 #Choose your experiment and Core
 #from experiments.experiment3 import Experiment
 from core.CarlaCore1 import CarlaCore
@@ -31,7 +29,6 @@ from core.CarlaCore1 import CarlaCore
 from helper.CarlaDebug import draw_spawn_points, get_actor_display_name, \
     split_actors, get_actor_status, print_spawn_point
 from helper.CarlaHelper import kill_server
-
 
 class CarlaEnv(gym.Env):
     def __init__(self, config=None):
@@ -47,17 +44,18 @@ class CarlaEnv(gym.Env):
         self.experiment_config = self.experiment.get_experiment_config()
 
         self.core = CarlaCore(self.environment_config, self.experiment_config)
-        CarlaCore.spawn_npcs(self.core, self.experiment_config["n_vehicles"],self.experiment_config["n_walkers"])
-        self.experiment.initialize_reward(self.core)
+        self.world = self.core.get_core_world()
+        CarlaCore.spawn_npcs(self.core, self.experiment_config["n_vehicles"],self.experiment_config["n_walkers"], hybrid = True)
+        self.map = self.world.get_map()
         self.reset()
 
     def reset(self):
         self.core.reset_sensors(self.experiment_config)
-        self.experiment.spawn_hero(self.core, self.experiment.start_location, autopilot=False)
+        self.experiment.spawn_hero(self.world, self.experiment.start_location, autopilot=False)
         self.core.setup_sensors(
             self.experiment.experiment_config,
             self.experiment.get_hero(),
-            self.core.get_core_world().get_settings().synchronous_mode,
+            self.world.get_settings().synchronous_mode,
         )
         self.experiment.initialize_reward(self.core)
         self.experiment.set_server_view(self.core)
@@ -72,7 +70,7 @@ class CarlaEnv(gym.Env):
         observation, info = self.experiment.get_observation(self.core)
         observation = self.experiment.process_observation(self.core, observation)
         reward = self.experiment.compute_reward(self.core,observation)
-        done = self.experiment.get_done_status()
+        done = self.experiment.get_done_status(self.map)
         return observation, reward, done, info
 
     def seed(self, seed=None):
@@ -123,8 +121,8 @@ if __name__ == "__main__":
             done = False
             while done is False:
                 t = time.time()
-                observation, reward, done, info = env.step(1)  #Forward
-                #observation, reward, done, info = env.step(randint(0,(env.action_space.n-1)))  #Random
+                observation, reward, done, info = env.step(1)  # Forward only
+                #observation, reward, done, info = env.step(randint(0,(env.action_space.n-1)))  # Random
                 # print ("observation:",observation," Reward::{:0.2f}".format(reward * 1000))
                 elapsed = time.time() - t
                 print("Elapsed (ms):{:0.2f}".format(elapsed * 1000))

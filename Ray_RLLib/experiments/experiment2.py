@@ -31,21 +31,10 @@ EXPERIMENT_CONFIG = {
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
 }
 
-ENV_CONFIG = {"RAY": True, "DEBUG_MODE": False} # Are we running an experiment in Ray
-
 class Experiment(BaseExperiment):
     def __init__(self):
         config=update_config(BASE_EXPERIMENT_CONFIG, EXPERIMENT_CONFIG)
         super().__init__(config)
-
-        self.environment_config = ENV_CONFIG.copy()
-
-        self.environment_config.update(
-            {
-                "RAY": True,  # Are we running an experiment in Ray
-                "DEBUG_MODE": False,
-            }
-        )
 
     def initialize_reward(self, core):
         """
@@ -87,11 +76,11 @@ class Experiment(BaseExperiment):
         )
         image = image[:, :, np.newaxis]
 
-        if self.prev_image_0 is None:  # can be improved
+        if self.prev_image_0 is None:
             self.prev_image_0 = image
             self.prev_image_1 = self.prev_image_0
             self.prev_image_2 = self.prev_image_1
-        #ToDO. Fix the images stack
+
         if self.frame_stack >= 2:
             images = np.concatenate([self.prev_image_0, image], axis=2)
         if self.frame_stack >= 3 and images is not None:
@@ -121,47 +110,36 @@ class Experiment(BaseExperiment):
         """
         c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location_x) + \
                             np.square(self.hero.get_location().y - self.start_location_y)))
-        # if c > self.previous_distance + 1e-2:
-        #     reward = 1
-        # else:
-        #     reward = 0
 
-        # # print("\n", self.previous_distance)
-        # self.previous_distance = c
-        # # print("\n", c)
-
-        # if c > 20:
-        #     self.base_x = self.hero.get_location().x
-        #     self.base_y = self.hero.get_location().y
-        #     print("Reached the milestone!")
-
-        if self.observation["collision"]!=False:
+        if self.observation["collision"] != False:
             reward = -0.002*self.observation["collision"]
-        elif self.observation["lane"]!=False:
-            reward = -10*(self.observation["lane"])
-        # elif (self.get_speed() > self.hero.get_speed_limit()):
-        #     reward = 0.1*(self.hero.get_speed_limit() - self.get_speed())
         elif c > self.previous_distance + 1e-2:
             reward = c - self.previous_distance
         else:
             reward = 0
         self.previous_distance = c
+        if c > 30: # to avoid losing points for getting closer to initial location
+            self.start_location_x = self.hero.get_location().x
+            self.start_location_x = self.hero.get_location().x
+            self.previous_distance = 0
         return reward
 
-    def spawn_hero(self, core, transform, autopilot=False):
+    def spawn_hero(self, world, transform, autopilot=False):
 
-        world = core.get_core_world()
         self.spawn_points = world.get_map().get_spawn_points()
         gc.collect()
         self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
         self.hero_blueprints.set_attribute("role_name", "hero")
+
+        if self.hero is not None:
+            self.hero.destroy()
+            self.hero = None
         i = 0
         random.shuffle(self.spawn_points, random.random)
-        success = False
-        while success is False:
+        while True:
             next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
-            success = super().spawn_hero(core, next_spawn_point, autopilot=False)
-            if success is True:
+            self.hero = world.try_spawn_actor(self.hero_blueprints, next_spawn_point)
+            if self.hero is not None:
                 break
             else:
                 print("Could not spawn Hero, changing spawn point")
@@ -171,3 +149,4 @@ class Experiment(BaseExperiment):
         print("Hero spawned!")
         self.start_location_x = self.spawn_points[0].location.x
         self.start_location_y = self.spawn_points[0].location.y
+        self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)

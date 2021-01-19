@@ -46,6 +46,8 @@ def calculate_forward_speed(vehicle):
 class Experiment(BaseExperiment):
     def __init__(self):
         config=update_config(BASE_EXPERIMENT_CONFIG, EXPERIMENT_CONFIG)
+        self.start_location = None
+        self.end_location = None
         super().__init__(config)
 
 
@@ -139,8 +141,6 @@ class Experiment(BaseExperiment):
             print(message)
 
         return post_observation
-
-
 
     def set_server_view(self, core):
 

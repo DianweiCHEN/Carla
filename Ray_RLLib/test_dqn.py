@@ -107,7 +107,7 @@ def restore_run(directory, name, model):
 if __name__ == "__main__":
     # If first run: this and make sure this folder is either empty or non-existing
     # If no first run: make sure that the folder only has one DQN_CarlaEnv_<xxxxx> entry
-    directory = "/home/jacopobartiromo/ray_results/a_local_dir" 
+    directory = os.path.expanduser("~")+"/ray_results/a_local_dir" 
     name = "dqn"
     model = "DQN"
     gc.enable()

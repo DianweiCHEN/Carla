@@ -95,7 +95,7 @@ class CameraManager(object):
             self.surface = None
             self.sensors = None
 
-    def set_sensor(self, index, force_respawn=False, synchronous_mode=True): ##this one needs to be adapted to multi sensor?
+    def set_sensor(self, index, transform_index, force_respawn=False, synchronous_mode=True):
         self.synchronous_mode = synchronous_mode
         index = index % len(self.sensors_list)
         needs_respawn = (
@@ -111,7 +111,7 @@ class CameraManager(object):
                 self.surface = None
             self.sensors = self._parent.get_world().spawn_actor(
                 self.sensors_list[index][-1],
-                self._camera_transforms[self.transform_index][0],
+                self._camera_transforms[transform_index][0],
                 attach_to=self._parent,
                 attachment_type=self._camera_transforms[self.transform_index][1],
             )

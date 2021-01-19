@@ -6,7 +6,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
+import gc
+import tensorflow as tf
 import ray
 from ray import tune
 from carla_env import CarlaEnv
@@ -43,7 +44,7 @@ if __name__ == "__main__":
                     "env": CarlaEnv,
                     "stop": {"episodes_total":30000000}, #"training_iteration":5000000},
                     "checkpoint_at_end": True,
-                    "checkpoint_freq": 1,
+                    "checkpoint_freq": 20,
                     "config": {
                         "env_config": env_config,
                         "num_gpus_per_worker": 0,

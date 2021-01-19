@@ -124,7 +124,7 @@ class BaseCarlaCore:
     # ==============================================================================
 
     @staticmethod
-    def __connect_client(host, port, timeout, num_retries, disable_rendering_mode, sync_mode, weather, map):
+    def __connect_client(host, port, timeout, num_retries, disable_rendering_mode, sync_mode, weather, town):
         """
         Connect the client
 
@@ -135,7 +135,7 @@ class BaseCarlaCore:
         :param disable_rendering_mode: True to disable rendering
         :param sync_mode: True for RL
         :param weather: The weather to start the world
-        :param map: current map
+        :param town: current town
         :return:
         """
 
@@ -143,7 +143,7 @@ class BaseCarlaCore:
             try:
                 carla_client = carla.Client(host, port)
                 carla_client.set_timeout(timeout)
-                carla_client.load_world(map)
+                carla_client.load_world(map_name = town, map_layers = carla.MapLayer.NONE)
 
                 world = carla_client.get_world()
 
@@ -255,10 +255,10 @@ class BaseCarlaCore:
                     experiment_config["SENSOR_CONFIG"]["CAMERA_Y"],
                     experiment_config["SENSOR_CONFIG"]["CAMERA_FOV"],
                 )
-                sensor = experiment_config["SENSOR_CONFIG"]["SENSOR"][i].value ##there might be an issue here
-                self.camera_manager.set_sensor(sensor, synchronous_mode=synchronous_mode)
+                sensor = experiment_config["SENSOR_CONFIG"]["SENSOR"][i].value
+                transform_index = experiment_config["SENSOR_CONFIG"]["SENSOR_TRANSFORM"][i].value
+                self.camera_manager.set_sensor(sensor, transform_index, synchronous_mode=synchronous_mode)
 
-                transform_index = experiment_config["SENSOR_CONFIG"]["SENSOR_TRANSFORM"][i].value ##QUESTO GLIELO DEVI PASSARE
         if experiment_config["OBSERVATION_CONFIG"]["COLLISION_OBSERVATION"]:
             self.collision_sensor = CollisionSensor(
                 hero, synchronous_mode=synchronous_mode
@@ -407,36 +407,34 @@ class BaseCarlaCore:
                         surrounding_vehicles.append(vehicle)
                         surrounding_vehicle_actors.append(x)
 
-    def spawn_npcs(self, n_vehicles, n_walkers, hybrid=False, seed=None, max_time=0.1):
+    def spawn_npcs(self, n_vehicles, n_walkers, hybrid=False, seed=None):
         """
-        Try to spawn a vehicle and give the vehicle time to be spawned and seen by the world before you say it is spawned
+        Spawns vehicles and walkers, also setting up the Traffic Manager and its parameters
 
-        :param transform: Location and Orientation of vehicle
-        :param vehicle_blueprint: Vehicle Blueprint (We assign a random color)
-        :param world: World
-        :param autopilot: If True, AutoPilot is Enabled. If False, autopilot is disabled
-        :param max_time: Maximum time in s to wait before you say that vehicle can not be spawned at current location
-        :return: True if vehicle was added to world and False otherwise
+        :param n_vehicles: Number of vehicles
+        :param n_walkers: Number of walkers
+        :param hybrid: Activates hybrid physics mode
+        :param seed: Activates deterministic mode
+        :return: None
         """
-        world = self.get_core_world()
-        client = self.get_core_client()
+
         tm_port = self.server_port//10 + self.server_port%10
-        traffic_manager = client.get_trafficmanager(tm_port)
+        traffic_manager = self.client.get_trafficmanager(tm_port)
         if hybrid:
             traffic_manager.set_hybrid_physics_mode(True)
         if seed is not None:
             traffic_manager.set_random_device_seed(seed)
         traffic_manager.set_synchronous_mode(True)
 
-        blueprints = world.get_blueprint_library().filter("vehicle.*")
-        blueprintsWalkers = world.get_blueprint_library().filter("walker.pedestrian.*")
+        blueprints = self.world.get_blueprint_library().filter("vehicle.*")
+        blueprintsWalkers = self.world.get_blueprint_library().filter("walker.pedestrian.*")
         blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
         blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
         blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
         blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
         blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-        spawn_points = world.get_map().get_spawn_points()
+        spawn_points = self.world.get_map().get_spawn_points()
         number_of_spawn_points = len(spawn_points)
 
         if n_vehicles < number_of_spawn_points:
@@ -471,7 +469,7 @@ class BaseCarlaCore:
             batch.append(SpawnActor(blueprint, transform)
                 .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
 
-        for response in client.apply_batch_sync(batch, True):
+        for response in self.client.apply_batch_sync(batch, True):
             if response.error:
                 logging.error(response.error)
             else:
@@ -483,7 +481,7 @@ class BaseCarlaCore:
         spawn_points = []
         for i in range(n_walkers):
             spawn_point = carla.Transform()
-            loc = world.get_random_location_from_navigation()
+            loc = self.world.get_random_location_from_navigation()
             if (loc != None):
                 spawn_point.location = loc
                 spawn_points.append(spawn_point)
@@ -506,7 +504,7 @@ class BaseCarlaCore:
             else:
                 walker_speed.append(0.0)
             batch.append(SpawnActor(walker_bp, spawn_point))
-        results = client.apply_batch_sync(batch, True)
+        results = self.client.apply_batch_sync(batch, True)
         walker_speed2 = []
         for i in range(len(results)):
             if results[i].error:
@@ -517,10 +515,10 @@ class BaseCarlaCore:
         walker_speed = walker_speed2
         # 3. we spawn the walker controller
         batch = []
-        walker_controller_bp = world.get_blueprint_library().find('controller.ai.walker')
+        walker_controller_bp = self.world.get_blueprint_library().find('controller.ai.walker')
         for i in range(len(walkers_list)):
             batch.append(SpawnActor(walker_controller_bp, carla.Transform(), walkers_list[i]["id"]))
-        results = client.apply_batch_sync(batch, True)
+        results = self.client.apply_batch_sync(batch, True)
         for i in range(len(results)):
             if results[i].error:
                 logging.error(results[i].error)
@@ -530,20 +528,20 @@ class BaseCarlaCore:
         for i in range(len(walkers_list)):
             all_id.append(walkers_list[i]["con"])
             all_id.append(walkers_list[i]["id"])
-        all_actors = world.get_actors(all_id)
+        all_actors = self.world.get_actors(all_id)
 
         # wait for a tick to ensure client receives the last transform of the walkers we have just created
-        world.tick()
+        self.world.tick()
 
         # 5. initialize each controller and set target to walk to (list is [controler, actor, controller, actor ...])
         # set how many pedestrians can cross the road
-        world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
+        self.world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
         for i in range(0, len(all_id), 2):
             # start walker
             all_actors[i].start()
             # set walk to random point
-            all_actors[i].go_to_location(world.get_random_location_from_navigation())
+            all_actors[i].go_to_location(self.world.get_random_location_from_navigation())
             # max speed
             all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
 
-        world.tick()
+        self.world.tick()

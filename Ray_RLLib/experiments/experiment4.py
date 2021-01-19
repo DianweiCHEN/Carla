@@ -10,6 +10,7 @@ from helper.CarlaHelper import update_config
 import carla
 import matplotlib.pyplot as plt
 import random
+import gc
 
 SERVER_VIEW_CONFIG = {
 }
@@ -34,7 +35,6 @@ EXPERIMENT_CONFIG = {
     "Server_View": SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": SENSOR_CONFIG,
     "number_of_spawning_actors": 0,
-    "server_map": "Town02",
     "start_pos_spawn_id": 95,
     "end_pos_spawn_id": 34,
     "Debug":False,
