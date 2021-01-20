@@ -51,6 +51,15 @@ def first_run(args):
                     "num_cpus_per_worker":4,
                     "buffer_size": 1000,
                     "num_workers": 1,
+                    "model": {
+                        'dim': 300,
+                        'conv_filters': [
+                            [16, [8, 8], 4],
+                            [32, [4, 4], 2],
+                            [32, [4, 4], 2],
+                            [64, [19, 19], 1],
+                        ],
+                    },
                 },
             },
         },
@@ -109,6 +118,15 @@ def restore_run(args):
                         "num_cpus_per_worker":4,
                         "buffer_size": 1000,
                         "num_workers": 1,
+                        "model": {
+                            'dim': 300,
+                            'conv_filters': [
+                                [16, [8, 8], 4],
+                                [32, [4, 4], 2],
+                                [32, [4, 4], 2],
+                                [64, [19, 19], 1],
+                            ],
+                        },
                     },
                 },
             },

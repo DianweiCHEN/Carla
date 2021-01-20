@@ -18,8 +18,15 @@ SENSOR_CONFIG = {
     "FRAMESTACK": 4,
 }
 
+BIRDVIEW_CONFIG = {
+    "SIZE": 300,
+    "RADIUS": 20,
+    "FRAMESTACK": 4
+}
+
 OBSERVATION_CONFIG = {
-    "CAMERA_OBSERVATION": [True],
+    "CAMERA_OBSERVATION": [False],
+    "BIRDVIEW_OBSERVATION": True,
 }
 
 EXPERIMENT_CONFIG = {
@@ -27,6 +34,7 @@ EXPERIMENT_CONFIG = {
     "Server_View": SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": SENSOR_CONFIG,
     "server_map": "Town02_Opt",
+    "BIRDVIEW_CONFIG": BIRDVIEW_CONFIG,
     "n_vehicles": 40,
     "n_walkers": 15,
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
@@ -50,14 +58,14 @@ class Experiment(BaseExperiment):
         self.prev_image_2 = None
 
     def set_observation_space(self):
-        num_of_channels = 1
+        num_of_channels = 3
         image_space = Box(
-            low=-1.0,
-            high=1.0,
+            low=0.0,
+            high=255.0,
             shape=(
-                self.experiment_config["SENSOR_CONFIG"]["CAMERA_X"],
-                self.experiment_config["SENSOR_CONFIG"]["CAMERA_Y"],
-                num_of_channels * self.experiment_config["SENSOR_CONFIG"]["FRAMESTACK"],
+                self.experiment_config["BIRDVIEW_CONFIG"]["SIZE"],
+                self.experiment_config["BIRDVIEW_CONFIG"]["SIZE"],
+                num_of_channels * self.experiment_config["BIRDVIEW_CONFIG"]["FRAMESTACK"],
             ),
             dtype=np.float32,
         )
@@ -71,19 +79,20 @@ class Experiment(BaseExperiment):
         :return:
         """
         self.set_server_view(core)
-        image = post_process_image(observation['camera'],
-                                   normalized = self.experiment_config["SENSOR_CONFIG"]["CAMERA_NORMALIZED"],
-                                   grayscale = self.experiment_config["SENSOR_CONFIG"]["CAMERA_GRAYSCALE"]
+        image = post_process_image(observation['birdview'],
+                                   normalized = False,
+                                   grayscale = False
         )
-        image = image[:, :, np.newaxis]
 
         if self.prev_image_0 is None:
             self.prev_image_0 = image
             self.prev_image_1 = self.prev_image_0
             self.prev_image_2 = self.prev_image_1
 
+        images = image
+
         if self.frame_stack >= 2:
-            images = np.concatenate([self.prev_image_0, image], axis=2)
+            images = np.concatenate([self.prev_image_0, images], axis=2)
         if self.frame_stack >= 3 and images is not None:
             images = np.concatenate([self.prev_image_1, images], axis=2)
         if self.frame_stack >= 4 and images is not None:

@@ -49,6 +49,7 @@ def post_process_image(image, normalized=True, grayscale=True):
         image = image[0]
     if grayscale:
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        image = image[:, :, np.newaxis]
 
     if normalized:
         return (image.astype(np.float32) - 128) / 128
