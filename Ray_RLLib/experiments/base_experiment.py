@@ -48,8 +48,8 @@ BASE_SENSOR_CONFIG = {
 }
 
 BASE_BIRDVIEW_CONFIG = {
-    "SIZE": 84,
-    "RADIUS": 50,
+    "SIZE": 300,
+    "RADIUS": 20,
     "FRAMESTACK": 4
 }
 

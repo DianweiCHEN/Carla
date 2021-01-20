@@ -19,8 +19,8 @@ SENSOR_CONFIG = {
 }
 
 BIRDVIEW_CONFIG = {
-    "SIZE": 600,
-    "RADIUS": 40,
+    "SIZE": 300,
+    "RADIUS": 20,
     "FRAMESTACK": 4
 }
 
