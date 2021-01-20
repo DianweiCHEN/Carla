@@ -19,8 +19,8 @@ SENSOR_CONFIG = {
 }
 
 BIRDVIEW_CONFIG = {
-    "SIZE": 284,
-    "RADIUS": 20,
+    "SIZE": 600,
+    "RADIUS": 40,
     "FRAMESTACK": 4
 }
 
@@ -89,6 +89,7 @@ class Experiment(BaseExperiment):
             self.prev_image_2 = self.prev_image_1
 
         images = image
+
         if self.frame_stack >= 2:
             images = np.concatenate([self.prev_image_0, images], axis=2)
         if self.frame_stack >= 3 and images is not None:

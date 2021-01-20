@@ -50,15 +50,17 @@ def first_run(directory, name, model):
                     "buffer_size": 1000,
                     "num_workers": 1,
                     "model": {
-                        'dim': 284,
+                        'dim': 600,
                         'framestack': False,
                         'no_final_linear': False,
                         'conv_filters': [
-                            [64,11,1]
+                            [64, [11, 11], 1],
+                            # [16, [8, 8], 4],
+                            # [32, [4, 4], 2]
                         ],
-                        'fcnet_hiddens': [256, 256],
-                        'use_lstm': True,
-                        'lstm_cell_size': 256,
+                        # 'fcnet_hiddens': [256, 256],
+                        # 'use_lstm': True,
+                        # 'lstm_cell_size': 256,
                     },
                 },
             },
@@ -104,15 +106,17 @@ def restore_run(directory, name, model):
                         "buffer_size": 1000,
                         "num_workers": 1,
                         "model": {
-                            'dim': 284,
+                            'dim': 600,
                             'framestack': False,
                             'no_final_linear': False,
                             'conv_filters': [
-                                [64,11,1]
+                                [64, [11, 11], 1],
+                                # [16, [8, 8], 4],
+                                # [32, [4, 4], 2]
                             ],
-                            'fcnet_hiddens': [256, 256],
-                            'use_lstm': True,
-                            'lstm_cell_size': 256,
+                            # 'fcnet_hiddens': [256, 256],
+                            # 'use_lstm': True,
+                            # 'lstm_cell_size': 256,
                         },
                     },
                 },

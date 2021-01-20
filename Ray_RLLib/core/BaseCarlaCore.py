@@ -282,10 +282,10 @@ class BaseCarlaCore:
                 hero, synchronous_mode=synchronous_mode
             )
         if experiment_config["OBSERVATION_CONFIG"]["BIRDVIEW_OBSERVATION"]:
-            dim = (experiment_config["BIRDVIEW_CONFIG"]["SIZE"], experiment_config["BIRDVIEW_CONFIG"]["SIZE"])
+            size = experiment_config["BIRDVIEW_CONFIG"]["SIZE"]
             radius = experiment_config["BIRDVIEW_CONFIG"]["RADIUS"]
             self.birdview_sensor = BirdViewSensor(
-                self.core_config["host"], self.server_port, dim, radius,
+                self.core_config["host"], self.server_port, size, radius,
                 hero, synchronous_mode=synchronous_mode
             )
 

@@ -31,9 +31,9 @@ from carla import TrafficLightState as tls
 
 import argparse
 import pygame
-import cv2
 import hashlib
 import math
+# from PIL import Image
 
 
 # ==============================================================================
@@ -85,7 +85,7 @@ COLOR_WHITE = pygame.Color(255, 255, 255)
 COLOR_BLACK = pygame.Color(0, 0, 0)
 
 # ==============================================================================
-# -- World ---------------------------------------------------------------------
+# -- MapImage ------------------------------------------------------------------
 # ==============================================================================
 
 
@@ -93,7 +93,7 @@ class MapImage(object):
     """Class encharged of rendering a 2D image from top view of a carla world. Please note that a cache system is used, so if the OpenDrive content
     of a Carla town has not changed, it will read and use the stored image if it was rendered in a previous execution"""
 
-    def __init__(self, carla_world, carla_map, pixels_per_meter):
+    def __init__(self, carla_world, carla_map, size, pixels_per_meter):
         """ Renders the map image generated based on the world, its map and additional flags that provide extra information about the road network"""
         self._pixels_per_meter = pixels_per_meter / math.sqrt(2)
 
@@ -116,9 +116,6 @@ class MapImage(object):
         self._pixels_per_meter = surface_pixel_per_meter
         width_in_pixels = int(self._pixels_per_meter * self.width)
 
-        # Render map
-        self.big_map_surface = pygame.Surface((width_in_pixels, width_in_pixels))
-
         # Load OpenDrive content
         opendrive_content = carla_map.to_opendrive()
 
@@ -133,10 +130,13 @@ class MapImage(object):
         self.full_path = str(os.path.join(self.dirname, filename))
 
         if os.path.isfile(self.full_path):
-            # Load Image
+            # Load image and scale it to the desired size
             self.big_map_surface = pygame.image.load(self.full_path)
+            self.big_map_surface = pygame.transform.scale(self.big_map_surface, (width_in_pixels, width_in_pixels))
+
         else:
             # Render map
+            self.big_map_surface = pygame.Surface((width_in_pixels, width_in_pixels))
             self.draw_road_map(self.big_map_surface, carla_world, carla_map, precision=0.05)
 
             # If folders path does not exist, create it
@@ -459,17 +459,25 @@ class MapImage(object):
         """Converts the world units to pixel units"""
         return int(self._pixels_per_meter * width)
 
+    def destroy(self):
+        """Erase the map cache"""
+        if os.path.isfile(self.full_path):
+            os.remove(self.full_path)
+
+# ==============================================================================
+# -- World ---------------------------------------------------------------------
+# ==============================================================================
 
 class World(object):
     """Class that contains all the information of a carla world that is running on the server side"""
 
-    def __init__(self, host, port, dimensions, radius, hero, timeout):
+    def __init__(self, host, port, size, radius, hero, timeout):
         self.client = None
         self.host = host
         self.port = port
-        self.pixels_per_meter = dimensions[0] / (2* radius)
+        self.pixels_per_meter = size / (2* radius)
         self.timeout = timeout
-        self.dimensions = dimensions
+        self.size = size
 
         # World data
         self.world = None
@@ -512,9 +520,9 @@ class World(object):
         self.world, self.town_map = self._get_data_from_carla()
 
         # Create Surfaces
-        self.map_image = MapImage(self.world, self.town_map, self.pixels_per_meter)
+        self.map_image = MapImage(self.world, self.town_map, self.size, self.pixels_per_meter)
 
-        self.original_surface_size = min(self.dimensions[0], self.dimensions[1])
+        self.original_surface_size = min(self.size, self.size)
         self.surface_size = self.map_image.big_map_surface.get_width()
 
         # Render Actors
@@ -527,8 +535,6 @@ class World(object):
 
         self.result_surface = pygame.Surface((self.surface_size, self.surface_size))
         self.result_surface.set_colorkey(COLOR_BLACK)
-
-        self.i = 0
 
     def tick(self):
         """Retrieves the actors for Hero and Map modes"""
@@ -667,7 +673,7 @@ class World(object):
         if self.actors_with_transforms is None:
             return
         self.result_surface.fill(COLOR_BLACK)
-        self.hero_surface.fill(COLOR_ALUMINIUM_4)
+        # self.hero_surface.fill(COLOR_ALUMINIUM_4)
 
         angle = self.hero_transform.rotation.yaw + 90.0
 
@@ -703,12 +709,12 @@ class World(object):
         array3d = pygame.surfarray.array3d(self.final_surface)
         array3d = array3d.swapaxes(0, 1)
 
-        # Show the image. CV2 expects BGR, so convert it
-        # cv2.imshow('BirdsView sensor image', cv2.cvtColor(array3d, cv2.COLOR_BGR2RGB))
-        # cv2.waitKey(1)
+        # img = Image.fromarray(array3d, 'RGB')
+        # img.show()
 
         return array3d
 
     def destroy(self):
         """Destroy the hero actor when class instance is destroyed"""
+        self.map_image.destroy()
         pygame.quit()
