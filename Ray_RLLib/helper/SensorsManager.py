@@ -340,18 +340,18 @@ class BirdViewSensor(object):
         pygame.init()
         self.image_array = None
         self.data_ready = False
+        self.previous_frame = None
         self.running = False
         self.world = World(host, port, dim, radius, parent_actor, timeout=2.0)
         self.run()
 
     @threaded
     def run(self):
-        self.previous_frame = self.world.world.get_snapshot().frame
         self.running = True
 
         while self.running:
             frame = self.world.world.get_snapshot().frame
-            if frame > self.previous_frame:
+            if self.previous_frame is None or frame > self.previous_frame:
                 # Ticks the world to update the actors and renders the image
                 self.image_array = self.world.tick()
                 self.data_ready = True
@@ -369,6 +369,6 @@ class BirdViewSensor(object):
 
     def get_birdview_data(self):
         while not self.data_ready:
-            time.sleep(0.005)
+            time.sleep(0.001)
         self.data_ready = False
         return self.image_array

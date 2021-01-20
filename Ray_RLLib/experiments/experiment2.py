@@ -98,12 +98,6 @@ class Experiment(BaseExperiment):
         if self.frame_stack >= 4 and images is not None:
             images = np.concatenate([self.prev_image_2, images], axis=2)
 
-        # uncomment to save the observations (Normalized must be False)
-        # cv2.imwrite('./input_img0.jpg', image)
-        # cv2.imwrite('./input_img1.jpg', self.prev_image_0)
-        # cv2.imwrite('./input_img2.jpg', self.prev_image_1)
-        # cv2.imwrite('./input_img3.jpg', self.prev_image_2)
-
         self.prev_image_2 = self.prev_image_1
         self.prev_image_1 = self.prev_image_0
         self.prev_image_0 = image
