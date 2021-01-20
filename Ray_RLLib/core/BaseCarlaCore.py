@@ -81,7 +81,7 @@ class BaseCarlaCore:
         if self.environment_config["DEBUG_MODE"]:
             self.server_port = 2000
         else:
-            self.server_port = random.randint(10000, 50000)
+            self.server_port = random.randint(15000, 50000)
         # Create a new server process and start the client.
         if self.environment_config["RAY"] is True:
             # Ray tends to start all processes simultaneously. This causes problems

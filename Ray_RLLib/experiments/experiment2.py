@@ -26,6 +26,7 @@ EXPERIMENT_CONFIG = {
     "OBSERVATION_CONFIG": OBSERVATION_CONFIG,
     "Server_View": SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": SENSOR_CONFIG,
+    "server_map": "Town02_Opt",
     "n_vehicles": 40,
     "n_walkers": 15,
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
