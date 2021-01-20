@@ -9,6 +9,7 @@ import carla
 import numpy as np
 
 from helper.CameraManager import CameraManager
+from helper.BirdviewManager import BirdviewManager
 from helper.CarlaDebug import get_actor_display_name
 from helper.SensorsManager import *
 from helper.list_procs import search_procs_by_name
@@ -284,9 +285,8 @@ class BaseCarlaCore:
         if experiment_config["OBSERVATION_CONFIG"]["BIRDVIEW_OBSERVATION"]:
             size = experiment_config["BIRDVIEW_CONFIG"]["SIZE"]
             radius = experiment_config["BIRDVIEW_CONFIG"]["RADIUS"]
-            self.birdview_sensor = BirdViewSensor(
-                self.core_config["host"], self.server_port, size, radius,
-                hero, synchronous_mode=synchronous_mode
+            self.birdview_sensor = BirdviewManager(
+                self.world, size, radius, hero, synchronous_mode=synchronous_mode
             )
 
     def reset_sensors(self, experiment_config):

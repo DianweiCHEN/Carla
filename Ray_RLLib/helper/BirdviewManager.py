@@ -33,7 +33,8 @@ import argparse
 import pygame
 import hashlib
 import math
-# from PIL import Image
+from threading import Thread
+import time
 
 
 # ==============================================================================
@@ -90,11 +91,15 @@ COLOR_BLACK = pygame.Color(0, 0, 0)
 
 
 class MapImage(object):
-    """Class encharged of rendering a 2D image from top view of a carla world. Please note that a cache system is used, so if the OpenDrive content
-    of a Carla town has not changed, it will read and use the stored image if it was rendered in a previous execution"""
+    """
+    Class encharged of rendering a 2D image from top view of a carla world (with pygame surfaces).
+    A cache system is used, so if the OpenDrive content of a Carla town has not changed,
+    it will read and use the stored image if it was rendered in a previous execution
+    """
 
-    def __init__(self, carla_world, carla_map, size, pixels_per_meter):
-        """ Renders the map image generated based on the world, its map and additional flags that provide extra information about the road network"""
+    def __init__(self, carla_world, carla_map, pixels_per_meter):
+        """Renders the map image with all the information about the road network"""
+        # TODO: The math.sqrt(2) is a patch due to the later rotation of this image
         self._pixels_per_meter = pixels_per_meter / math.sqrt(2)
 
         waypoints = carla_map.generate_waypoints(2)
@@ -465,85 +470,31 @@ class MapImage(object):
             os.remove(self.full_path)
 
 # ==============================================================================
-# -- World ---------------------------------------------------------------------
+# -- BirdviewSensor ---------------------------------------------------------------------
 # ==============================================================================
 
-class World(object):
-    """Class that contains all the information of a carla world that is running on the server side"""
+class BirdviewSensor(object):
+    """Class that contains all the information of the carla world (in the form of pygame surfaces)"""
 
-    def __init__(self, host, port, size, radius, hero, timeout):
-        self.client = None
-        self.host = host
-        self.port = port
-        self.pixels_per_meter = size / (2* radius)
-        self.timeout = timeout
-        self.size = size
+    def __init__(self, world, size, radius, hero):
+        self.world = world
+        self.town_map = self.world.get_map()
 
-        # World data
-        self.world = None
-        self.town_map = None
-        self.actors_with_transforms = []
-
-        self.surface_size = [0, 0]
-
-        # Hero actor
-        self.hero_actor = hero
         self.hero_transform = hero.get_transform()
+        self.pixels_per_meter = size / (2* radius)
+        self.map_image = MapImage(self.world, self.town_map, self.pixels_per_meter)
 
-        self.result_surface = None
+        # Create the 'info' surfaces
+        self.map_surface = self.map_image.surface  # Static elements
+        map_surface_size = self.map_surface.get_width()
+        self.actors_surface = pygame.Surface((map_surface_size, map_surface_size))  # Scene actors
+        self.actors_surface.set_colorkey(COLOR_BLACK)  # Treat COLOR_BLACK pixels as transparent
+        self.result_surface = pygame.Surface((map_surface_size, map_surface_size))  # Union of the previous two
+        self.result_surface.set_colorkey(COLOR_BLACK)  # Treat COLOR_BLACK pixels as transparent
 
-        # Map info
-        self.map_image = None
-        self.border_round_surface = None
-        self.original_surface_size = None
-        self.final_surface = None
-        self.actors_surface = None
-
-        self.start()
-
-    def _get_data_from_carla(self):
-        """Retrieves the data from the server side"""
-        try:
-            self.client = carla.Client(self.host, self.port)
-            self.client.set_timeout(self.timeout)
-
-            world = self.client.get_world()
-            town_map = world.get_map()
-            return (world, town_map)
-
-        except RuntimeError:
-            exit_game()
-
-    def start(self):
-        """Build the map image, stores the needed modules and prepares rendering in Hero Mode"""
-
-        self.world, self.town_map = self._get_data_from_carla()
-
-        # Create Surfaces
-        self.map_image = MapImage(self.world, self.town_map, self.size, self.pixels_per_meter)
-
-        self.original_surface_size = min(self.size, self.size)
-        self.surface_size = self.map_image.big_map_surface.get_width()
-
-        # Render Actors
-        self.actors_surface = pygame.Surface((self.map_image.surface.get_width(), self.map_image.surface.get_height()))
-        self.actors_surface.set_colorkey(COLOR_BLACK)
-
-        scaled_original_size = self.original_surface_size
-        self.hero_surface = pygame.Surface((scaled_original_size, scaled_original_size))
-        self.final_surface = pygame.Surface((scaled_original_size, scaled_original_size))
-
-        self.result_surface = pygame.Surface((self.surface_size, self.surface_size))
-        self.result_surface.set_colorkey(COLOR_BLACK)
-
-    def tick(self):
-        """Retrieves the actors for Hero and Map modes"""
-        actors = self.world.get_actors()
-
-        # We store the transforms also so that we avoid having transforms of
-        # previous tick and current tick when rendering them.
-        self.actors_with_transforms = [(actor, actor.get_transform()) for actor in actors]
-        return self.render()
+        # Create the 'egocentric' surface
+        self.hero_surface = pygame.Surface((size, size))  # translation
+        self.final_surface = pygame.Surface((size, size))  # rotation
 
     def _split_actors(self):
         """Splits the retrieved actors by type id"""
@@ -552,25 +503,22 @@ class World(object):
         speed_limits = []
         walkers = []
 
-        for actor_with_transform in self.actors_with_transforms:
-            actor = actor_with_transform[0]
+        for actor in self.world.get_actors():
             if 'vehicle' in actor.type_id:
-                vehicles.append(actor_with_transform)
-            elif 'traffic_light' in actor.type_id:
-                traffic_lights.append(actor_with_transform)
-            elif 'speed_limit' in actor.type_id:
-                speed_limits.append(actor_with_transform)
+                vehicles.append(actor)
             elif 'walker.pedestrian' in actor.type_id:
-                walkers.append(actor_with_transform)
+                walkers.append((actor))
+            elif 'traffic_light' in actor.type_id:
+                traffic_lights.append(actor)
+            elif 'speed_limit' in actor.type_id:
+                speed_limits.append(actor)
 
         return (vehicles, traffic_lights, speed_limits, walkers)
 
     def _render_traffic_lights(self, surface, traffic_lights):
         """Renders the traffic lights and shows its triggers and bounding boxes if flags are enabled"""
 
-        list_tl = [tl[0] for tl in traffic_lights]
-
-        for tl in list_tl:
+        for tl in traffic_lights:
             world_pos = tl.get_location()
             pos = self.map_image.world_to_pixel(world_pos)
             radius = self.map_image.world_to_pixel_width(1.2)
@@ -594,13 +542,11 @@ class World(object):
     def _render_speed_limits(self, surface, speed_limits, angle):
         """Renders the speed limits by drawing two concentric circles (outer is red and inner white) and a speed limit text"""
 
-        list_sl = [sl[0] for sl in speed_limits]
-
         font_size = self.map_image.world_to_pixel_width(2)
         radius = self.map_image.world_to_pixel_width(2)
         font = pygame.font.SysFont('Arial', font_size)
 
-        for sl in list_sl:
+        for sl in speed_limits:
 
             x, y = self.map_image.world_to_pixel(sl.get_location())
 
@@ -622,14 +568,14 @@ class World(object):
             color = COLOR_PLUM_0
 
             # Compute bounding box points
-            bb = w[0].bounding_box.extent
+            bb = w.bounding_box.extent
             corners = [
                 carla.Location(x=-bb.x, y=-bb.y),
                 carla.Location(x=bb.x, y=-bb.y),
                 carla.Location(x=bb.x, y=bb.y),
                 carla.Location(x=-bb.x, y=bb.y)]
 
-            w[1].transform(corners)
+            w.get_transform().transform(corners)
             corners = [self.map_image.world_to_pixel(p) for p in corners]
             pygame.draw.polygon(surface, color, corners)
 
@@ -637,12 +583,12 @@ class World(object):
         """Renders the vehicles' bounding boxes"""
         for v in list_v:
             color = COLOR_SKY_BLUE_0
-            if int(v[0].attributes['number_of_wheels']) == 2:
+            if int(v.attributes['number_of_wheels']) == 2:
                 color = COLOR_CHOCOLATE_1
-            if v[0].attributes['role_name'] == 'hero':
+            if v.attributes['role_name'] == 'hero':
                 color = COLOR_CHAMELEON_0
             # Compute bounding box points
-            bb = v[0].bounding_box.extent
+            bb = v.bounding_box.extent
             corners = [carla.Location(x=-bb.x, y=-bb.y),
                        carla.Location(x=bb.x - 0.8, y=-bb.y),
                        carla.Location(x=bb.x, y=0),
@@ -650,7 +596,7 @@ class World(object):
                        carla.Location(x=-bb.x, y=bb.y),
                        carla.Location(x=-bb.x, y=-bb.y)
                        ]
-            v[1].transform(corners)
+            v.get_transform().transform(corners)
             corners = [self.map_image.world_to_pixel(p) for p in corners]
             pygame.draw.polygon(surface, color, corners)
 
@@ -667,41 +613,40 @@ class World(object):
         self._render_vehicles(surface, vehicles)
         self._render_walkers(surface, walkers)
 
-    def render(self):
+    def get_data(self):
         """Renders the map and all the actors in hero and map mode"""
 
-        if self.actors_with_transforms is None:
-            return
+        # Together with pygame.Surface.set_colorkey, makes their background transparent
         self.result_surface.fill(COLOR_BLACK)
-        # self.hero_surface.fill(COLOR_ALUMINIUM_4)
+        self.actors_surface.fill(COLOR_BLACK)
 
+        # Angle on with to rotate to make the view egocentric
         angle = self.hero_transform.rotation.yaw + 90.0
 
         # Render the actors
-        self.actors_surface.fill(COLOR_BLACK)
         self.render_actors(self.actors_surface, angle)
 
         # Clips the surfaces to render only the visible parts, improves perfomance.
         hero_screen_location = self.map_image.world_to_pixel(self.hero_transform.location)
-        offset = (hero_screen_location[0] - self.hero_surface.get_width() / 2,
-                 (hero_screen_location[1] - self.hero_surface.get_height() / 2))
+        hero_surface_size = (self.hero_surface.get_width(), self.hero_surface.get_height())
+        offset = (hero_screen_location[0] - hero_surface_size[0] / 2,
+                 (hero_screen_location[1] - hero_surface_size[1] / 2))
+        clipping_rect = pygame.Rect(offset[0], offset[1], hero_surface_size[0] * 2, hero_surface_size[1] * 2)
 
-        clipping_rect = pygame.Rect(offset[0],
-                                    offset[1],
-                                    self.hero_surface.get_width()*2,
-                                    self.hero_surface.get_height()*2)
-
+        self.map_surface.set_clip(clipping_rect)
         self.actors_surface.set_clip(clipping_rect)
         self.result_surface.set_clip(clipping_rect)
 
-        # Add the map and the actors
-        self.result_surface.blit(self.map_image.surface, (0, 0))
+        # Join map and actor surface
+        self.result_surface.blit(self.map_surface, (0, 0))
         self.result_surface.blit(self.actors_surface, (0, 0))
+
+        # Translate it to make the surface egocentric
         self.hero_surface.blit(self.result_surface, (-offset[0], -offset[1]))
 
-        # Rotate the map to make the image egocentric. Zoom by sqrt(2) to avoid seeing black corners
+        # Rotate it to make the image egocentric. Zoom by sqrt(2) to avoid seeing black corners
         rotated_surface = pygame.transform.rotozoom(self.hero_surface, angle, math.sqrt(2))
-        center = (self.hero_surface.get_width() / 2, self.hero_surface.get_height() / 2)
+        center = (hero_surface_size[0] / 2, hero_surface_size[1] / 2)
         rotation_pivot = rotated_surface.get_rect(center=center)
         self.final_surface.blit(rotated_surface, rotation_pivot)
 
@@ -709,12 +654,76 @@ class World(object):
         array3d = pygame.surfarray.array3d(self.final_surface)
         array3d = array3d.swapaxes(0, 1)
 
-        # img = Image.fromarray(array3d, 'RGB')
-        # img.show()
-
         return array3d
 
     def destroy(self):
         """Destroy the hero actor when class instance is destroyed"""
         self.map_image.destroy()
         pygame.quit()
+
+
+def threaded(fn):
+    def wrapper(*args, **kwargs):
+        thread = Thread(target=fn, args=args, kwargs=kwargs)
+        thread.setDaemon(True)
+        thread.start()
+
+        return thread
+    return wrapper
+
+class BirdviewManager(object):
+    """
+    This class is responsible of creating a 'birdview' pseudo-sensor, which is a simplified
+    version of CARLA's non rendering mode.
+    """
+
+    def __init__(self, world, size, radius, parent_actor, synchronous_mode=True):
+        pygame.init()
+        self.world = world
+
+        self.birdview_data = None  # Data given by the sensor
+        self.data_ready = False  # Whether or not the data has been sent
+        self.running = False  # Flag to stop the execution of the sensor
+
+        # Get the sensor instance and run it
+        self.sensor = BirdviewSensor(world, size, radius, parent_actor)
+        self.run()
+
+    @threaded
+    def run(self):
+        self.running = True
+        self.previous_frame = None
+
+        while self.running:
+            frame = self.world.get_snapshot().frame
+
+            # Avoid getting the data more than once per frame
+            if self.previous_frame is None or frame > self.previous_frame:
+
+                # Get the sensor data
+                self.birdview_data = self.sensor.get_data()
+                self.data_ready = True
+
+                # Update the previous frame
+                self.previous_frame = frame
+            else:
+                time.sleep(0.005)
+
+    def read_birdview_queue(self):
+        return self.get_birdview_data()
+
+    def destroy_sensor(self):
+        """Stop the sensor and its execution"""
+        self.running = False
+        self.sensor.destroy()
+
+    def get_birdview_data(self):
+        """Gets the data of the sensor"""
+
+        #Make sure the sensor has finished rendering before sending the data
+        while not self.data_ready:
+            time.sleep(0.001)
+        self.data_ready = False
+
+        # Return the data
+        return self.birdview_data
