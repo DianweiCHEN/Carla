@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
+import os, shutil
 import ray
 from ray import tune
 from carla_env import CarlaEnv
@@ -32,45 +32,6 @@ env_config.update(
     }
 )
 
-def first_run(args):
-    try:
-        kill_server()
-        tf.keras.backend.clear_session()
-        ray.init()
-        run_experiments({
-            args.name: {
-                "run": args.model,
-                "env": CarlaEnv,
-                "stop": {"perf/ram_util_percent":90.0}, # {"training_iteration":300},
-                "checkpoint_freq": 10,
-                "checkpoint_at_end":True,
-                "local_dir": args.directory,
-                "config": {
-                    "env_config": env_config,
-                    "num_gpus_per_worker": 0.5,
-                    "num_cpus_per_worker":4,
-                    "buffer_size": 1000,
-                    "num_workers": 1,
-                    "model": {
-                        'dim': 300,
-                        'conv_filters': [
-                            [16, [8, 8], 4],
-                            [32, [4, 4], 2],
-                            [32, [4, 4], 2],
-                            [64, [19, 19], 1],
-                        ],
-                    },
-                },
-            },
-        },
-        resume = False,
-        )
-        ray.shutdown()
-        gc.collect()
-    finally:
-        kill_server()
-        ray.shutdown()
-
 def find_latest_checkpoint(args):
     """
     Finds the latest checkpoint, based on how RLLib creates and names them.
@@ -95,13 +56,15 @@ def find_latest_checkpoint(args):
     start+=("/"+max_f+"/"+max_g+"/"+max_g.replace("_","-"))
     return start
 
-
-def restore_run(args):
+def run(args):
     try:
+        if args.restore:
+            checkpoint = find_latest_checkpoint(args)
+        else:
+            checkpoint = False
         while (True):
             kill_server()
             tf.keras.backend.clear_session()
-            checkpoint = find_latest_checkpoint(args)
             ray.init()
             run_experiments({
                 args.name: {
@@ -134,6 +97,7 @@ def restore_run(args):
             )
             ray.shutdown()
             gc.collect()
+            checkpoint = find_latest_checkpoint(args)
 
     finally:
         kill_server()
@@ -145,13 +109,13 @@ def main():
     argparser.add_argument(
         '-d', '--directory',
         metavar='D',
-        default= os.path.expanduser("~")+"/ray_results/newdir",
+        default= os.path.expanduser("~")+"/ray_results/newdir3",
         help='Specified directory to save results')
     argparser.add_argument(
         '-n', '--name',
         metavar='P',
         default="dqn",
-        help='Name of the experiment')
+        help='Name of the experiment (default: dqn)')
     argparser.add_argument(
         '-m', '--model',
         metavar='P',
@@ -161,20 +125,28 @@ def main():
         '--restore',
         action='store_true',
         default=False,
-        help='If we need to restore from the specified directory')
+        help='Flag to restore from the specified directory')
+    argparser.add_argument(
+        '--override',
+        action='store_true',
+        default=False,
+        help='Flag to override a specific directory (warning: all content of the folder will be lost.)')
+
     args = argparser.parse_args()
 
     gc.enable()
+    directory = args.directory + "/" + args.name
     if not args.restore:
-        if os.path.exists(args.directory):
-            if len(os.listdir(args.directory)) != 0:
-                print("The directory " + args.directory + " is not empty. To start a new training instance, make sure this folder is either empty or non-existing.")
+        if os.path.exists(directory):
+            if args.override and os.path.isdir(directory):
+                shutil.rmtree(directory)
+            elif len(os.listdir(directory)) != 0:
+                print("The directory " + directory + " is not empty. To start a new training instance, make sure this folder is either empty or non-existing.")
                 return
-        first_run(args)
-    if args.restore:
-        if not(os.path.exists(args.directory)) or len(os.listdir(args.directory)) == 0:
+    else:
+        if not(os.path.exists(directory)) or len(os.listdir(directory)) == 0:
             print("You can't restore from an empty or non-existing directory. To restore a training instance, make sure there is at least one checkpoint.")
-    restore_run(args)
+    run(args)
 
 if __name__ == '__main__':
 
