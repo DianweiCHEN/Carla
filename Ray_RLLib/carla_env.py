@@ -59,14 +59,14 @@ class CarlaEnv(gym.Env):
         )
         self.experiment.initialize_reward(self.core)
         self.experiment.set_server_view(self.core)
-        self.experiment.experiment_tick(self.core, action=None)
+        self.experiment.experiment_tick(self.core, self.world, action=None)
         obs, info = self.experiment.get_observation(self.core)
         obs = self.experiment.process_observation(self.core, obs)
         return obs
 
     def step(self, action):
         # assert action in [0, 13], action
-        self.experiment.experiment_tick(self.core, action)
+        self.experiment.experiment_tick(self.core, self.world, action)
         observation, info = self.experiment.get_observation(self.core)
         observation = self.experiment.process_observation(self.core, observation)
         reward = self.experiment.compute_reward(self.core,observation)

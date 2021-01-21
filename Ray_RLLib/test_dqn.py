@@ -79,8 +79,7 @@ def run(args):
                         "env_config": env_config,
                         "num_gpus_per_worker": 0.5,
                         "num_cpus_per_worker":4,
-                        "buffer_size": 1000,
-                        "num_workers": 1,
+                        "num_workers": 2,
                         "model": {
                             'dim': 190,
                             'conv_filters': [

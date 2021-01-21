@@ -151,6 +151,6 @@ class Experiment(BaseExperiment):
 
         world.tick()
         print("Hero spawned!")
-        self.start_location_x = self.spawn_points[0].location.x
-        self.start_location_y = self.spawn_points[0].location.y
+        self.start_location_x = self.spawn_points[i].location.x
+        self.start_location_y = self.spawn_points[i].location.y
         self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)

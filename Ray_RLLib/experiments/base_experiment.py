@@ -101,15 +101,15 @@ DISCRETE_ACTIONS_SMALL = {
 
 DISCRETE_ACTIONS_SMALLER = {
     0: [0.0, 0.00, 0.0, False, False], # Coast
-    1: [0.0, -0.10, 0.0, False, False], # Turn Left
-    2: [0.0, 0.10, 0.0, False, False], # Turn Right
-    3: [0.1, 0.00, 0.0, False, False], # Accelerate
-    4: [-0.2, 0.00, 0.0, False, False], # Decelerate
+    1: [0.0, -0.15, 0.0, False, False], # Turn Left
+    2: [0.0, 0.15, 0.0, False, False], # Turn Right
+    3: [0.2, 0.00, 0.0, False, False], # Accelerate
+    4: [-0.3, 0.00, 0.0, False, False], # Decelerate
     5: [0.0, 0.00, 1.0, False, False], # Brake
-    6: [0.1, 0.10, 0.0, False, False], # Turn Right + Accelerate
-    7: [0.1, -0.10, 0.0, False, False], # Turn Left + Accelerate
-    8: [-0.2, 0.10, 0.0, False, False], # Turn Right + Decelerate
-    9: [-0.2, -0.10, 0.0, False, False], # Turn Left + Decelerate
+    6: [0.2, 0.15, 0.0, False, False], # Turn Right + Accelerate
+    7: [0.2, -0.15, 0.0, False, False], # Turn Left + Accelerate
+    8: [-0.3, 0.10, 0.0, False, False], # Turn Right + Decelerate
+    9: [-0.3, -0.15, 0.0, False, False], # Turn Left + Decelerate
 }
 
 DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALLER
@@ -359,7 +359,7 @@ class BaseExperiment:
     # -- Tick -----------------------------------------------------------
     # ==============================================================================
 
-    def experiment_tick(self, core, action):
+    def experiment_tick(self, core, world, action):
 
         """
         This is the "tick" logic.
@@ -368,7 +368,6 @@ class BaseExperiment:
         :return:
         """
 
-        world = core.get_core_world()
         world.tick()
         self.update_measurements(core)
         self.update_actions(action, self.hero)
