@@ -465,11 +465,6 @@ class MapImage(object):
         """Converts the world units to pixel units"""
         return int(self._pixels_per_meter * width)
 
-    def destroy(self):
-        """Erase the map cache"""
-        if os.path.exists(self.full_path):
-            os.remove(self.full_path)
-
 # ==============================================================================
 # -- BirdviewSensor ---------------------------------------------------------------------
 # ==============================================================================
@@ -659,7 +654,6 @@ class BirdviewSensor(object):
 
     def destroy(self):
         """Destroy the hero actor when class instance is destroyed"""
-        self.map_image.destroy()
         pygame.quit()
 
 
