@@ -35,6 +35,7 @@ import hashlib
 import math
 from threading import Thread
 import time
+import queue
 
 
 # ==============================================================================
@@ -466,7 +467,7 @@ class MapImage(object):
 
     def destroy(self):
         """Erase the map cache"""
-        if os.path.isfile(self.full_path):
+        if os.path.exists(self.full_path):
             os.remove(self.full_path)
 
 # ==============================================================================
@@ -479,9 +480,10 @@ class BirdviewSensor(object):
     def __init__(self, world, size, radius, hero):
         self.world = world
         self.town_map = self.world.get_map()
+        self.radius = radius
 
         self.hero_transform = hero.get_transform()
-        self.pixels_per_meter = size / (2* radius)
+        self.pixels_per_meter = size / (2* self.radius)
         self.map_image = MapImage(self.world, self.town_map, self.pixels_per_meter)
 
         # Create the 'info' surfaces
@@ -519,11 +521,8 @@ class BirdviewSensor(object):
         """Renders the traffic lights and shows its triggers and bounding boxes if flags are enabled"""
 
         for tl in traffic_lights:
-            world_pos = tl.get_location()
-            pos = self.map_image.world_to_pixel(world_pos)
-            radius = self.map_image.world_to_pixel_width(1.2)
-            out_radius = self.map_image.world_to_pixel_width(1.3)
-            out_radius_width = self.map_image.world_to_pixel_width(0.2)
+            pos = self.map_image.world_to_pixel(tl.get_location())
+            radius = self.map_image.world_to_pixel_width(1.4)
 
             if tl.state == tls.Red:
                 color = COLOR_SCARLET_RED_0
@@ -537,7 +536,7 @@ class BirdviewSensor(object):
                 color = COLOR_BLACK
 
             pygame.draw.circle(surface, color, (pos[0], pos[1]), radius)
-            pygame.draw.circle(surface, COLOR_WHITE, (pos[0], pos[1]), out_radius, out_radius_width)
+            pygame.draw.circle(surface, COLOR_WHITE, (pos[0], pos[1]), radius, 1)
 
     def _render_speed_limits(self, surface, speed_limits, angle):
         """Renders the speed limits by drawing two concentric circles (outer is red and inner white) and a speed limit text"""
@@ -570,10 +569,10 @@ class BirdviewSensor(object):
             # Compute bounding box points
             bb = w.bounding_box.extent
             corners = [
-                carla.Location(x=-bb.x, y=-bb.y),
-                carla.Location(x=bb.x, y=-bb.y),
-                carla.Location(x=bb.x, y=bb.y),
-                carla.Location(x=-bb.x, y=bb.y)]
+                2*carla.Location(x=-bb.x, y=-bb.y),
+                2*carla.Location(x=bb.x, y=-bb.y),
+                2*carla.Location(x=bb.x, y=bb.y),
+                2*carla.Location(x=-bb.x, y=bb.y)]
 
             w.get_transform().transform(corners)
             corners = [self.map_image.world_to_pixel(p) for p in corners]
@@ -626,8 +625,10 @@ class BirdviewSensor(object):
         # Render the actors
         self.render_actors(self.actors_surface, angle)
 
-        # Clips the surfaces to render only the visible parts, improves perfomance.
-        hero_screen_location = self.map_image.world_to_pixel(self.hero_transform.location)
+        # Get a point in front of the ego vehicle. It will act as the center of the resulting image.
+        # Then clip the surfaces to render only the visible parts, improving perfomance.
+        hero_center_location = self.hero_transform.location + self.hero_transform.get_forward_vector()*self.radius / 2
+        hero_screen_location = self.map_image.world_to_pixel(hero_center_location)
         hero_surface_size = (self.hero_surface.get_width(), self.hero_surface.get_height())
         offset = (hero_screen_location[0] - hero_surface_size[0] / 2,
                  (hero_screen_location[1] - hero_surface_size[1] / 2))
@@ -677,13 +678,19 @@ class BirdviewManager(object):
     version of CARLA's non rendering mode.
     """
 
-    def __init__(self, world, size, radius, parent_actor, synchronous_mode=True):
+    def __init__(self, world, size, radius, parent_actor, synchronous_mode=True, timeout=2.0):
         pygame.init()
         self.world = world
-
-        self.birdview_data = None  # Data given by the sensor
-        self.data_ready = False  # Whether or not the data has been sent
+        self.synchronous_mode = synchronous_mode
+        self.timeout = timeout
         self.running = False  # Flag to stop the execution of the sensor
+
+        # Data given by the sensor
+        if not self.synchronous_mode:
+            self.birdview_data = None
+        else:
+            # The queue erases the previous value, so the simulation has to wait for the next one to be ready
+            self.birdview_data = queue.Queue()
 
         # Get the sensor instance and run it
         self.sensor = BirdviewSensor(world, size, radius, parent_actor)
@@ -700,9 +707,10 @@ class BirdviewManager(object):
             # Avoid getting the data more than once per frame
             if self.previous_frame is None or frame > self.previous_frame:
 
-                # Get the sensor data
-                self.birdview_data = self.sensor.get_data()
-                self.data_ready = True
+                if not self.synchronous_mode:
+                    self.birdview_data = self.sensor.get_data()
+                else:
+                    self.birdview_data.put(self.sensor.get_data())
 
                 # Update the previous frame
                 self.previous_frame = frame
@@ -719,11 +727,7 @@ class BirdviewManager(object):
 
     def get_birdview_data(self):
         """Gets the data of the sensor"""
-
-        #Make sure the sensor has finished rendering before sending the data
-        while not self.data_ready:
-            time.sleep(0.001)
-        self.data_ready = False
-
-        # Return the data
-        return self.birdview_data
+        if self.synchronous_mode:
+            return self.birdview_data.get(True, self.timeout)
+        else:
+            return self.birdview_data
