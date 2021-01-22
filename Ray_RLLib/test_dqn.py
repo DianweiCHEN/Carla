@@ -70,7 +70,7 @@ def run(args):
                 args.name: {
                     "run": args.model,
                     "env": CarlaEnv,
-                    "stop": {"perf/ram_util_percent":90.0},
+                    "stop": {"perf/ram_util_percent":85.0},
                     "checkpoint_freq": 10,
                     "checkpoint_at_end" : True,
                     "local_dir": args.directory,

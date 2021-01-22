@@ -18,10 +18,7 @@ def update_config(d, u):
     return d
 
 def add_carla_path(carla_path_config_file):
-    carla_text_path = (os.path.dirname(os.path.realpath(__file__)) + "/" + carla_path_config_file)
-    carla_path_file = open(carla_text_path, "r")
-    carla_main_path = (carla_path_file.readline().split("\n"))[0]
-    carla_path_file.close()
+    carla_main_path = os.environ.get("CARLA_ROOT")
     for file in os.listdir(carla_main_path + "/PythonAPI/carla/dist/"):
         if 'py3.' in file:
             carla_egg_file = os.path.join(carla_main_path + "/PythonAPI/carla/dist/", file)
