@@ -128,7 +128,7 @@ class Experiment(BaseExperiment):
         self.previous_distance = c
         if c > 30: # to avoid losing points for getting closer to initial location
             self.start_location_x = self.hero.get_location().x
-            self.start_location_x = self.hero.get_location().x
+            self.start_location_y = self.hero.get_location().y
             self.previous_distance = 0
         # if self.previous_distance < 15 and reward < 0:
         #     reward = 0
