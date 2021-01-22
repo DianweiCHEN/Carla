@@ -8,6 +8,7 @@ from __future__ import print_function
 # Put import that you want "helper" modules to import
 import time
 import gym
+import os
 from gym.utils import seeding
 from helper.CarlaHelper import add_carla_path
 from random import randint
@@ -15,11 +16,10 @@ from random import randint
 ENV_CONFIG = {
     "RAY": True,  # True if you are  running an experiment in Ray
     "DEBUG_MODE": False,
-    "CARLA_PATH_CONFIG_FILE": "CARLA_PATH.txt",  # Do not modify for individual experiments
     "Experiment":"experiment1",
 }
 
-CARLA_SERVER_BINARY = add_carla_path(ENV_CONFIG["CARLA_PATH_CONFIG_FILE"])
+CARLA_SERVER_BINARY = add_carla_path(os.environ.get("CARLA_ROOT"))
 ENV_CONFIG.update({"SERVER_BINARY": CARLA_SERVER_BINARY})
 
 #Choose your experiment and Core
@@ -35,7 +35,7 @@ class CarlaEnv(gym.Env):
         if config is None:
             config = ENV_CONFIG
         self.environment_config = config
-        carla_server_binary = add_carla_path(ENV_CONFIG["CARLA_PATH_CONFIG_FILE"])
+        carla_server_binary = add_carla_path(os.environ.get("CARLA_ROOT"))
         self.environment_config.update({"SERVER_BINARY": carla_server_binary})
         module = __import__("experiments.{}".format(self.environment_config["Experiment"] ))
         exec("self.experiment = module.{}.Experiment()".format(self.environment_config["Experiment"]))

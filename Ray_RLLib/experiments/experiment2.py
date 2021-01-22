@@ -56,6 +56,7 @@ class Experiment(BaseExperiment):
         self.prev_image_0 = None
         self.prev_image_1 = None
         self.prev_image_2 = None
+        self.allowed_types = [carla.LaneType.Driving, carla.LaneType.Parking]
 
     def set_observation_space(self):
         num_of_channels = 3
@@ -115,9 +116,12 @@ class Experiment(BaseExperiment):
         c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location_x) + \
                             np.square(self.hero.get_location().y - self.start_location_y)))
 
-        if self.observation["collision"] != False:
-            reward = -0.002*self.observation["collision"]
-        elif c > self.previous_distance + 1e-2:
+        # if self.observation["collision"] != False:
+        #     reward = -10
+        # elif self.current_w is not None:
+        #     if not(self.current_w.lane_type in self.allowed_types):
+        #         reward = -5
+        if c > self.previous_distance + 1e-2:
             reward = c - self.previous_distance
         else:
             reward = 0
@@ -126,6 +130,10 @@ class Experiment(BaseExperiment):
             self.start_location_x = self.hero.get_location().x
             self.start_location_x = self.hero.get_location().x
             self.previous_distance = 0
+        # if self.previous_distance < 15 and reward < 0:
+        #     reward = 0
+        #     print("avoid negative reward")
+        #print(reward)
         return reward
 
     def spawn_hero(self, world, transform, autopilot=False):

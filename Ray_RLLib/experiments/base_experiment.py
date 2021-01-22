@@ -129,7 +129,7 @@ class BaseExperiment:
         self.vehicle_list = []
         self.start_location = None
         self.end_location = None
-
+        self.current_w = None
         self.hero_model = ''.join(self.experiment_config["hero_vehicle_model"])
 
         self.set_observation_space()
@@ -204,9 +204,9 @@ class BaseExperiment:
         return 3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
 
     def check_lane_type(self, map):
-        current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
+        self.current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
         allowed_types = [carla.LaneType.Driving, carla.LaneType.Parking]
-        return current_w.lane_type in allowed_types
+        return self.current_w.lane_type in allowed_types
 
     def get_done_status(self, map):
         done = self.observation["collision"] is not False or not self.check_lane_type(map)
