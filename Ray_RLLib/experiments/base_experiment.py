@@ -1,12 +1,10 @@
 import random
 from enum import Enum
-from itertools import cycle
 import math
 import carla
 import numpy as np
-from gym.spaces import Discrete, Box
-import logging
-from helper.CarlaHelper import spawn_vehicle_at, post_process_image
+from gym.spaces import Discrete
+from helper.CarlaHelper import post_process_image
 import time
 
 class SensorsTransformEnum(Enum):

@@ -9,6 +9,7 @@ import signal
 
 import collections
 
+
 def update_config(d, u):
     for k, v in u.items():
         if isinstance(v, collections.Mapping):
@@ -16,18 +17,6 @@ def update_config(d, u):
         else:
             d[k] = v
     return d
-
-def add_carla_path(carla_path_config_file):
-    carla_main_path = os.environ.get("CARLA_ROOT")
-    for file in os.listdir(carla_main_path + "/PythonAPI/carla/dist/"):
-        if 'py3.' in file:
-            carla_egg_file = os.path.join(carla_main_path + "/PythonAPI/carla/dist/", file)
-    sys.path.append(os.path.expanduser(carla_egg_file))
-    carla_python_interface = carla_main_path + "/PythonAPI/carla/"
-    carla_server_binary = carla_main_path + "/Dist/CARLA_Latest/CarlaUE4.sh"
-    sys.path.append(os.path.expanduser(carla_python_interface))
-    print(carla_python_interface)
-    return carla_server_binary
 
 
 def get_parent_dir(directory):

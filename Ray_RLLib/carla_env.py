@@ -5,38 +5,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# Put import that you want "helper" modules to import
-import time
 import gym
-import os
-from gym.utils import seeding
-from helper.CarlaHelper import add_carla_path
-from random import randint
+# from gym.utils import seeding
 
-ENV_CONFIG = {
-    "RAY": True,  # True if you are  running an experiment in Ray
-    "DEBUG_MODE": False,
-    "Experiment":"experiment1",
-}
+from core.CarlaCore import CarlaCore
 
-CARLA_SERVER_BINARY = add_carla_path(os.environ.get("CARLA_ROOT"))
-ENV_CONFIG.update({"SERVER_BINARY": CARLA_SERVER_BINARY})
-
-#Choose your experiment and Core
-#from experiments.experiment3 import Experiment
-from core.CarlaCore1 import CarlaCore
-
-from helper.CarlaDebug import draw_spawn_points, get_actor_display_name, \
-    split_actors, get_actor_status, print_spawn_point
-from helper.CarlaHelper import kill_server
 
 class CarlaEnv(gym.Env):
-    def __init__(self, config=None):
-        if config is None:
-            config = ENV_CONFIG
+
+    def __init__(self, config):
+
         self.environment_config = config
-        carla_server_binary = add_carla_path(os.environ.get("CARLA_ROOT"))
-        self.environment_config.update({"SERVER_BINARY": carla_server_binary})
+
         module = __import__("experiments.{}".format(self.environment_config["Experiment"] ))
         exec("self.experiment = module.{}.Experiment()".format(self.environment_config["Experiment"]))
         self.action_space = self.experiment.get_action_space()
@@ -57,6 +37,7 @@ class CarlaEnv(gym.Env):
             self.experiment.get_hero(),
             self.world.get_settings().synchronous_mode,
         )
+
         self.experiment.initialize_reward(self.core)
         self.experiment.set_server_view(self.core)
         self.experiment.experiment_tick(self.core, self.world, action=None)
@@ -73,59 +54,6 @@ class CarlaEnv(gym.Env):
         done = self.experiment.get_done_status()
         return observation, reward, done, info
 
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
-
-if __name__ == "__main__":
-
-    env = CarlaEnv()
-    obs = env.reset()
-    try:
-        if env.environment_config["DEBUG_MODE"]:
-            dir(carla)
-            dir(carla.LaneInvasionEvent)
-            dir(carla.LaneInvasionEvent.crossed_lane_markings)
-
-            world = env.core.get_core_world()
-            hero = env.experiment.hero
-
-            draw_spawn_points(world)
-            print_spawn_point(world)
-            position, velocity, control, heading = get_actor_status(hero)
-            print(
-                "Position:",
-                [position.location.x, position.location.y],
-                " Velocity:",
-                [velocity.x, velocity.y, velocity.z],
-                " Heading:",
-                heading,
-            )
-            print(get_actor_display_name(hero))
-            # print_blueprint_attributes(world.get_blueprint_library())
-
-            Vehicles, Traffic_lights, Speed_limits, walkers = split_actors(
-                world.get_actors()
-            )
-            print("vehicles", Vehicles)
-            env.core.get_nearby_vehicles(world, hero, max_distance=200)
-
-        for _ in range(100):
-            obs = env.reset()
-            if env.environment_config["DEBUG_MODE"]:
-                if env.experiment_config["OBSERVATION_CONFIG"]["CAMERA_OBSERVATION"]:
-                    env.core.record_camera(True)
-                    env.core.render_camera_lidar(True)
-
-            done = False
-            while done is False:
-                t = time.time()
-                observation, reward, done, info = env.step(1)  # Forward only
-                #observation, reward, done, info = env.step(randint(0,(env.action_space.n-1)))  # Random
-                # print ("observation:",observation," Reward::{:0.2f}".format(reward * 1000))
-                elapsed = time.time() - t
-                print("Elapsed (ms):{:0.2f}".format(elapsed * 1000))
-
-    except (KeyboardInterrupt, SystemExit):
-        kill_server()
+#    def seed(self, seed=None):
+#        self.np_random, seed = seeding.np_random(seed)
+#        return [seed]
