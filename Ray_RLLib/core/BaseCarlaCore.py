@@ -15,6 +15,7 @@ from helper.SensorsManager import *
 from helper.list_procs import search_procs_by_name
 
 from carla import VehicleLightState as vls
+import psutil
 
 import logging
 
@@ -25,6 +26,9 @@ CORE_CONFIG = {
     "host": "localhost",
     "map_buffer": 1.2,  # To find the minimum and maximum coordinates of the map
                }
+
+def is_used(port):
+    return port in [conn.laddr.port for conn in psutil.net_connections()]
 
 class BaseCarlaCore:
     def __init__(self, environment_config, experiment_config, core_config=None):
@@ -84,7 +88,7 @@ class BaseCarlaCore:
         if self.environment_config["DEBUG_MODE"]:
             self.server_port = 2000
         else:
-            self.server_port = random.randint(15000, 50000)
+            self.server_port = random.randint(15000, 32000)
         # Create a new server process and start the client.
         if self.environment_config["RAY"] is True:
             # Ray tends to start all processes simultaneously. This causes problems
@@ -99,6 +103,17 @@ class BaseCarlaCore:
                 self.experiment_config["SENSOR_CONFIG"]["CAMERA_Y"][i] = 1200
             self.experiment_config["quality_level"] = "High"
 
+        uses_server_port = is_used(self.server_port)
+        uses_stream_port = is_used(self.server_port+1)
+        while uses_server_port and uses_stream_port:
+            if uses_server_port:
+                print("Is using the server port: " + self.server_port)
+            if uses_stream_port:
+                print("Is using the streaming port: " + str(self.server_port+1))
+            self.server_port += 2
+            uses_server_port = is_used(self.server_port)
+            uses_stream_port = is_used(self.server_port+1)
+
         # Run the server process
         server_command = [
             self.environment_config["SERVER_BINARY"],
@@ -109,7 +124,6 @@ class BaseCarlaCore:
             "-quality-level =",
             self.experiment_config["quality_level"],
             "--no-rendering",
-            "-carla-server-timeout = 10000ms",
         ]
 
         server_command_text = " ".join(map(str, server_command))
@@ -263,7 +277,7 @@ class BaseCarlaCore:
 
         if experiment_config["OBSERVATION_CONFIG"]["COLLISION_OBSERVATION"]:
             self.collision_sensor = CollisionSensor(
-                hero, synchronous_mode=synchronous_mode
+                hero, synchronous_mode=False
             )
         if experiment_config["OBSERVATION_CONFIG"]["RADAR_OBSERVATION"]:
             self.radar_sensor = RadarSensor(
@@ -439,6 +453,9 @@ class BaseCarlaCore:
         """
 
         tm_port = self.server_port//10 + self.server_port%10
+        while is_used(tm_port):
+            print("Is using the TM port: " + tm_port)
+            tm_port+=1
         traffic_manager = self.client.get_trafficmanager(tm_port)
         if hybrid:
             traffic_manager.set_hybrid_physics_mode(True)

@@ -105,60 +105,34 @@ class Experiment(BaseExperiment):
 
         return images
 
+    def inside_lane(self, map):
+        self.current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
+        return self.current_w.lane_type in self.allowed_types
 
-    def compute_reward(self, core, observation):
+    def compute_reward(self, core, observation, map):
         """
         Reward function
         :param observation:
         :param core:
         :return:
         """
-        c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location_x) + \
-                            np.square(self.hero.get_location().y - self.start_location_y)))
 
-        # if self.observation["collision"] != False:
-        #     reward = -10
-        # elif self.current_w is not None:
-        #     if not(self.current_w.lane_type in self.allowed_types):
-        #         reward = -5
-        if c > self.previous_distance + 1e-2:
+        c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location.x) + \
+                            np.square(self.hero.get_location().y - self.start_location.y)))
+        if self.observation["collision"] != False or not self.inside_lane(map):
+            reward = 0
+        elif c > self.previous_distance + 1e-2:
             reward = c - self.previous_distance
         else:
             reward = 0
-        self.previous_distance = c
+
+        if c > self.previous_distance + 1e-2: # to avoid car going in circle.
+            self.previous_distance = c
         if c > 30: # to avoid losing points for getting closer to initial location
-            self.start_location_x = self.hero.get_location().x
-            self.start_location_y = self.hero.get_location().y
+            self.start_location = self.hero.get_location()
             self.previous_distance = 0
         # if self.previous_distance < 15 and reward < 0:
         #     reward = 0
         #     print("avoid negative reward")
-        #print(reward)
         return reward
 
-    def spawn_hero(self, world, transform, autopilot=False):
-
-        self.spawn_points = world.get_map().get_spawn_points()
-        gc.collect()
-        self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
-        self.hero_blueprints.set_attribute("role_name", "hero")
-
-        if self.hero is not None:
-            self.hero.destroy()
-            self.hero = None
-        i = 0
-        random.shuffle(self.spawn_points, random.random)
-        while True:
-            next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
-            self.hero = world.try_spawn_actor(self.hero_blueprints, next_spawn_point)
-            if self.hero is not None:
-                break
-            else:
-                print("Could not spawn Hero, changing spawn point")
-                i+=1
-
-        world.tick()
-        print("Hero spawned!")
-        self.start_location_x = self.spawn_points[i].location.x
-        self.start_location_y = self.spawn_points[i].location.y
-        self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)

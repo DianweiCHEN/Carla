@@ -50,7 +50,9 @@ class CollisionSensor(object):
 
     def get_collision_data(self):
         if self.intensity is not False:
-            return self.intensity
+            intensity = self.intensity
+            self.intensity = False
+            return intensity
         else:
             return False
 

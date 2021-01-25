@@ -14,6 +14,7 @@ from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.catalog import ModelCatalog
 from ray.rllib.models.tf.fcnet import FullyConnectedNetwork
 from ray.tune import grid_search, run_experiments
+from ray.tune.trial import ExportFormat
 from helper.CarlaHelper import kill_server
 import tensorflow as tf
 import gc
@@ -41,10 +42,10 @@ def find_latest_checkpoint(args):
     max_g = ""
     max_checkpoint = 0
     for f in os.listdir(start):
-        if args.model in f:
+        if args.algorithm in f:
             temp = start+"/"+f
             for g in os.listdir(temp):
-                if "checkpoint" in g:
+                if "checkpoint_" in g:
                     episode = int(''.join([n for n in g if n.isdigit()]))
                     if episode > max_checkpoint:
                         max_checkpoint = episode
@@ -68,13 +69,14 @@ def run(args):
             ray.init()
             run_experiments({
                 args.name: {
-                    "run": args.model,
+                    "run": args.algorithm,
                     "env": CarlaEnv,
                     "stop": {"perf/ram_util_percent":85.0},
                     "checkpoint_freq": 10,
                     "checkpoint_at_end" : True,
                     "local_dir": args.directory,
                     "restore": checkpoint,
+                    "export_formats": [ExportFormat.CHECKPOINT, ExportFormat.MODEL],
                     "config": {
                         "env_config": env_config,
                         "num_gpus_per_worker": 0.5,
@@ -121,10 +123,10 @@ def main():
         default="dqn",
         help='Name of the experiment (default: dqn)')
     argparser.add_argument(
-        '-m', '--model',
+        '-a', '--algorithm',
         metavar='P',
         default="DQN",
-        help='Model used by the experiment (default: DQN)')
+        help='Algorithm used by the experiment (default: DQN)')
     argparser.add_argument(
         '--restore',
         action='store_true',

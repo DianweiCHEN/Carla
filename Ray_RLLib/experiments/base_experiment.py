@@ -7,7 +7,7 @@ import numpy as np
 from gym.spaces import Discrete, Box
 import logging
 from helper.CarlaHelper import spawn_vehicle_at, post_process_image
-
+import time
 
 class SensorsTransformEnum(Enum):
     Transform_A = 0  # (carla.Transform(carla.Location(x=-5.5, z=2.5), carla.Rotation(pitch=8.0)), Attachment.SpringArm)
@@ -68,16 +68,14 @@ BASE_EXPERIMENT_CONFIG = {
     "Server_View": BASE_SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": BASE_SENSOR_CONFIG,
     "BIRDVIEW_CONFIG": BASE_BIRDVIEW_CONFIG,
-    "server_map": "Town03_Opt",
+    "server_map": "Town02_Opt",
     "quality_level": "Low",  # options are low or Epic #ToDO. This does not do anything + change to enum
     "Disable_Rendering_Mode": False,  # If you disable, you will not get camera images
     "n_vehicles": 0,
     "n_walkers": 0,
-    "start_pos_spawn_id": 100,  # 82,
     "end_pos_spawn_id": 45,  # 34,
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
     "Weather": carla.WeatherParameters.ClearNoon,
-    "RANDOM_RESPAWN": False,  # Actors are randomly Respawned or Not
     "DISCRETE_ACTION": True,
     "Debug": False,
 }
@@ -99,20 +97,38 @@ DISCRETE_ACTIONS_SMALL = {
     13: [0.0, 0.70, 0.0, False, False],  # Right+Stop
 }
 
+# DISCRETE_ACTIONS_SMALLER = {
+#     0: [0.0, 0.00, 0.0, False, False], # Coast
+#     1: [0.0, -0.15, 0.0, False, False], # Turn Left
+#     2: [0.0, 0.15, 0.0, False, False], # Turn Right
+#     3: [0.2, 0.00, 0.0, False, False], # Accelerate
+#     4: [-0.3, 0.00, 0.0, False, False], # Decelerate
+#     5: [0.0, 0.00, 1.0, False, False], # Brake
+#     6: [0.2, 0.15, 0.0, False, False], # Turn Right + Accelerate
+#     7: [0.2, -0.15, 0.0, False, False], # Turn Left + Accelerate
+#     8: [-0.3, 0.10, 0.0, False, False], # Turn Right + Decelerate
+#     9: [-0.3, -0.15, 0.0, False, False], # Turn Left + Decelerate
+# }
+
 DISCRETE_ACTIONS_SMALLER = {
     0: [0.0, 0.00, 0.0, False, False], # Coast
-    1: [0.0, -0.15, 0.0, False, False], # Turn Left
-    2: [0.0, 0.15, 0.0, False, False], # Turn Right
-    3: [0.2, 0.00, 0.0, False, False], # Accelerate
-    4: [-0.3, 0.00, 0.0, False, False], # Decelerate
-    5: [0.0, 0.00, 1.0, False, False], # Brake
-    6: [0.2, 0.15, 0.0, False, False], # Turn Right + Accelerate
-    7: [0.2, -0.15, 0.0, False, False], # Turn Left + Accelerate
-    8: [-0.3, 0.10, 0.0, False, False], # Turn Right + Decelerate
-    9: [-0.3, -0.15, 0.0, False, False], # Turn Left + Decelerate
+    1: [0.0, -0.1, 0.0, False, False], # Turn Left
+    2: [0.0, 0.1, 0.0, False, False], # Turn Right
+    3: [1.0, 0.00, 0.0, False, False], # Accelerate
+    4: [0.0, 0.00, 1.0, False, False], # Brake
 }
 
 DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALLER
+
+class CustomTimer:
+    def __init__(self):
+        try:
+            self.timer = time.perf_counter
+        except AttributeError:
+            self.timer = time.time
+
+    def time(self):
+        return self.timer()
 
 class BaseExperiment:
     def __init__(self, config=BASE_EXPERIMENT_CONFIG):
@@ -131,9 +147,14 @@ class BaseExperiment:
         self.end_location = None
         self.current_w = None
         self.hero_model = ''.join(self.experiment_config["hero_vehicle_model"])
-
         self.set_observation_space()
         self.set_action_space()
+        self.max_idle = 40 #seconds
+        self.max_ep_time = 120 #seconds
+        self.timer_idle = CustomTimer()
+        self.timer_ep = CustomTimer()
+        self.t_idle_start = None
+        self.t_ep_start = None
 
 
     def get_experiment_config(self):
@@ -200,17 +221,20 @@ class BaseExperiment:
             :return: speed as a float in Km/h
         """
         vel = self.hero.get_velocity()
-
         return 3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
 
-    def check_lane_type(self, map):
-        self.current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
-        allowed_types = [carla.LaneType.Driving, carla.LaneType.Parking]
-        return self.current_w.lane_type in allowed_types
-
-    def get_done_status(self, map):
-        done = self.observation["collision"] is not False or not self.check_lane_type(map)
-        return done
+    def get_done_status(self):
+        #done = self.observation["collision"] is not False or not self.check_lane_type(map)
+        done_idle = False
+        if self.get_speed() < 4.0:
+            idle_time = self.timer_idle.time()
+            done_idle = self.max_idle < (idle_time - self.t_idle_start)
+        else:
+            self.t_idle_start = self.timer_idle.time()
+        ep_time = self.timer_ep.time()
+        done_max_time = self.max_ep_time < (ep_time - self.t_ep_start)
+        done_falling = self.hero.get_location().z < -0.5
+        return done_idle or done_max_time or done_falling
 
     def process_observation(self, core, observation):
 
@@ -283,7 +307,7 @@ class BaseExperiment:
             if action[2] != 0.0:
                 self.action.throttle = float(0)
             else:
-                self.action.throttle = float(np.clip(self.past_action.throttle + action[0], 0, 1))
+                self.action.throttle = float(np.clip(self.past_action.throttle + action[0], 0, 0.5))
             self.action.steer = float(np.clip(self.past_action.steer + action[1], -0.7, 0.7))
             self.action.reverse = action[3]
             self.action.hand_brake = action[4]
@@ -330,22 +354,29 @@ class BaseExperiment:
         self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
         self.hero_blueprints.set_attribute("role_name", "hero")
 
-        self.start_location = self.spawn_points[self.experiment_config["start_pos_spawn_id"]]
         self.end_location = self.spawn_points[self.experiment_config["end_pos_spawn_id"]]
+
         if self.hero is not None:
             self.hero.destroy()
             self.hero = None
 
-        hero_car_blueprint = world.get_blueprint_library().find(self.hero_model)
-        hero_car_blueprint.set_attribute("role_name", "hero")
-
-        while self.hero is None:
-            self.hero = world.try_spawn_actor(hero_car_blueprint, self.start_location)
+        i = 0
+        random.shuffle(self.spawn_points, random.random)
+        while True:
+            next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
+            self.hero = world.try_spawn_actor(self.hero_blueprints, next_spawn_point)
+            if self.hero is not None:
+                break
+            else:
+                print("Could not spawn Hero, changing spawn point")
+                i+=1
 
         world.tick()
         print("Hero spawned!")
-
+        self.start_location = self.spawn_points[i].location
         self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)
+        self.t_idle_start = self.timer_idle.time()
+        self.t_ep_start = self.timer_ep.time()
 
     def get_hero(self):
 
