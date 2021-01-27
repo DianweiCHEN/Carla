@@ -116,17 +116,7 @@ DISCRETE_ACTIONS_SMALLER = {
     4: [0.0, 0.00, 1.0, False, False], # Brake
 }
 
-DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALLER
-
-class CustomTimer:
-    def __init__(self):
-        try:
-            self.timer = time.perf_counter
-        except AttributeError:
-            self.timer = time.time
-
-    def time(self):
-        return self.timer()
+DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALL
 
 class BaseExperiment:
     def __init__(self, config=BASE_EXPERIMENT_CONFIG):
@@ -147,13 +137,14 @@ class BaseExperiment:
         self.hero_model = ''.join(self.experiment_config["hero_vehicle_model"])
         self.set_observation_space()
         self.set_action_space()
-        self.max_idle = 40 #seconds
-        self.max_ep_time = 120 #seconds
-        self.timer_idle = CustomTimer()
-        self.timer_ep = CustomTimer()
-        self.t_idle_start = None
-        self.t_ep_start = None
+        self.max_idle = 400 # ticks
+        self.max_ep_time = 1200 # ticks
+        self.t_idle = None
+        self.t_ep = None
 
+        self.done_idle = False
+        self.done_max_time = False
+        self.done_falling = False
 
     def get_experiment_config(self):
 
@@ -223,16 +214,12 @@ class BaseExperiment:
 
     def get_done_status(self):
         #done = self.observation["collision"] is not False or not self.check_lane_type(map)
-        done_idle = False
-        if self.get_speed() < 4.0:
-            idle_time = self.timer_idle.time()
-            done_idle = self.max_idle < (idle_time - self.t_idle_start)
-        else:
-            self.t_idle_start = self.timer_idle.time()
-        ep_time = self.timer_ep.time()
-        done_max_time = self.max_ep_time < (ep_time - self.t_ep_start)
-        done_falling = self.hero.get_location().z < -0.5
-        return done_idle or done_max_time or done_falling
+        self.done_idle = self.max_idle < self.t_idle
+        if self.get_speed() > 4.0:
+            self.t_idle = 0
+        self.done_max_time = self.max_ep_time < self.t_ep
+        self.done_falling = self.hero.get_location().z < -0.5
+        return self.done_idle or self.done_max_time or self.done_falling
 
     def process_observation(self, core, observation):
 
@@ -295,22 +282,36 @@ class BaseExperiment:
         if self.experiment_config["OBSERVATION_CONFIG"]["LANE_OBSERVATION"]:
             core.update_lane_invasion()
 
-
     def update_actions(self, action, hero):
+        # ToDO SA: These actions are not good, we should have incremental actions
+        #  (like current action = previous action + extra). This is absolutely necessary for realism.
+        #  (For example, command should be: Increase or decrease acceleration =>"throttle=Throttle+small_number
         if action is None:
             self.action = carla.VehicleControl()
         else:
             action = DISCRETE_ACTIONS[int(action)]
+            self.action.throttle = float(np.clip(action[0], 0, 1))
+            self.action.steer = float(np.clip(action[1], -0.7, 0.7))
             self.action.brake = float(np.clip(action[2], 0, 1))
-            if action[2] != 0.0:
-                self.action.throttle = float(0)
-            else:
-                self.action.throttle = float(np.clip(self.past_action.throttle + action[0], 0, 0.5))
-            self.action.steer = float(np.clip(self.past_action.steer + action[1], -0.7, 0.7))
             self.action.reverse = action[3]
             self.action.hand_brake = action[4]
-            self.past_action = self.action
-            self.hero.apply_control(self.action)
+            hero.apply_control(self.action)
+
+    # def update_actions(self, action, hero):
+    #     if action is None:
+    #         self.action = carla.VehicleControl()
+    #     else:
+    #         action = DISCRETE_ACTIONS[int(action)]
+    #         self.action.brake = float(np.clip(action[2], 0, 1))
+    #         if action[2] != 0.0:
+    #             self.action.throttle = float(0)
+    #         else:
+    #             self.action.throttle = float(np.clip(self.past_action.throttle + action[0], 0, 0.5))
+    #         self.action.steer = float(np.clip(self.past_action.steer + action[1], -0.7, 0.7))
+    #         self.action.reverse = action[3]
+    #         self.action.hand_brake = action[4]
+    #         self.past_action = self.action
+    #         self.hero.apply_control(self.action)
 
     def compute_reward(self, core, observation):
 
@@ -359,7 +360,7 @@ class BaseExperiment:
             self.hero = None
 
         i = 0
-        random.shuffle(self.spawn_points, random.random)
+        #random.shuffle(self.spawn_points, random.random)
         while True:
             next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
             self.hero = world.try_spawn_actor(self.hero_blueprints, next_spawn_point)
@@ -373,8 +374,8 @@ class BaseExperiment:
         print("Hero spawned!")
         self.start_location = self.spawn_points[i].location
         self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)
-        self.t_idle_start = self.timer_idle.time()
-        self.t_ep_start = self.timer_ep.time()
+        self.t_idle = 0
+        self.t_ep = 0
 
     def get_hero(self):
 
@@ -398,6 +399,8 @@ class BaseExperiment:
         """
 
         world.tick()
+        self.t_idle += 1
+        self.t_ep += 1
         self.update_measurements(core)
         self.update_actions(action, self.hero)
 

@@ -35,8 +35,8 @@ EXPERIMENT_CONFIG = {
     "SENSOR_CONFIG": SENSOR_CONFIG,
     "server_map": "Town02_Opt",
     "BIRDVIEW_CONFIG": BIRDVIEW_CONFIG,
-    "n_vehicles": 40,
-    "n_walkers": 15,
+    "n_vehicles": 0,
+    "n_walkers": 0,
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
 }
 
@@ -52,6 +52,7 @@ class Experiment(BaseExperiment):
         :return:
         """
         self.previous_distance = 0
+        self.i = 0
         self.frame_stack = 4  # can be 1,2,3,4
         self.prev_image_0 = None
         self.prev_image_1 = None
@@ -119,18 +120,34 @@ class Experiment(BaseExperiment):
 
         c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location.x) + \
                             np.square(self.hero.get_location().y - self.start_location.y)))
-        if self.observation["collision"] != False or not self.inside_lane(map):
-            reward = 0
-        elif c > self.previous_distance + 1e-2:
+
+        if c > self.previous_distance + 1e-2:
             reward = c - self.previous_distance
         else:
             reward = 0
+        self.start_location = self.hero.get_location()
+        self.previous_distance = 0
+        if self.done_max_time:
+            reward += 10
+            print("Mission accomplished for " + str(self.i) + "times! Increase max episode time!")
+            self.max_ep_time += 100 # ticks
+            self.i += 1
+        if self.done_falling:
+            reward += -3
+        if self.done_idle:
+            reward += -1
+        # if self.observation["collision"] != False or not self.inside_lane(map):
+        #     reward = 0
+        # elif c > self.previous_distance + 1e-2:
+        #     reward = c - self.previous_distance
+        # else:
+        #     reward = 0
 
-        if c > self.previous_distance + 1e-2: # to avoid car going in circle.
-            self.previous_distance = c
-        if c > 30: # to avoid losing points for getting closer to initial location
-            self.start_location = self.hero.get_location()
-            self.previous_distance = 0
+        # if c > self.previous_distance + 1e-2: # to avoid car going in circle.
+        #     self.previous_distance = c
+        # if c > 30: # to avoid losing points for getting closer to initial location
+        #     self.start_location = self.hero.get_location()
+        #     self.previous_distance = 0
         # if self.previous_distance < 15 and reward < 0:
         #     reward = 0
         #     print("avoid negative reward")

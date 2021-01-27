@@ -6,26 +6,32 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import gc
-import argparse
-import os
-import shutil
-
+import os, shutil
 import ray
-from ray.tune import run_experiments
-from ray.tune.trial import ExportFormat
-import tensorflow as tf
-
+from ray import tune
 from carla_env import CarlaEnv
+from ray.rllib.models.modelv2 import ModelV2
+from ray.rllib.models.catalog import ModelCatalog
+from ray.rllib.models.tf.fcnet import FullyConnectedNetwork
+from ray.tune import grid_search, run_experiments
+from ray.tune.trial import ExportFormat
 from helper.CarlaHelper import kill_server
+import tensorflow as tf
+import gc
+import time
+import argparse
 
+ENV_CONFIG = {"RAY": True, "DEBUG_MODE": False}  # Are we running an experiment in Ray
 
-env_config = {
+env_config = ENV_CONFIG.copy()
+env_config.update(
+    {
         "RAY": True,  # Are we running an experiment in Ray
         "DEBUG_MODE": False,
         "Experiment": "experiment2",
-}
 
+    }
+)
 
 def find_latest_checkpoint(args):
     """
@@ -48,9 +54,8 @@ def find_latest_checkpoint(args):
     if max_checkpoint == 0:
         print("Could not find any checkpoint, make sure that you have selected the correct folder path")
         raise IndexError
-    start += ("/"+max_f+"/"+max_g+"/"+max_g.replace("_", "-"))
+    start+=("/"+max_f+"/"+max_g+"/"+max_g.replace("_","-"))
     return start
-
 
 def run(args):
     try:
@@ -58,7 +63,7 @@ def run(args):
             checkpoint = find_latest_checkpoint(args)
         else:
             checkpoint = False
-        while True:
+        while (True):
             kill_server()
             tf.keras.backend.clear_session()
             ray.init()
@@ -75,8 +80,8 @@ def run(args):
                     "config": {
                         "env_config": env_config,
                         "num_gpus_per_worker": 0.5,
-                        "num_cpus_per_worker": 4,
-                        "num_workers": 2,
+                        "num_cpus_per_worker":4,
+                        "num_workers": 1,
                         "model": {
                             'dim': 190,
                             'conv_filters': [
@@ -103,7 +108,6 @@ def run(args):
     finally:
         kill_server()
         ray.shutdown()
-
 
 def main():
     argparser = argparse.ArgumentParser(
