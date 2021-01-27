@@ -78,6 +78,7 @@ def run(args):
                     "restore": checkpoint,
                     "export_formats": [ExportFormat.CHECKPOINT, ExportFormat.MODEL],
                     "config": {
+                        "framework" : "torch",
                         "env_config": env_config,
                         "num_gpus_per_worker": 0.5,
                         "num_cpus_per_worker":4,
