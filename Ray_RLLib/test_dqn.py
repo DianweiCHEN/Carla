@@ -76,7 +76,7 @@ def run(args):
                     "checkpoint_at_end" : True,
                     "local_dir": args.directory,
                     "restore": checkpoint,
-                    "export_formats": [ExportFormat.CHECKPOINT, ExportFormat.MODEL],
+                    #"export_formats": [ExportFormat.CHECKPOINT, ExportFormat.MODEL],
                     "config": {
                         "framework" : "torch",
                         "env_config": env_config,
