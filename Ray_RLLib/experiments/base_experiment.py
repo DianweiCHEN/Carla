@@ -89,10 +89,11 @@ DISCRETE_ACTIONS_SMALL = {
     7: [1.0, 0.30, 0.0, False, False],  # Left+Accelerate
     8: [1.0, 0.50, 0.0, False, False],  # Left+Accelerate
     9: [1.0, 0.70, 0.0, False, False],  # Left+Accelerate
-    10: [0.0, -0.70, 0.0, False, False],  # Left+Stop
-    11: [0.0, -0.23, 0.0, False, False],  # Left+Stop
-    12: [0.0, 0.23, 0.0, False, False],  # Right+Stop
-    13: [0.0, 0.70, 0.0, False, False],  # Right+Stop
+    10: [0.0, -0.70, 1.0, False, False],  # Left+Stop
+    11: [0.0, -0.23, 1.0, False, False],  # Left+Stop
+    12: [0.0, 0.23, 1.0, False, False],  # Right+Stop
+    13: [0.0, 0.70, 1.0, False, False],  # Right+Stop
+    14: [0.0, 0.00, 0.0, False, False],  # Coast
 }
 
 # DISCRETE_ACTIONS_SMALLER = {
@@ -290,7 +291,7 @@ class BaseExperiment:
             self.action = carla.VehicleControl()
         else:
             action = DISCRETE_ACTIONS[int(action)]
-            self.action.throttle = float(np.clip(action[0], 0, 1))
+            self.action.throttle = float(np.clip(action[0], 0, 0.7))
             self.action.steer = float(np.clip(action[1], -0.7, 0.7))
             self.action.brake = float(np.clip(action[2], 0, 1))
             self.action.reverse = action[3]
