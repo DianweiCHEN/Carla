@@ -89,10 +89,10 @@ DISCRETE_ACTIONS_SMALL = {
     7: [1.0, 0.30, 0.0, False, False],  # Left+Accelerate
     8: [1.0, 0.50, 0.0, False, False],  # Left+Accelerate
     9: [1.0, 0.70, 0.0, False, False],  # Left+Accelerate
-    10: [0.0, -0.70, 0.0, False, False],  # Left+Stop
-    11: [0.0, -0.23, 0.0, False, False],  # Left+Stop
-    12: [0.0, 0.23, 0.0, False, False],  # Right+Stop
-    13: [0.0, 0.70, 0.0, False, False],  # Right+Stop
+    10: [0.0, -0.70, 1.0, False, False],  # Left+Stop
+    11: [0.0, -0.23, 1.0, False, False],  # Left+Stop
+    12: [0.0, 0.23, 1.0, False, False],  # Right+Stop
+    13: [0.0, 0.70, 1.0, False, False],  # Right+Stop
 }
 
 # DISCRETE_ACTIONS_SMALLER = {
@@ -116,7 +116,7 @@ DISCRETE_ACTIONS_SMALLER = {
     4: [0.0, 0.00, 1.0, False, False], # Brake
 }
 
-DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALLER
+DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALL
 
 class CustomTimer:
     def __init__(self):
