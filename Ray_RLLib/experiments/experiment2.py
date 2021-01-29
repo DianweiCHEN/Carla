@@ -125,17 +125,16 @@ class Experiment(BaseExperiment):
             reward = c - self.previous_distance
         else:
             reward = 0
+
         self.start_location = self.hero.get_location()
         self.previous_distance = 0
         if self.done_max_time:
             reward += 10
-            print("Mission accomplished for " + str(self.i) + "times! Increase max episode time!")
-            self.max_ep_time += 100 # ticks
-            self.i += 1
         if self.done_falling:
             reward += -3
         if self.done_idle:
             reward += -1
+
         # if self.observation["collision"] != False or not self.inside_lane(map):
         #     reward = 0
         # elif c > self.previous_distance + 1e-2:

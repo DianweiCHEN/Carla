@@ -85,6 +85,7 @@ def run(args):
                 restore=checkpoint,
                 config={
                     "log_level": "DEBUG",
+                    "horizon": 2500
                     "learning_starts": 1000,
                     "buffer_size": 50000,
                     "env": CarlaEnv,
