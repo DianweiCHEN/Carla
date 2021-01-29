@@ -69,7 +69,7 @@ class Experiment(BaseExperiment):
                 self.experiment_config["BIRDVIEW_CONFIG"]["SIZE"],
                 num_of_channels * self.experiment_config["BIRDVIEW_CONFIG"]["FRAMESTACK"],
             ),
-            dtype=np.float32,
+            dtype=np.uint8,
         )
         self.observation_space = image_space
 

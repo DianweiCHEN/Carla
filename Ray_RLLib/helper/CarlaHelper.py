@@ -40,7 +40,7 @@ def post_process_image(image, normalized=True, grayscale=True):
     if normalized:
         return (image.astype(np.float32) - 128) / 128
     else:
-        return image.astype(np.float32)
+        return image.astype(np.uint8)
 
 
 def kill_server():

@@ -22,17 +22,7 @@ from helper.CarlaHelper import kill_server
 
 class CustomDQNTrainer(DQNTrainer):
     def save_checkpoint(self, checkpoint_dir):
-        print("Hello from save_checkpoint")
         checkpoint_path = super().save_checkpoint(checkpoint_dir)
-
-        # Add exploration metadata state
-        with open(checkpoint_path + ".exploration_metadata", "wb") as f:
-            exploration = self.get_policy().exploration
-            exploration_state = {
-                "last_timestep": exploration.last_timestep,
-                "cur_epsilon": exploration.get_info()["cur_epsilon"]
-            }
-            pickle.dump(exploration_state, f)
 
         model = self.get_policy().model
         torch.save({
@@ -85,10 +75,6 @@ def run(args):
         while True:
             kill_server()
             ray.init()
-            exploration_state = {"last_timestep": 0, "cur_epsilon": 1.0}
-            if checkpoint:
-                with open(checkpoint + ".exploration_metadata", "rb") as f:
-                    exploration_state = pickle.load(f)
             tune.run(
                 CustomDQNTrainer,
                 name=args.name,
@@ -99,14 +85,14 @@ def run(args):
                 restore=checkpoint,
                 config={
                     "log_level": "DEBUG",
-                    "learning_starts": 100,
-                    "buffer_size": 500,
+                    "learning_starts": 1000,
+                    "buffer_size": 50000,
                     "env": CarlaEnv,
                     "env_config": env_config,
                     "framework": "torch",
-                    "num_gpus_per_worker": 0.25,
-                    "num_cpus_per_worker": 3,
-                    "num_workers": 15,
+                    "num_gpus_per_worker": 0.2,
+                    "num_cpus_per_worker": 2,
+                    "num_workers": 20,
                     "timesteps_per_iteration": 5000,
                     "exploration_config": {
                         "type": "EpsilonGreedy",
