@@ -121,7 +121,7 @@ class Experiment(BaseExperiment):
         c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location.x) + \
                             np.square(self.hero.get_location().y - self.start_location.y)))
 
-        if c > self.previous_distance + 1e-2 and not self.inside_lane(map):
+        if c > self.previous_distance + 1e-2 and self.inside_lane(map):
             reward = c - self.previous_distance
         else:
             reward = 0
