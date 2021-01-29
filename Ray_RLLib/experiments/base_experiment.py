@@ -79,43 +79,20 @@ BASE_EXPERIMENT_CONFIG = {
 }
 
 DISCRETE_ACTIONS_SMALL = {
-    0: [0.0, 0.00, 1.0, False, False],  # Apply Break
-    1: [1.0, 0.00, 0.0, False, False],  # Straight
-    2: [1.0, -0.70, 0.0, False, False],  # Right + Accelerate
-    3: [1.0, -0.50, 0.0, False, False],  # Right + Accelerate
-    4: [1.0, -0.30, 0.0, False, False],  # Right + Accelerate
-    5: [1.0, -0.10, 0.0, False, False],  # Right + Accelerate
-    6: [1.0, 0.10, 0.0, False, False],  # Left+Accelerate
-    7: [1.0, 0.30, 0.0, False, False],  # Left+Accelerate
-    8: [1.0, 0.50, 0.0, False, False],  # Left+Accelerate
-    9: [1.0, 0.70, 0.0, False, False],  # Left+Accelerate
-    10: [0.0, -0.70, 1.0, False, False],  # Left+Stop
-    11: [0.0, -0.23, 1.0, False, False],  # Left+Stop
-    12: [0.0, 0.23, 1.0, False, False],  # Right+Stop
-    13: [0.0, 0.70, 1.0, False, False],  # Right+Stop
-    14: [0.0, 0.00, 0.0, False, False],  # Coast
+    0: [0.0, 0.00, 0.0, False, False],  # Coast
+    1: [0.0, 0.00, 0.75, False, False],  # Apply Break
+    2: [0.50, 0.00, 0.0, False, False],  # Straight
+    3: [0.25, 0.00, 0.0, False, False],  # Straight
+    4: [0.0, 0.75, 0.0, False, False],  # Right
+    5: [0.0, 0.50, 0.0, False, False],  # Right
+    6: [0.0, -0.50, 0.0, False, False],  # Left
+    7: [0.0, -0.75, 0.0, False, False],  # Left
+    8: [0.25, 0.75, 0.0, False, False],  # Right + Accelerate
+    9: [0.25, 0.50, 0.0, False, False],  # Right + Accelerate
+    10: [0.25, -0.50, 0.0, False, False],  # Left + Accelerate
+    11: [0.25, -0.75, 0.0, False, False],  # Left + Accelerate
 }
 
-# DISCRETE_ACTIONS_SMALLER = {
-#     0: [0.0, 0.00, 0.0, False, False], # Coast
-#     1: [0.0, -0.15, 0.0, False, False], # Turn Left
-#     2: [0.0, 0.15, 0.0, False, False], # Turn Right
-#     3: [0.2, 0.00, 0.0, False, False], # Accelerate
-#     4: [-0.3, 0.00, 0.0, False, False], # Decelerate
-#     5: [0.0, 0.00, 1.0, False, False], # Brake
-#     6: [0.2, 0.15, 0.0, False, False], # Turn Right + Accelerate
-#     7: [0.2, -0.15, 0.0, False, False], # Turn Left + Accelerate
-#     8: [-0.3, 0.10, 0.0, False, False], # Turn Right + Decelerate
-#     9: [-0.3, -0.15, 0.0, False, False], # Turn Left + Decelerate
-# }
-
-DISCRETE_ACTIONS_SMALLER = {
-    0: [0.0, 0.00, 0.0, False, False], # Coast
-    1: [0.0, -0.1, 0.0, False, False], # Turn Left
-    2: [0.0, 0.1, 0.0, False, False], # Turn Right
-    3: [1.0, 0.00, 0.0, False, False], # Accelerate
-    4: [0.0, 0.00, 1.0, False, False], # Brake
-}
 
 DISCRETE_ACTIONS = DISCRETE_ACTIONS_SMALL
 
@@ -284,35 +261,16 @@ class BaseExperiment:
             core.update_lane_invasion()
 
     def update_actions(self, action, hero):
-        # ToDO SA: These actions are not good, we should have incremental actions
-        #  (like current action = previous action + extra). This is absolutely necessary for realism.
-        #  (For example, command should be: Increase or decrease acceleration =>"throttle=Throttle+small_number
         if action is None:
             self.action = carla.VehicleControl()
         else:
             action = DISCRETE_ACTIONS[int(action)]
-            self.action.throttle = float(np.clip(action[0], 0, 0.7))
-            self.action.steer = float(np.clip(action[1], -0.7, 0.7))
-            self.action.brake = float(np.clip(action[2], 0, 1))
+            self.action.throttle = action[0]
+            self.action.steer = action[1]
+            self.action.brake = action[2]
             self.action.reverse = action[3]
             self.action.hand_brake = action[4]
             hero.apply_control(self.action)
-
-    # def update_actions(self, action, hero):
-    #     if action is None:
-    #         self.action = carla.VehicleControl()
-    #     else:
-    #         action = DISCRETE_ACTIONS[int(action)]
-    #         self.action.brake = float(np.clip(action[2], 0, 1))
-    #         if action[2] != 0.0:
-    #             self.action.throttle = float(0)
-    #         else:
-    #             self.action.throttle = float(np.clip(self.past_action.throttle + action[0], 0, 0.5))
-    #         self.action.steer = float(np.clip(self.past_action.steer + action[1], -0.7, 0.7))
-    #         self.action.reverse = action[3]
-    #         self.action.hand_brake = action[4]
-    #         self.past_action = self.action
-    #         self.hero.apply_control(self.action)
 
     def compute_reward(self, core, observation):
 
