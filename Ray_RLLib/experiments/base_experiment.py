@@ -80,17 +80,17 @@ BASE_EXPERIMENT_CONFIG = {
 
 DISCRETE_ACTIONS_SMALL = {
     0: [0.0, 0.00, 0.0, False, False],  # Coast
-    1: [0.0, 0.00, 0.75, False, False],  # Apply Break
-    2: [0.50, 0.00, 0.0, False, False],  # Straight
-    3: [0.25, 0.00, 0.0, False, False],  # Straight
+    1: [0.0, 0.00, 1.0, False, False],  # Apply Break
+    2: [0.6, 0.00, 0.0, False, False],  # Straight
+    3: [0.3, 0.00, 0.0, False, False],  # Straight
     4: [0.0, 0.75, 0.0, False, False],  # Right
     5: [0.0, 0.50, 0.0, False, False],  # Right
     6: [0.0, -0.50, 0.0, False, False],  # Left
     7: [0.0, -0.75, 0.0, False, False],  # Left
-    8: [0.25, 0.75, 0.0, False, False],  # Right + Accelerate
-    9: [0.25, 0.50, 0.0, False, False],  # Right + Accelerate
-    10: [0.25, -0.50, 0.0, False, False],  # Left + Accelerate
-    11: [0.25, -0.75, 0.0, False, False],  # Left + Accelerate
+    8: [0.3, 0.75, 0.0, False, False],  # Right + Accelerate
+    9: [0.3, 0.50, 0.0, False, False],  # Right + Accelerate
+    10: [0.3, -0.50, 0.0, False, False],  # Left + Accelerate
+    11: [0.3, -0.75, 0.0, False, False],  # Left + Accelerate
 }
 
 
@@ -115,8 +115,8 @@ class BaseExperiment:
         self.hero_model = ''.join(self.experiment_config["hero_vehicle_model"])
         self.set_observation_space()
         self.set_action_space()
-        self.max_idle = 400 # ticks
-        self.max_ep_time = 1200 # ticks
+        self.max_idle = 600 # ticks
+        self.max_ep_time = 3200 # ticks
         self.t_idle = None
         self.t_ep = None
 
