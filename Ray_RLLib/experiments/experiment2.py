@@ -136,6 +136,7 @@ class Experiment(BaseExperiment):
 
         if c > self.previous_distance + 1e-2:
             reward = m*(c - self.previous_distance)
+            self.previous_distance = c
         else:
             reward = 0
 
@@ -155,11 +156,9 @@ class Experiment(BaseExperiment):
         # else:
         #     reward = 0
 
-        # if c > self.previous_distance + 1e-2: # to avoid car going in circle.
-        #     self.previous_distance = c
-        # if c > 30: # to avoid losing points for getting closer to initial location
-        #     self.start_location = self.hero.get_location()
-        #     self.previous_distance = 0
+        if c > 30: # to avoid losing points for getting closer to initial location
+            self.start_location = self.hero.get_location()
+            self.previous_distance = 0
         # if self.previous_distance < 15 and reward < 0:
         #     reward = 0
         #     print("avoid negative reward")
