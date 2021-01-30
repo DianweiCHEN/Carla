@@ -193,7 +193,7 @@ class BaseExperiment:
     def get_done_status(self):
         #done = self.observation["collision"] is not False or not self.check_lane_type(map)
         self.done_idle = self.max_idle < self.t_idle
-        if self.get_speed() > 4.0:
+        if self.get_speed() > 2.0:
             self.t_idle = 0
         self.done_max_time = self.max_ep_time < self.t_ep
         self.done_falling = self.hero.get_location().z < -0.5

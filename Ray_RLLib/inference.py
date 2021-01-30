@@ -23,6 +23,7 @@ def main(args):
         del config["num_cpus_per_worker"]
         del config["num_gpus_per_worker"]
         config["num_workers"] = 0
+        config["explore"] = False
 
     # Restore agent
     agent = DQNTrainer(env=CarlaEnv, config=config)

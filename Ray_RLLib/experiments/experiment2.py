@@ -110,6 +110,12 @@ class Experiment(BaseExperiment):
         self.current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
         return self.current_w.lane_type in self.allowed_types
 
+    def dist_to_driving_lane(self, map_):
+        cur_loc = self.hero.get_location()
+        cur_w = map_.get_waypoint(cur_loc)
+        return math.sqrt((cur_loc.x - cur_w.transform.location.x)**2 +
+                         (cur_loc.y - cur_w.transform.location.y)**2)
+
     def compute_reward(self, core, observation, map):
         """
         Reward function
@@ -121,8 +127,15 @@ class Experiment(BaseExperiment):
         c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location.x) + \
                             np.square(self.hero.get_location().y - self.start_location.y)))
 
-        if c > self.previous_distance + 1e-2 and self.inside_lane(map):
-            reward = c - self.previous_distance
+        d = self.dist_to_driving_lane(map)
+        Dmin, Dmax = 5, 25
+        if d < Dmin:
+            m = 1
+        else:
+            m = max((d - Dmax) / (Dmin - Dmax), 0)
+
+        if c > self.previous_distance + 1e-2:
+            reward = m*(c - self.previous_distance)
         else:
             reward = 0
 
