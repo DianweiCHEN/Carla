@@ -101,7 +101,7 @@ def run(args):
                     "rollout_fragment_length": 16,
                     "exploration_config": {
                         "type": "EpsilonGreedy",
-                        "initial_epsilon": 1.0,
+                        "initial_epsilon": 0.7,
                         "final_epsilon": 0.02,
                         "epsilon_timesteps": 1000000
                     },
