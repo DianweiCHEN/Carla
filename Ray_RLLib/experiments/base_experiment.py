@@ -82,15 +82,15 @@ DISCRETE_ACTIONS_SMALL = {
     0: [0.0, 0.00, 0.0, False, False],  # Coast
     1: [0.0, 0.00, 1.0, False, False],  # Apply Break
     2: [0.6, 0.00, 0.0, False, False],  # Straight
-    3: [0.3, 0.00, 0.0, False, False],  # Straight
-    4: [0.0, 0.75, 0.0, False, False],  # Right
-    5: [0.0, 0.50, 0.0, False, False],  # Right
-    6: [0.0, -0.50, 0.0, False, False],  # Left
-    7: [0.0, -0.75, 0.0, False, False],  # Left
-    8: [0.3, 0.75, 0.0, False, False],  # Right + Accelerate
-    9: [0.3, 0.50, 0.0, False, False],  # Right + Accelerate
-    10: [0.3, -0.50, 0.0, False, False],  # Left + Accelerate
-    11: [0.3, -0.75, 0.0, False, False],  # Left + Accelerate
+    #3: [0.3, 0.00, 0.0, False, False],  # Straight
+    # 4: [0.0, 0.75, 0.0, False, False],  # Right
+    # 5: [0.0, 0.50, 0.0, False, False],  # Right
+    # 6: [0.0, -0.50, 0.0, False, False],  # Left
+    # 7: [0.0, -0.75, 0.0, False, False],  # Left
+    3: [0.6, 0.75, 0.0, False, False],  # Right + Accelerate
+    4: [0.6, 0.50, 0.0, False, False],  # Right + Accelerate
+    5: [0.6, -0.50, 0.0, False, False],  # Left + Accelerate
+    6: [0.6, -0.75, 0.0, False, False],  # Left + Accelerate
 }
 
 
@@ -125,6 +125,7 @@ class BaseExperiment:
         self.done_idle = False
         self.done_max_time = False
         self.done_falling = False
+        self.done_route = False
 
     def get_experiment_config(self):
 

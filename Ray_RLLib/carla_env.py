@@ -52,7 +52,7 @@ class CarlaEnv(gym.Env):
         self.experiment.experiment_tick(self.core, self.world, action)
         observation, info = self.experiment.get_observation(self.core)
         observation = self.experiment.process_observation(self.core, observation)
-        reward = self.experiment.compute_reward(self.core,observation, self.map, action)
+        reward = self.experiment.compute_reward(self.core,observation, self.map, self.world)
         done = self.experiment.get_done_status()
         return observation, reward, done, info
 
