@@ -25,7 +25,7 @@ import logging
 CORE_CONFIG = {
     "RAY_DELAY": 1,  # Delay between 0 & RAY_DELAY before starting server so not all servers are launched simultaneously
     "RETRIES_ON_ERROR": 30,
-    "timeout": 10.0,
+    "timeout": 60.0,
     "host": "localhost",
     "map_buffer": 1.2,  # To find the minimum and maximum coordinates of the map
                }
@@ -259,7 +259,7 @@ class CarlaCore:
     # -- SensorSetup -----------------------------------------------------------
     # ==============================================================================
 
-    def setup_sensors(self, experiment_config, hero, synchronous_mode=True):
+    def setup_sensors(self, experiment_config, hero, route=[], synchronous_mode=True):
         """
         This function sets up hero vehicle sensors
 
@@ -304,7 +304,7 @@ class CarlaCore:
             size = experiment_config["BIRDVIEW_CONFIG"]["SIZE"]
             radius = experiment_config["BIRDVIEW_CONFIG"]["RADIUS"]
             self.birdview_sensor = BirdviewManager(
-                self.world, size, radius, hero, synchronous_mode=synchronous_mode
+                self.world, size, radius, hero, route, synchronous_mode=synchronous_mode
             )
 
     def reset_sensors(self, experiment_config):

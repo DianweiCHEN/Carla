@@ -120,6 +120,8 @@ class BaseExperiment:
         self.t_idle = None
         self.t_ep = None
 
+        self.route = []
+
         self.done_idle = False
         self.done_max_time = False
         self.done_falling = False
@@ -319,7 +321,7 @@ class BaseExperiment:
             self.hero = None
 
         i = 0
-        #random.shuffle(self.spawn_points, random.random)
+        random.shuffle(self.spawn_points, random.random)
         while True:
             next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
             self.hero = world.try_spawn_actor(self.hero_blueprints, next_spawn_point)
@@ -343,6 +345,26 @@ class BaseExperiment:
         :return:
         """
         return self.hero
+
+    def compute_route(self, hero, map_):
+        D = 100
+        d = 5
+
+        wp = map_.get_waypoint(hero.get_location())
+        route, route_dist = [wp], 0.0
+        while route_dist < D:
+            next_wp = random.choice(wp.next(d))
+            route_dist += math.sqrt(
+                (wp.transform.location.x - next_wp.transform.location.x)**2 +
+                (wp.transform.location.y - next_wp.transform.location.y)**2
+            )
+            wp = next_wp
+            route.append(wp)
+
+        self.route = route
+
+    def get_route(self):
+        return self.route
 
     # ==============================================================================
     # -- Tick -----------------------------------------------------------

@@ -86,6 +86,8 @@ COLOR_ALUMINIUM_5 = pygame.Color(46, 52, 54)
 COLOR_WHITE = pygame.Color(255, 255, 255)
 COLOR_BLACK = pygame.Color(0, 0, 0)
 
+COLOR_PURPLE = pygame.Color(186, 85, 211)
+
 # ==============================================================================
 # -- MapImage ------------------------------------------------------------------
 # ==============================================================================
@@ -472,18 +474,21 @@ class MapImage(object):
 class BirdviewSensor(object):
     """Class that contains all the information of the carla world (in the form of pygame surfaces)"""
 
-    def __init__(self, world, size, radius, hero):
+    def __init__(self, world, size, radius, hero, route):
         self.world = world
         self.town_map = self.world.get_map()
         self.radius = radius
 
         self.hero_transform = hero.get_transform()
+        self.route = route
         self.pixels_per_meter = size / (2* self.radius)
         self.map_image = MapImage(self.world, self.town_map, self.pixels_per_meter)
 
         # Create the 'info' surfaces
         self.map_surface = self.map_image.surface  # Static elements
         map_surface_size = self.map_surface.get_width()
+        self.route_surface = pygame.Surface((map_surface_size, map_surface_size))  # Route
+        self.route_surface.set_colorkey(COLOR_BLACK)  # Treat COLOR_BLACK pixels as transparent
         self.actors_surface = pygame.Surface((map_surface_size, map_surface_size))  # Scene actors
         self.actors_surface.set_colorkey(COLOR_BLACK)  # Treat COLOR_BLACK pixels as transparent
         self.result_surface = pygame.Surface((map_surface_size, map_surface_size))  # Union of the previous two
@@ -607,6 +612,13 @@ class BirdviewSensor(object):
         self._render_vehicles(surface, vehicles)
         self._render_walkers(surface, walkers)
 
+    def render_route(self, surface, route):
+        """Renders route"""
+        for wp in route:
+            pos = self.map_image.world_to_pixel(wp.transform.location)
+            radius = self.map_image.world_to_pixel_width(0.7)
+            pygame.draw.circle(surface, COLOR_PURPLE, (pos[0], pos[1]), radius)
+
     def get_data(self):
         """Renders the map and all the actors in hero and map mode"""
 
@@ -619,6 +631,8 @@ class BirdviewSensor(object):
 
         # Render the actors
         self.render_actors(self.actors_surface, angle)
+        # Render the route
+        self.render_route(self.route_surface, self.route)
 
         # Get a point in front of the ego vehicle. It will act as the center of the resulting image.
         # Then clip the surfaces to render only the visible parts, improving perfomance.
@@ -631,11 +645,13 @@ class BirdviewSensor(object):
 
         self.map_surface.set_clip(clipping_rect)
         self.actors_surface.set_clip(clipping_rect)
+        self.route_surface.set_clip(clipping_rect)
         self.result_surface.set_clip(clipping_rect)
 
         # Join map and actor surface
         self.result_surface.blit(self.map_surface, (0, 0))
         self.result_surface.blit(self.actors_surface, (0, 0))
+        self.result_surface.blit(self.route_surface, (0, 0))
 
         # Translate it to make the surface egocentric
         self.hero_surface.blit(self.result_surface, (-offset[0], -offset[1]))
@@ -672,7 +688,7 @@ class BirdviewManager(object):
     version of CARLA's non rendering mode.
     """
 
-    def __init__(self, world, size, radius, parent_actor, synchronous_mode=True, timeout=2.0):
+    def __init__(self, world, size, radius, parent_actor, route=[], synchronous_mode=True, timeout=2.0):
         pygame.init()
         self.world = world
         self.synchronous_mode = synchronous_mode
@@ -687,7 +703,7 @@ class BirdviewManager(object):
             self.birdview_data = queue.Queue()
 
         # Get the sensor instance and run it
-        self.sensor = BirdviewSensor(world, size, radius, parent_actor)
+        self.sensor = BirdviewSensor(world, size, radius, parent_actor, route)
         self.run()
 
     @threaded
