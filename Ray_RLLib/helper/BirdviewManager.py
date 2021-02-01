@@ -477,7 +477,8 @@ class BirdviewSensor(object):
         self.town_map = self.world.get_map()
         self.radius = radius
 
-        self.hero_transform = hero.get_transform()
+        self.hero = hero
+        self.hero_transform = self.hero.get_transform()
         self.pixels_per_meter = size / (2* self.radius)
         self.map_image = MapImage(self.world, self.town_map, self.pixels_per_meter)
 
@@ -609,11 +610,11 @@ class BirdviewSensor(object):
 
     def get_data(self):
         """Renders the map and all the actors in hero and map mode"""
-
+        self.hero_transform = self.hero.get_transform()
         # Together with pygame.Surface.set_colorkey, makes their background transparent
         self.result_surface.fill(COLOR_BLACK)
         self.actors_surface.fill(COLOR_BLACK)
-
+        self.route_surface.fill(COLOR_BLACK)
         # Angle on with to rotate to make the view egocentric
         angle = self.hero_transform.rotation.yaw + 90.0
 
