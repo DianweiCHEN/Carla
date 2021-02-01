@@ -83,7 +83,6 @@ def run(args):
                 restore=checkpoint,
                 config={
                     "batch_mode": "complete_episodes",
-                    "log_level": "DEBUG",
                     "horizon": 3200,
                     "learning_starts": 15000,
                     "buffer_size": 20000,
@@ -100,6 +99,7 @@ def run(args):
                     "exploration_config": {
                         "type": "ParameterNoise",
                     },
+                    "hiddens": [256, 512],
                     "model": {
                         'dim': 300,
                         'conv_filters': [
@@ -111,7 +111,6 @@ def run(args):
                             [128, [5, 5], 2],
                             [512, [5, 5], 1],
                         ],
-                        'fcnet_hiddens': [256, 512]
                     },
                 },
             )
