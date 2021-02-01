@@ -113,8 +113,8 @@ class Experiment(BaseExperiment):
     def dist_to_driving_lane(self, map_):
         cur_loc = self.hero.get_location()
         self.current_w = map_.get_waypoint(cur_loc)
-        return math.sqrt((cur_loc.x - cur_w.transform.location.x)**2 +
-                         (cur_loc.y - cur_w.transform.location.y)**2)
+        return math.sqrt((cur_loc.x - self.current_w.transform.location.x)**2 +
+                         (cur_loc.y - self.current_w.transform.location.y)**2)
 
     def get_done_status(self):
         #done = self.observation["collision"] is not False or not self.check_lane_type(map)
