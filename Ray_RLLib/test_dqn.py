@@ -25,9 +25,7 @@ class CustomDQNTrainer(DQNTrainer):
         checkpoint_path = super().save_checkpoint(checkpoint_dir)
 
         model = self.get_policy().model
-        torch.save({
-            "model_state_dict": model.state_dict(),
-        }, os.path.join(checkpoint_dir, "checkpoint.pth"))
+        torch.save(model.state_dict(), os.path.join(checkpoint_dir, "checkpoint_state_dict.pth"))
 
         return checkpoint_path
 
