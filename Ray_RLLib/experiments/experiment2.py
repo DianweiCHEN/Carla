@@ -144,7 +144,7 @@ class Experiment(BaseExperiment):
             m = max((d - Dmax) / (Dmin - Dmax), 0)
 
         if c > self.previous_distance + 1e-2:
-            if self.inside_lane(map) and self.current_w.is_junction():
+            if self.inside_lane(map) and self.current_w.is_junction:
                 m=m*10
             reward = m*(c - self.previous_distance)
             self.previous_distance = c
