@@ -614,7 +614,7 @@ class BirdviewSensor(object):
         # Together with pygame.Surface.set_colorkey, makes their background transparent
         self.result_surface.fill(COLOR_BLACK)
         self.actors_surface.fill(COLOR_BLACK)
-        self.route_surface.fill(COLOR_BLACK)
+
         # Angle on with to rotate to make the view egocentric
         angle = self.hero_transform.rotation.yaw + 90.0
 

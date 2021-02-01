@@ -112,9 +112,18 @@ class Experiment(BaseExperiment):
 
     def dist_to_driving_lane(self, map_):
         cur_loc = self.hero.get_location()
-        cur_w = map_.get_waypoint(cur_loc)
+        self.current_w = map_.get_waypoint(cur_loc)
         return math.sqrt((cur_loc.x - cur_w.transform.location.x)**2 +
                          (cur_loc.y - cur_w.transform.location.y)**2)
+
+    def get_done_status(self):
+        #done = self.observation["collision"] is not False or not self.check_lane_type(map)
+        self.done_idle = self.max_idle < self.t_idle
+        if self.get_speed() > 2.0:
+            self.t_idle = 0
+        self.done_max_time = self.max_ep_time < self.t_ep
+        self.done_falling = self.hero.get_location().z < -0.5
+        return self.done_idle or self.done_max_time or self.done_falling
 
     def compute_reward(self, core, observation, map):
         """
@@ -135,6 +144,8 @@ class Experiment(BaseExperiment):
             m = max((d - Dmax) / (Dmin - Dmax), 0)
 
         if c > self.previous_distance + 1e-2:
+            if self.inside_lane(map) and self.current_w.is_junction():
+                m=m*10
             reward = m*(c - self.previous_distance)
             self.previous_distance = c
         else:
@@ -143,10 +154,13 @@ class Experiment(BaseExperiment):
         self.start_location = self.hero.get_location()
         self.previous_distance = 0
         if self.done_max_time:
+            print("Done by max time")
             reward += 10
         if self.done_falling:
+            print("Done falling")
             reward += -3
         if self.done_idle:
+            print("Done idle")
             reward += -1
 
         # if self.observation["collision"] != False or not self.inside_lane(map):

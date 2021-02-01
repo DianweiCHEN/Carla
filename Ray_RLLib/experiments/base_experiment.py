@@ -116,7 +116,7 @@ class BaseExperiment:
         self.set_observation_space()
         self.set_action_space()
         self.max_idle = 600 # ticks
-        self.max_ep_time = 3200 # ticks
+        self.max_ep_time = 4000 # ticks
         self.t_idle = None
         self.t_ep = None
 
@@ -189,15 +189,6 @@ class BaseExperiment:
         """
         vel = self.hero.get_velocity()
         return 3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
-
-    def get_done_status(self):
-        #done = self.observation["collision"] is not False or not self.check_lane_type(map)
-        self.done_idle = self.max_idle < self.t_idle
-        if self.get_speed() > 2.0:
-            self.t_idle = 0
-        self.done_max_time = self.max_ep_time < self.t_ep
-        self.done_falling = self.hero.get_location().z < -0.5
-        return self.done_idle or self.done_max_time or self.done_falling
 
     def process_observation(self, core, observation):
 
