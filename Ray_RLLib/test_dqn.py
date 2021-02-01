@@ -98,10 +98,7 @@ def run(args):
                     "train_batch_size": 160, ## higher -> more calculations
                     "rollout_fragment_length": 16,
                     "exploration_config": {
-                        "type": "EpsilonGreedy",
-                        "initial_epsilon": 0.7,
-                        "final_epsilon": 0.02,
-                        "epsilon_timesteps": 1000000
+                        "type": "ParameterNoise",
                     },
                     "model": {
                         'dim': 300,
@@ -114,6 +111,7 @@ def run(args):
                             [128, [5, 5], 2],
                             [512, [5, 5], 1],
                         ],
+                        'fcnet_hiddens': [256, 512]
                     },
                 },
             )
