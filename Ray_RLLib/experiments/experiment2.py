@@ -19,7 +19,7 @@ SENSOR_CONFIG = {
 }
 
 BIRDVIEW_CONFIG = {
-    "SIZE": 190,
+    "SIZE": 300,
     "RADIUS": 15,
     "FRAMESTACK": 4
 }
@@ -33,7 +33,7 @@ EXPERIMENT_CONFIG = {
     "OBSERVATION_CONFIG": OBSERVATION_CONFIG,
     "Server_View": SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": SENSOR_CONFIG,
-    "server_map": "Town02_Opt",
+    "server_map": "Town05_Opt",
     "BIRDVIEW_CONFIG": BIRDVIEW_CONFIG,
     "n_vehicles": 0,
     "n_walkers": 0,
@@ -51,7 +51,8 @@ class Experiment(BaseExperiment):
         :param core:
         :return:
         """
-        self.previous_distance = 0
+        self.last_location = self.start_location
+        self.last_velocity = self.get_speed()
         self.i = 0
         self.frame_stack = 4  # can be 1,2,3,4
         self.prev_image_0 = None
@@ -106,9 +107,8 @@ class Experiment(BaseExperiment):
 
         return images
 
-    def inside_lane(self, map):
-        self.current_w = map.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
-        return self.current_w.lane_type in self.allowed_types
+    def inside_lane(self, waypoint):
+        return waypoint.lane_type in self.allowed_types
 
     def dist_to_driving_lane(self, map_):
         cur_loc = self.hero.get_location()
@@ -116,16 +116,7 @@ class Experiment(BaseExperiment):
         return math.sqrt((cur_loc.x - self.current_w.transform.location.x)**2 +
                          (cur_loc.y - self.current_w.transform.location.y)**2)
 
-    def get_done_status(self):
-        #done = self.observation["collision"] is not False or not self.check_lane_type(map)
-        self.done_idle = self.max_idle < self.t_idle
-        if self.get_speed() > 2.0:
-            self.t_idle = 0
-        self.done_max_time = self.max_ep_time < self.t_ep
-        self.done_falling = self.hero.get_location().z < -0.5
-        return self.done_idle or self.done_max_time or self.done_falling
-
-    def compute_reward(self, core, observation, map):
+    def compute_reward(self, core, observation, map_):
         """
         Reward function
         :param observation:
@@ -133,29 +124,61 @@ class Experiment(BaseExperiment):
         :return:
         """
 
-        c = float(np.sqrt(np.square(self.hero.get_location().x - self.start_location.x) + \
-                            np.square(self.hero.get_location().y - self.start_location.y)))
+        def unit_vector(vector):
+            return vector / np.linalg.norm(vector)
+        def compute_angle(u, v):
+            return -math.atan2(u[0]*v[1] - u[1]*v[0], u[0]*v[0] + u[1]*v[1])
 
-        d = self.dist_to_driving_lane(map)
-        Dmin, Dmax = 5, 25
-        if d < Dmin:
-            m = 1
-        else:
-            m = max((d - Dmax) / (Dmin - Dmax), 0)
+        # Hero-related variables
+        hero_waypoint = self.find_current_waypoint(map_)
+        hero_location = self.hero.get_location()
+        hero_velocity = self.get_speed()
+        hero_heading = self.hero.get_transform().get_forward_vector()
+        hero_heading = [hero_heading.x, hero_heading.y]
+        wp_heading = hero_waypoint.transform.get_forward_vector()
+        wp_heading = [wp_heading.x, wp_heading.y]
+        hero_to_wp = unit_vector([
+            hero_waypoint.transform.location.x - hero_location.x,
+            hero_waypoint.transform.location.y - hero_location.y
+        ])
 
-        if c > self.previous_distance + 1e-2:
-            if self.inside_lane(map) and self.current_w.is_junction:
-                m=m*10
-            reward = m*(c - self.previous_distance)
-            self.previous_distance = c
-        else:
-            reward = 0
+        # Compute deltas
+        delta_distance = float(np.sqrt(np.square(hero_location.x - self.last_location.x) + \
+                            np.square(hero_location.y - self.last_location.y)))
+        delta_velocity = hero_velocity - self.last_velocity
+        dot_product = np.dot(hero_heading, wp_heading)
+        angle = compute_angle(hero_heading, hero_to_wp)
 
-        self.start_location = self.hero.get_location()
-        self.previous_distance = 0
-        if self.done_max_time:
-            print("Done by max time")
-            reward += 10
+        # Update varibles
+        self.last_location = hero_location
+        self.last_velocity = hero_velocity
+
+        # Calculate reward
+        reward = 0
+
+        # Reward if going forward
+        if delta_distance > 0:
+            reward += 10*delta_distance
+
+        # Reward if going faster than last step
+        reward += 0.05 * delta_velocity
+
+        # Penalize if not inside the lane
+        if not self.inside_lane(hero_waypoint):
+            reward += -0.5
+
+        if dot_product < 0.0 and not(hero_waypoint.is_junction):
+            reward += -0.5
+
+        # if abs(math.sin(angle)) < 0.7:
+        #     print("Estamos alineados ---> +1")
+        #     reward += 1
+        # else:
+        #     print("NO estamos alineados")
+        #     if self.action.steer * math.sin(angle) < 0:
+        #         print("Corrigiendo direction: {} -----> +1".format(self.action.steer))
+        #         reward += 0.5
+
         if self.done_falling:
             print("Done falling")
             reward += -3
@@ -163,18 +186,5 @@ class Experiment(BaseExperiment):
             print("Done idle")
             reward += -1
 
-        # if self.observation["collision"] != False or not self.inside_lane(map):
-        #     reward = 0
-        # elif c > self.previous_distance + 1e-2:
-        #     reward = c - self.previous_distance
-        # else:
-        #     reward = 0
-
-        if c > 30: # to avoid losing points for getting closer to initial location
-            self.start_location = self.hero.get_location()
-            self.previous_distance = 0
-        # if self.previous_distance < 15 and reward < 0:
-        #     reward = 0
-        #     print("avoid negative reward")
         return reward
 

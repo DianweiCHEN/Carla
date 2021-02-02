@@ -25,10 +25,7 @@ class CustomDQNTrainer(DQNTrainer):
         checkpoint_path = super().save_checkpoint(checkpoint_dir)
 
         model = self.get_policy().model
-        torch.save({
-            "model_state_dict": model.state_dict(),
-        }, os.path.join(checkpoint_dir, "checkpoint.pth"))
-
+        torch.save(model.state_dict(), os.path.join(checkpoint_dir, "checkpoint_state_dict.pth"))
         return checkpoint_path
 
 
@@ -85,38 +82,35 @@ def run(args):
                 restore=checkpoint,
                 config={
                     "batch_mode": "complete_episodes",
-                    "log_level": "DEBUG",
-                    "horizon": 3200,
                     "learning_starts": 15000,
                     "buffer_size": 20000,
                     "env": CarlaEnv,
                     "env_config": env_config,
                     "framework": "torch",
-                    "num_gpus_per_worker": 0.2,
-                    "num_cpus_per_worker": 2,
-                    "num_workers": 20,
+                    "num_gpus_per_worker": 0.4,
+                    "num_cpus_per_worker": 4,
+                    "num_workers": 8,
                     "timesteps_per_iteration": 15000,
                     "lr": 5e-3,
                     "train_batch_size": 160, ## higher -> more calculations
                     "rollout_fragment_length": 16,
+                    "hiddens": [256, 512],
                     "exploration_config": {
-                        "type": "EpsilonGreedy",
-                        "initial_epsilon": 1.0,
-                        "final_epsilon": 0.02,
-                        "epsilon_timesteps": 1000000
+                        "type": "ParameterNoise",
+                        "random_timesteps" : 30000,
+                        #"final_epsilon": 0.02,
+                        #"epsilon_timesteps": 1000000
                     },
                     "model": {
-                        'dim': 190,
+                        'dim': 300,
                         'conv_filters': [
-                            [16, [7, 7], 2],
-                            [16, [7, 7], 1],
-                            [32, [7, 7], 2],
-                            [32, [7, 7], 1],
-                            [64, [7, 7], 2],
-                            [64, [7, 7], 1],
-                            [128, [7, 7], 2],
-                            [128, [7, 7], 2],
-                            [256, [6, 6], 1],
+                            [16, [5, 5], 4],
+                            [32, [5, 5], 2],
+                            [32, [5, 5], 2],
+                            [64, [5, 5], 1],
+                            [64, [5, 5], 2],
+                            [128, [5, 5], 2],
+                            [512, [5, 5], 1],
                         ],
                     },
                 },

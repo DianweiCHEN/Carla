@@ -108,37 +108,39 @@ class CarlaCore:
                 self.experiment_config["SENSOR_CONFIG"]["CAMERA_Y"][i] = 1200
             self.experiment_config["quality_level"] = "High"
 
-        uses_server_port = is_used(self.server_port)
-        uses_stream_port = is_used(self.server_port+1)
-        while uses_server_port and uses_stream_port:
-            if uses_server_port:
-                print("Is using the server port: " + self.server_port)
-            if uses_stream_port:
-                print("Is using the streaming port: " + str(self.server_port+1))
+        if self.environment_config["DEBUG_MODE"] is False:
+
+            uses_server_port = is_used(self.server_port)
+            uses_stream_port = is_used(self.server_port+1)
+            while uses_server_port and uses_stream_port:
+                if uses_server_port:
+                    print("Is using the server port: " + str(self.server_port))
+                if uses_stream_port:
+                    print("Is using the streaming port: " + str(self.server_port+1))
             self.server_port += 2
             uses_server_port = is_used(self.server_port)
             uses_stream_port = is_used(self.server_port+1)
 
-        # Run the server process
-        server_command = [
-            "{}/CarlaUE4.sh".format(os.environ["CARLA_ROOT"]),
-            "-windowed",
-            "-ResX=84",
-            "-ResY=84",
-            "--carla-rpc-port={}".format(self.server_port),
-            "-quality-level =",
-            self.experiment_config["quality_level"],
-            "--no-rendering",
-        ]
+            # Run the server process
+            server_command = [
+                "{}/CarlaUE4.sh".format(os.environ["CARLA_ROOT"]),
+                "-windowed",
+                "-ResX=84",
+                "-ResY=84",
+                "--carla-rpc-port={}".format(self.server_port),
+                "-quality-level =",
+                self.experiment_config["quality_level"],
+                "--no-rendering",
+            ]
 
-        server_command_text = " ".join(map(str, server_command))
-        print(server_command_text)
-        server_process = subprocess.Popen(
-            server_command_text,
-            shell=True,
-            preexec_fn=os.setsid,
-            stdout=open(os.devnull, "w"),
-        )
+            server_command_text = " ".join(map(str, server_command))
+            print(server_command_text)
+            server_process = subprocess.Popen(
+                server_command_text,
+                shell=True,
+                preexec_fn=os.setsid,
+                stdout=open(os.devnull, "w"),
+            )
 
     # ==============================================================================
     # -- ClientSetup -----------------------------------------------------------
@@ -176,7 +178,7 @@ class CarlaCore:
                 settings = world.get_settings()
                 settings.no_rendering_mode = disable_rendering_mode
                 settings.synchronous_mode = sync_mode
-                settings.fixed_delta_seconds = 0.1
+                settings.fixed_delta_seconds = 0.05
 
                 world.apply_settings(settings)
 

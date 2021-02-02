@@ -66,12 +66,11 @@ BASE_EXPERIMENT_CONFIG = {
     "Server_View": BASE_SERVER_VIEW_CONFIG,
     "SENSOR_CONFIG": BASE_SENSOR_CONFIG,
     "BIRDVIEW_CONFIG": BASE_BIRDVIEW_CONFIG,
-    "server_map": "Town02_Opt",
+    "server_map": "Town05_Opt",
     "quality_level": "Low",  # options are low or Epic #ToDO. This does not do anything + change to enum
     "Disable_Rendering_Mode": False,  # If you disable, you will not get camera images
     "n_vehicles": 0,
     "n_walkers": 0,
-    "end_pos_spawn_id": 45,  # 34,
     "hero_vehicle_model": "vehicle.lincoln.mkz2017",
     "Weather": carla.WeatherParameters.ClearNoon,
     "DISCRETE_ACTION": True,
@@ -81,16 +80,33 @@ BASE_EXPERIMENT_CONFIG = {
 DISCRETE_ACTIONS_SMALL = {
     0: [0.0, 0.00, 0.0, False, False],  # Coast
     1: [0.0, 0.00, 1.0, False, False],  # Apply Break
-    2: [0.6, 0.00, 0.0, False, False],  # Straight
-    3: [0.3, 0.00, 0.0, False, False],  # Straight
-    4: [0.0, 0.75, 0.0, False, False],  # Right
-    5: [0.0, 0.50, 0.0, False, False],  # Right
+    2: [0.0, 0.75, 0.0, False, False],  # Right
+    3: [0.0, 0.50, 0.0, False, False],  # Right
+    4: [0.0, 0.25, 0.0, False, False],  # Right
+    5: [0.0, -0.75, 0.0, False, False],  # Left
     6: [0.0, -0.50, 0.0, False, False],  # Left
-    7: [0.0, -0.75, 0.0, False, False],  # Left
-    8: [0.3, 0.75, 0.0, False, False],  # Right + Accelerate
-    9: [0.3, 0.50, 0.0, False, False],  # Right + Accelerate
-    10: [0.3, -0.50, 0.0, False, False],  # Left + Accelerate
-    11: [0.3, -0.75, 0.0, False, False],  # Left + Accelerate
+    7: [0.0, -0.25, 0.0, False, False],  # Left
+    8: [0.3, 0.00, 0.0, False, False],  # Straight
+    9: [0.3, 0.75, 0.0, False, False],  # Right
+    10: [0.3, 0.50, 0.0, False, False],  # Right
+    11: [0.3, 0.25, 0.0, False, False],  # Right
+    12: [0.3, -0.75, 0.0, False, False],  # Left
+    13: [0.3, -0.50, 0.0, False, False],  # Left
+    14: [0.3, -0.25, 0.0, False, False],  # Left
+    15: [0.6, 0.00, 0.0, False, False],  # Straight
+    16: [0.6, 0.75, 0.0, False, False],  # Right
+    17: [0.6, 0.50, 0.0, False, False],  # Right
+    18: [0.6, 0.25, 0.0, False, False],  # Right
+    19: [0.6, -0.75, 0.0, False, False],  # Left
+    20: [0.6, -0.50, 0.0, False, False],  # Left
+    21: [0.6, -0.25, 0.0, False, False],  # Left
+    22: [1.0, 0.00, 0.0, False, False],  # Straight
+    23: [1.0, 0.75, 0.0, False, False],  # Right
+    24: [1.0, 0.50, 0.0, False, False],  # Right
+    25: [1.0, 0.25, 0.0, False, False],  # Right
+    26: [1.0, -0.75, 0.0, False, False],  # Left
+    27: [1.0, -0.50, 0.0, False, False],  # Left
+    28: [1.0, -0.25, 0.0, False, False],  # Left
 }
 
 
@@ -111,18 +127,18 @@ class BaseExperiment:
         self.vehicle_list = []
         self.start_location = None
         self.end_location = None
-        self.current_w = None
+        self.current_waypoint = None
         self.hero_model = ''.join(self.experiment_config["hero_vehicle_model"])
         self.set_observation_space()
         self.set_action_space()
         self.max_idle = 600 # ticks
-        self.max_ep_time = 4000 # ticks
-        self.t_idle = None
-        self.t_ep = None
+        self.time_idle = None
 
         self.done_idle = False
-        self.done_max_time = False
         self.done_falling = False
+
+        # List of spawn points for Town05 that have a curve near.
+        self.spawn_points_list = [257, 256, 78, 77, 222, 221, 60, 61, 95, 98, 163, 164, 294, 295, 168, 169, 64, 66, 102, 170, 211, 212]
 
     def get_experiment_config(self):
 
@@ -189,6 +205,17 @@ class BaseExperiment:
         """
         vel = self.hero.get_velocity()
         return 3.6 * math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
+
+    def find_current_waypoint(self, map_):
+        return map_.get_waypoint(self.hero.get_location(), lane_type=carla.LaneType.Any)
+
+    def get_done_status(self):
+        #done = self.observation["collision"] is not False or not self.check_lane_type(map)
+        self.done_idle = self.max_idle < self.time_idle
+        if self.get_speed() > 1.0:
+            self.time_idle = 0
+        self.done_falling = self.hero.get_location().z < -0.5
+        return self.done_idle or self.done_falling
 
     def process_observation(self, core, observation):
 
@@ -297,22 +324,20 @@ class BaseExperiment:
         :param autopilot: Autopilot Status
         :return:
         """
-
         self.spawn_points = world.get_map().get_spawn_points()
 
         self.hero_blueprints = world.get_blueprint_library().find(self.hero_model)
         self.hero_blueprints.set_attribute("role_name", "hero")
 
-        self.end_location = self.spawn_points[self.experiment_config["end_pos_spawn_id"]]
-
         if self.hero is not None:
             self.hero.destroy()
             self.hero = None
 
+        random.shuffle(self.spawn_points_list, random.random) # SET THE SEED!
+
         i = 0
-        #random.shuffle(self.spawn_points, random.random)
         while True:
-            next_spawn_point = self.spawn_points[i % len(self.spawn_points)]
+            next_spawn_point = self.spawn_points[self.spawn_points_list[i]]
             self.hero = world.try_spawn_actor(self.hero_blueprints, next_spawn_point)
             if self.hero is not None:
                 break
@@ -324,8 +349,7 @@ class BaseExperiment:
         print("Hero spawned!")
         self.start_location = self.spawn_points[i].location
         self.past_action = carla.VehicleControl(0.0, 0.00, 0.0, False, False)
-        self.t_idle = 0
-        self.t_ep = 0
+        self.time_idle = 0
 
     def get_hero(self):
 
@@ -349,8 +373,7 @@ class BaseExperiment:
         """
 
         world.tick()
-        self.t_idle += 1
-        self.t_ep += 1
+        self.time_idle += 1
         self.update_measurements(core)
         self.update_actions(action, self.hero)
 

@@ -611,6 +611,7 @@ class BirdviewSensor(object):
     def get_data(self):
         """Renders the map and all the actors in hero and map mode"""
         self.hero_transform = self.hero.get_transform()
+
         # Together with pygame.Surface.set_colorkey, makes their background transparent
         self.result_surface.fill(COLOR_BLACK)
         self.actors_surface.fill(COLOR_BLACK)
