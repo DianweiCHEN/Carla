@@ -152,7 +152,8 @@ class MapImage(object):
             # Remove files if selected town had a previous version saved
             list_filenames = glob.glob(os.path.join(self.dirname, carla_map.name) + "*")
             for town_filename in list_filenames:
-                os.remove(town_filename)
+                if os.path.isfile(town_filename):
+                    os.remove(town_filename)
 
             # Save rendered map for next executions of same map
             pygame.image.save(self.big_map_surface, self.full_path)
