@@ -223,7 +223,7 @@ if %USE_CHRONO% == true (
     xcopy /Y /S /I "%INSTALLATION_DIR%eigen-install\include\*" "%CARLA_DEPENDENCIES_FOLDER%include\*" > NUL
     rem Workaround for unreal not finding the .dll files
     copy "%INSTALLATION_DIR%chrono-install\bin\*.dll" "%CARLA_BINARIES_FOLDER%\*.dll" > NUL
-    
+
 )
 
 rem ============================================================================
@@ -268,9 +268,7 @@ set CMAKE_CONFIG_FILE=%INSTALLATION_DIR%CMakeLists.txt.in
 >>"%CMAKE_CONFIG_FILE%" echo.
 >>"%CMAKE_CONFIG_FILE%" echo if (CMAKE_BUILD_TYPE STREQUAL "Server")
 >>"%CMAKE_CONFIG_FILE%" echo   # Prevent exceptions
-if not %USE_CHRONO% == true (
->>"%CMAKE_CONFIG_FILE%" echo   add_compile_options(/GR-^)
-)
+>>"%CMAKE_CONFIG_FILE%" echo   add_definitions(-DBOOST_TYPE_INDEX_FORCE_NO_RTTI_COMPATIBILITY)·
 >>"%CMAKE_CONFIG_FILE%" echo   add_compile_options(/EHsc)
 >>"%CMAKE_CONFIG_FILE%" echo   add_definitions(-DASIO_NO_EXCEPTIONS)
 >>"%CMAKE_CONFIG_FILE%" echo   add_definitions(-DBOOST_NO_EXCEPTIONS)
