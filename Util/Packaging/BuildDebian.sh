@@ -26,7 +26,11 @@ fi
 CARLA_VERSION=$1
 DEBIAN_REVISION=$2
 
-DEB_NAME=carla-simulator-${CARLA_VERSION}-${DEBIAN_REVISION}
+DEB_NAME=carla-simulator-${CARLA_VERSION}
+if [ ! -z ${DEBIAN_REVISION} ]
+then
+    DEB_NAME="${DEB_NAME}-${DEBIAN_REVISION}"
+fi
 
 CARLA_RELEASE_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/CARLA_${CARLA_VERSION}.tar.gz
 ADDITIONAL_MAPS_URL=https://carla-releases.s3.eu-west-3.amazonaws.com/Linux/AdditionalMaps_${CARLA_VERSION}.tar.gz
