@@ -494,7 +494,7 @@ void FCarlaServer::FPimpl::BindActions()
     return Episode->SerializeActor(Result.Value);
   };
 
-  BIND_SYNC(destroy_actor) << [this](cr::ActorId ActorId) -> R<void>
+  BIND_SYNC(destroy_actor) << [this](cr::ActorId ActorId) -> R<bool>
   {
     REQUIRE_CARLA_EPISODE();
     auto ActorView = Episode->FindActor(ActorId);
@@ -506,7 +506,7 @@ void FCarlaServer::FPimpl::BindActions()
     {
       RESPOND_ERROR("internal error: unable to destroy actor");
     }
-    return R<void>::Success();
+    return true;
   };
 
   // ~~ Actor physics ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
