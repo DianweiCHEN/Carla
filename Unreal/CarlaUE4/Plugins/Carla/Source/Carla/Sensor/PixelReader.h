@@ -15,10 +15,27 @@
 #include <carla/sensor/SensorRegistry.h>
 #include <compiler/enable-ue4-macros.h>
 
+
+// =============================================================================
+// -- FImageResizer -------------------------------------------------------------
+// =============================================================================
+/// Struct that stores the information to resize an image if needed before send it to client
+struct FImageResizer {
+  uint32 MinX = 0;
+  uint32 MinY = 0;
+  uint32 MaxX = 0;
+  uint32 MaxY = 0;
+  bool ReduceTexture = false;
+
+  FImageResizer() : ReduceTexture(false) {}
+  FImageResizer(bool reduce_texture, uint32 minX, uint32 maxX, uint32 minY, uint32 maxY) :
+    MinX(minX), MinY(minY), MaxX(maxX), MaxY(maxY), ReduceTexture(reduce_texture) {}
+};
+
+
 // =============================================================================
 // -- FPixelReader -------------------------------------------------------------
 // =============================================================================
-
 /// Utils for reading pixels from UTextureRenderTarget2D.
 ///
 /// @todo This class only supports PF_R8G8B8A8 format.
@@ -62,7 +79,7 @@ public:
   ///
   /// @pre To be called from game-thread.
   template <typename TSensor>
-  static void SendPixelsInRenderThread(TSensor &Sensor);
+  static void SendPixelsInRenderThread(TSensor &Sensor, const FImageResizer& = FImageResizer());
 
 private:
 
@@ -73,16 +90,15 @@ private:
       UTextureRenderTarget2D &RenderTarget,
       carla::Buffer &Buffer,
       uint32 Offset,
-      FRHICommandListImmediate &InRHICmdList);
-
+      FRHICommandListImmediate &InRHICmdList,
+      const FImageResizer& = FImageResizer());
 };
 
 // =============================================================================
 // -- FPixelReader::SendPixelsInRenderThread -----------------------------------
 // =============================================================================
-
 template <typename TSensor>
-void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
+void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, const FImageResizer& ImageResizer)
 {
   TRACE_CPUPROFILER_EVENT_SCOPE(FPixelReader::SendPixelsInRenderThread);
   check(Sensor.CaptureRenderTarget != nullptr);
@@ -100,7 +116,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
   // game-thread.
   ENQUEUE_RENDER_COMMAND(FWritePixels_SendPixelsInRenderThread)
   (
-    [&Sensor, Stream=Sensor.GetDataStream(Sensor)](auto &InRHICmdList) mutable
+    [&Sensor, Stream=Sensor.GetDataStream(Sensor), &ImageResizer](auto &InRHICmdList) mutable
     {
       TRACE_CPUPROFILER_EVENT_SCOPE_STR("FWritePixels_SendPixelsInRenderThread");
 
@@ -112,7 +128,8 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor)
             *Sensor.CaptureRenderTarget,
             Buffer,
             carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
-            InRHICmdList);
+            InRHICmdList,
+            ImageResizer);
         if(Buffer.data())
         {
           SCOPE_CYCLE_COUNTER(STAT_CarlaSensorStreamSend);

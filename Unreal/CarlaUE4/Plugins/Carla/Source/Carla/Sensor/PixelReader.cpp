@@ -44,7 +44,8 @@ static void WritePixelsToBuffer_Vulkan(
     const UTextureRenderTarget2D &RenderTarget,
     carla::Buffer &Buffer,
     uint32 Offset,
-    FRHICommandListImmediate &InRHICmdList)
+    FRHICommandListImmediate &InRHICmdList,
+    const FImageResizer& ImageResizer)
 {
   TRACE_CPUPROFILER_EVENT_SCOPE_STR(__FUNCTION__);
   check(IsInRenderingThread());
@@ -63,7 +64,7 @@ static void WritePixelsToBuffer_Vulkan(
     TRACE_CPUPROFILER_EVENT_SCOPE_STR("Read Surface");
     InRHICmdList.ReadSurfaceData(
         Texture,
-        FIntRect(0, 0, Rect.X, Rect.Y),
+        FIntRect(ImageResizer.MinX, ImageResizer.MinY, ImageResizer.MaxX, ImageResizer.MaxY),
         gPixels,
         FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
   }
@@ -134,15 +135,15 @@ void FPixelReader::WritePixelsToBuffer(
     UTextureRenderTarget2D &RenderTarget,
     carla::Buffer &Buffer,
     uint32 Offset,
-    FRHICommandListImmediate &InRHICmdList
-    )
+    FRHICommandListImmediate &InRHICmdList,
+    const FImageResizer& ImageResizer)
 {
   TRACE_CPUPROFILER_EVENT_SCOPE_STR(__FUNCTION__);
   check(IsInRenderingThread());
 
   if (IsVulkanPlatform(GMaxRHIShaderPlatform) || IsD3DPlatform(GMaxRHIShaderPlatform, false))
   {
-    WritePixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList);
+    WritePixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList, ImageResizer);
     return;
   }
 

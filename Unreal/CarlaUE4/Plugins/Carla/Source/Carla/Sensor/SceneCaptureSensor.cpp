@@ -84,14 +84,45 @@ void ASceneCaptureSensor::Set(const FActorDescription &Description)
 
 void ASceneCaptureSensor::SetImageSize(uint32 InWidth, uint32 InHeight)
 {
-  ImageWidth = InWidth;
-  ImageHeight = InHeight;
+  ImageWidthTarget = InWidth;
+  ImageHeightTarget = InHeight;
 }
 
-void ASceneCaptureSensor::SetFOVAngle(const float FOVAngle)
+void ASceneCaptureSensor::ComputeRenderParameters()
+{
+  Image_Resize = 1.0;
+
+  if (FOV_Render > 0) {
+    Image_Resize = true;
+
+    const float size_render = FMath::Tan(FMath::DegreesToRadians(FOV_Render * 0.5f));
+    const float size_target = FMath::Tan(FMath::DegreesToRadians(FOV_Target * 0.5f));
+
+    Image_Resize_Scale = size_render / size_target;
+
+    ImageWidthRender  = Image_Resize_Scale * ImageWidthTarget;
+    ImageHeightRender = Image_Resize_Scale * ImageHeightTarget;
+  }
+  else {
+    Image_Resize = false;
+
+    FOV_Render = FOV_Target;
+    Image_Resize_Scale = 1.0f;
+
+    ImageWidthRender  = ImageWidthTarget;
+    ImageHeightRender = ImageHeightTarget;
+  }
+
+  CaptureComponent2D->FOVAngle = FOV_Render;
+}
+
+
+void ASceneCaptureSensor::SetFOVAngle(const float FOVAngle, const float FOVAngleRender)
 {
   check(CaptureComponent2D != nullptr);
-  CaptureComponent2D->FOVAngle = FOVAngle;
+  
+  FOV_Target = FOVAngle;
+  FOV_Render = FOVAngleRender;
 }
 
 float ASceneCaptureSensor::GetFOVAngle() const
@@ -467,7 +498,15 @@ void ASceneCaptureSensor::BeginPlay()
   // Determine the gamma of the player.
   const bool bInForceLinearGamma = !bEnablePostProcessingEffects;
 
-  CaptureRenderTarget->InitCustomFormat(ImageWidth, ImageHeight, PF_B8G8R8A8, bInForceLinearGamma);
+  // Compute if we need to render a bigger area
+  ComputeRenderParameters();
+
+  CaptureRenderTarget->InitCustomFormat(ImageWidthRender, ImageHeightRender, PF_B8G8R8A8, bInForceLinearGamma);
+  //DisplacementTexture->InitCustomFormat(ImageWidth, ImageHeight, PF_B8G8R8A8, bInForceLinearGamma);
+
+  UE_LOG(LogCarla, Warning, TEXT("Init DisplacementTexture"));
+
+  DisplacementTexture->InitAutoFormat(ImageWidthRender, ImageHeightRender);
 
   if (bEnablePostProcessingEffects)
   {
@@ -506,12 +545,15 @@ void ASceneCaptureSensor::PrePhysTick(float DeltaSeconds)
 {
   Super::PrePhysTick(DeltaSeconds);
 
+  if (ChangeDistortMap)
+    ChangeDistortionMap();
+
   // Add the view information every tick. It's only used for one tick and then
   // removed by the streamer.
   IStreamingManager::Get().AddViewInformation(
       CaptureComponent2D->GetComponentLocation(),
-      ImageWidth,
-      ImageWidth / FMath::Tan(CaptureComponent2D->FOVAngle));
+      ImageWidthRender,
+      ImageWidthRender / FMath::Tan(CaptureComponent2D->FOVAngle));
 }
 
 void ASceneCaptureSensor::PostPhysTick(UWorld *World, ELevelTick TickType, float DeltaTime)

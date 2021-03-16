@@ -310,6 +310,12 @@ void UActorBlueprintFunctionLibrary::MakeCameraDefinition(
   FOV.RecommendedValues = { TEXT("90.0") };
   FOV.bRestrictToRecommended = false;
 
+  FActorVariation FOV_Render;
+  FOV_Render.Id = TEXT("fov_render");
+  FOV_Render.Type = EActorAttributeType::Float;
+  FOV_Render.RecommendedValues = { TEXT("90.0") };
+  FOV_Render.bRestrictToRecommended = false;
+
   // Resolution
   FActorVariation ResX;
   ResX.Id = TEXT("image_size_x");
@@ -360,16 +366,68 @@ void UActorBlueprintFunctionLibrary::MakeCameraDefinition(
   LensYSize.RecommendedValues = { TEXT("0.08") };
   LensYSize.bRestrictToRecommended = false;
 
+  FActorVariation k1;
+  k1.Id = TEXT("k1");
+  k1.Type = EActorAttributeType::Float;
+  k1.RecommendedValues = { TEXT("0.0") };
+  k1.bRestrictToRecommended = false;
+
+  FActorVariation k2;
+  k2.Id = TEXT("k2");
+  k2.Type = EActorAttributeType::Float;
+  k2.RecommendedValues = { TEXT("0.0") };
+  k2.bRestrictToRecommended = false;
+
+  FActorVariation p1;
+  p1.Id = TEXT("p1");
+  p1.Type = EActorAttributeType::Float;
+  p1.RecommendedValues = { TEXT("0.0") };
+  p1.bRestrictToRecommended = false;
+
+  FActorVariation p2;
+  p2.Id = TEXT("p2");
+  p2.Type = EActorAttributeType::Float;
+  p2.RecommendedValues = { TEXT("0.0") };
+  p2.bRestrictToRecommended = false;
+
+  FActorVariation cx;
+  cx.Id = TEXT("cx");
+  cx.Type = EActorAttributeType::Float;
+  cx.RecommendedValues = { TEXT("0.5") };
+  cx.bRestrictToRecommended = false;
+
+  FActorVariation cy;
+  cy.Id = TEXT("cy");
+  cy.Type = EActorAttributeType::Float;
+  cy.RecommendedValues = { TEXT("0.5") };
+  cy.bRestrictToRecommended = false;
+
+  FActorVariation fx;
+  fx.Id = TEXT("fx");
+  fx.Type = EActorAttributeType::Float;
+  fx.RecommendedValues = { TEXT("1.0") };
+  fx.bRestrictToRecommended = false;
+
+  FActorVariation fy;
+  fy.Id = TEXT("fy");
+  fy.Type = EActorAttributeType::Float;
+  fy.RecommendedValues = { TEXT("1.0") };
+  fy.bRestrictToRecommended = false;
+
+
   Definition.Variations.Append({
       ResX,
       ResY,
       FOV,
+      FOV_Render,
       LensCircleFalloff,
       LensCircleMultiplier,
       LensK,
       LensKcube,
       LensXSize,
-      LensYSize});
+      LensYSize,
+      k1, k2, p1, p2,
+      cx, cy, fx, fy});
 
   if (bEnableModifyingPostProcessEffects)
   {
@@ -1405,7 +1463,8 @@ void UActorBlueprintFunctionLibrary::SetCamera(
       RetrieveActorAttributeToInt("image_size_x", Description.Variations, 800),
       RetrieveActorAttributeToInt("image_size_y", Description.Variations, 600));
   Camera->SetFOVAngle(
-      RetrieveActorAttributeToFloat("fov", Description.Variations, 90.0f));
+      RetrieveActorAttributeToFloat("fov", Description.Variations, 90.0f),
+      RetrieveActorAttributeToFloat("fov_render", Description.Variations, 90.0f));
   if (Description.Variations.Contains("enable_postprocess_effects"))
   {
     Camera->EnablePostProcessingEffects(
@@ -1504,6 +1563,22 @@ void UActorBlueprintFunctionLibrary::SetCamera(
       RetrieveActorAttributeToFloat("lens_x_size", Description.Variations, 0.08f));
   Camera->SetFloatShaderParameter(0, TEXT("YSize_NState"),
       RetrieveActorAttributeToFloat("lens_y_size", Description.Variations, 0.08f));
+  Camera->SetFloatShaderParameter(0, TEXT("k1"),
+      RetrieveActorAttributeToFloat("k1", Description.Variations, 0.0f));
+  Camera->SetFloatShaderParameter(0, TEXT("k2"),
+      RetrieveActorAttributeToFloat("k2", Description.Variations, 0.0f));
+  Camera->SetFloatShaderParameter(0, TEXT("p1"),
+      RetrieveActorAttributeToFloat("p1", Description.Variations, 0.0f));
+  Camera->SetFloatShaderParameter(0, TEXT("p2"),
+      RetrieveActorAttributeToFloat("p2", Description.Variations, 0.0f));
+  Camera->SetFloatShaderParameter(0, TEXT("cx"),
+      RetrieveActorAttributeToFloat("cx", Description.Variations, 0.5f));
+  Camera->SetFloatShaderParameter(0, TEXT("cy"),
+      RetrieveActorAttributeToFloat("cy", Description.Variations, 0.5f));
+  Camera->SetFloatShaderParameter(0, TEXT("fx"),
+      RetrieveActorAttributeToFloat("fx", Description.Variations, 1.0f));
+  Camera->SetFloatShaderParameter(0, TEXT("fy"),
+      RetrieveActorAttributeToFloat("fy", Description.Variations, 1.0f));
 }
 
 void UActorBlueprintFunctionLibrary::SetLidar(

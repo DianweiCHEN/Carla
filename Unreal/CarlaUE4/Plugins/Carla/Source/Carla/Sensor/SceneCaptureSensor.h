@@ -43,12 +43,12 @@ public:
 
   uint32 GetImageWidth() const
   {
-    return ImageWidth;
+    return ImageWidthTarget;
   }
 
   uint32 GetImageHeight() const
   {
-    return ImageHeight;
+    return ImageHeightTarget;
   }
 
   UFUNCTION(BlueprintCallable)
@@ -64,7 +64,10 @@ public:
   }
 
   UFUNCTION(BlueprintCallable)
-  void SetFOVAngle(float FOVAngle);
+  void SetFOVAngle(const float FOVAngle, const float FOV_Render = -1.0f);
+
+  UFUNCTION(BlueprintCallable)
+  void ComputeRenderParameters();
 
   UFUNCTION(BlueprintCallable)
   float GetFOVAngle() const;
@@ -310,11 +313,26 @@ protected:
 
   /// Image width in pixels.
   UPROPERTY(EditAnywhere)
-  uint32 ImageWidth = 800u;
+  uint32 ImageWidthTarget = 800u;
+  UPROPERTY(EditAnywhere)
+  uint32 ImageWidthRender = 800u;
 
   /// Image height in pixels.
   UPROPERTY(EditAnywhere)
-  uint32 ImageHeight = 600u;
+  uint32 ImageHeightTarget = 600u;
+  UPROPERTY(EditAnywhere)
+  uint32 ImageHeightRender = 600u;
+
+  /// Image height in pixels.
+  UPROPERTY(EditAnywhere)
+  float FOV_Target;
+  UPROPERTY(EditAnywhere)
+  float FOV_Render;
+  UPROPERTY(EditAnywhere)
+  bool Image_Resize = false;
+  UPROPERTY(EditAnywhere)
+  float Image_Resize_Scale = 1.0;
+
 
   /// Whether to render the post-processing effects present in the scene.
   UPROPERTY(EditAnywhere)
