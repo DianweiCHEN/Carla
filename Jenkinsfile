@@ -160,7 +160,6 @@ pipeline
                         }
                         stage('ubuntu deploy dev')
                         {
-                            when { branch "dev"; }
                             steps
                             {
                                 sh 'git checkout .'
@@ -309,7 +308,6 @@ pipeline
                         }
                         stage('windows deploy')
                         {
-                            when { anyOf { branch "master"; branch "dev"; buildingTag() } }
                             steps {
                                 bat """
                                     call ../setEnv64.bat
