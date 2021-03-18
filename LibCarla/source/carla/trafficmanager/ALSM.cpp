@@ -4,10 +4,12 @@
 #include "carla/client/Actor.h"
 #include "carla/client/Vehicle.h"
 #include "carla/client/Walker.h"
+#include "carla/client/Map.h"
+#include "carla/client/Waypoint.h"
 
 #include "carla/trafficmanager/Constants.h"
 #include "carla/trafficmanager/LocalizationUtils.h"
-#include "carla/trafficmanager/SimpleWaypoint.h"
+// #include "carla/trafficmanager/SimpleWaypoint.h"
 
 #include "carla/trafficmanager/ALSM.h"
 
@@ -21,7 +23,7 @@ ALSM::ALSM(
   std::vector<ActorId>& marked_for_removal,
   const Parameters &parameters,
   const cc::World &world,
-  const LocalMapPtr &local_map,
+  const MapPtr &world_map,
   SimulationState &simulation_state,
   LocalizationStage &localization_stage,
   CollisionStage &collision_stage,
@@ -34,7 +36,7 @@ ALSM::ALSM(
     marked_for_removal(marked_for_removal),
     parameters(parameters),
     world(world),
-    local_map(local_map),
+    world_map(world_map),
     simulation_state(simulation_state),
     localization_stage(localization_stage),
     collision_stage(collision_stage),
@@ -54,7 +56,7 @@ void ALSM::Update() {
   ActorList world_actors = world.GetActors();
 
   // Find destroyed actors and perform clean up.
-  const ALSM::DestroyeddActors destroyed_actors = IdentifyDestroyedActors(world_actors);
+  const ALSM::DestroyedActors destroyed_actors = IdentifyDestroyedActors(world_actors);
 
   const ActorIdSet &destroyed_registered = destroyed_actors.first;
   for (const auto &deletion_id: destroyed_registered) {
@@ -136,9 +138,9 @@ std::vector<ActorPtr> ALSM::IdentifyNewActors(const ActorList &actor_list) {
   return new_actors;
 }
 
-ALSM::DestroyeddActors ALSM::IdentifyDestroyedActors(const ActorList &actor_list) {
+ALSM::DestroyedActors ALSM::IdentifyDestroyedActors(const ActorList &actor_list) {
 
-  ALSM::DestroyeddActors destroyed_actors;
+  ALSM::DestroyedActors destroyed_actors;
   ActorIdSet &deleted_registered = destroyed_actors.first;
   ActorIdSet &deleted_unregistered = destroyed_actors.second;
 
@@ -257,7 +259,7 @@ void ALSM::UpdateUnregisteredActorsData() {
     TrafficLightState tl_state;
     ActorType actor_type = ActorType::Any;
     cg::Vector3D dimensions;
-    std::vector<SimpleWaypointPtr> nearest_waypoints;
+    std::vector<WaypointPtr> nearest_waypoints;
 
     bool state_entry_not_present = !simulation_state.ContainsActor(actor_id);
     if (type_id.front() == 'v') {
@@ -284,7 +286,7 @@ void ALSM::UpdateUnregisteredActorsData() {
                                            actor_location,
                                            actor_location + cg::Location(-extent.x * heading_vector)};
       for (cg::Location &vertex: corners) {
-        SimpleWaypointPtr nearest_waypoint = local_map->GetWaypoint(vertex);
+        WaypointPtr nearest_waypoint = world_map->GetWaypoint(vertex);
         nearest_waypoints.push_back(nearest_waypoint);
       }
     }
@@ -302,7 +304,7 @@ void ALSM::UpdateUnregisteredActorsData() {
       }
 
       // Identify occupied waypoints.
-      SimpleWaypointPtr nearest_waypoint = local_map->GetWaypoint(actor_location);
+      WaypointPtr nearest_waypoint = world_map->GetWaypoint(actor_location);
       nearest_waypoints.push_back(nearest_waypoint);
     }
 

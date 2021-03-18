@@ -10,12 +10,13 @@
 #include "carla/client/ActorList.h"
 #include "carla/client/Vehicle.h"
 #include "carla/client/World.h"
+#include "carla/client/Waypoint.h"
 #include "carla/geom/Location.h"
 #include "carla/road/RoadTypes.h"
 #include "carla/rpc/ActorId.h"
 
 #include "carla/trafficmanager/Constants.h"
-#include "carla/trafficmanager/SimpleWaypoint.h"
+// #include "carla/trafficmanager/SimpleWaypoint.h"
 #include "carla/trafficmanager/TrackTraffic.h"
 
 namespace carla {
@@ -26,8 +27,8 @@ namespace traffic_manager {
   using Actor = carla::SharedPtr<cc::Actor>;
   using ActorId = carla::ActorId;
   using ActorIdSet = std::unordered_set<ActorId>;
-  using SimpleWaypointPtr = std::shared_ptr<SimpleWaypoint>;
-  using Buffer = std::deque<SimpleWaypointPtr>;
+  using WaypointPtr = boost::shared_ptr<cc::Waypoint>;
+  using Buffer = std::deque<WaypointPtr>;
   using GeoGridId = carla::road::JuncId;
   using constants::Map::MAP_RESOLUTION;
   using constants::Map::INV_MAP_RESOLUTION;
@@ -46,14 +47,14 @@ namespace traffic_manager {
 
   // Function to add a waypoint to a path buffer and update waypoint tracking.
   void PushWaypoint(ActorId actor_id, TrackTraffic& track_traffic,
-                    Buffer& buffer, SimpleWaypointPtr& waypoint);
+                    Buffer& buffer, WaypointPtr& waypoint);
 
   // Function to remove a waypoint from a path buffer and update waypoint tracking.
   void PopWaypoint(ActorId actor_id, TrackTraffic& track_traffic,
                    Buffer& buffer, bool front_or_back=true);
 
   /// Method to return the wayPoints from the waypoint Buffer by using target point distance
-  using TargetWPInfo = std::pair<SimpleWaypointPtr,uint64_t>;
+  using TargetWPInfo = std::pair<WaypointPtr,uint64_t>;
   TargetWPInfo GetTargetWaypoint(const Buffer& waypoint_buffer, const float& target_point_distance);
 
 } // namespace traffic_manager

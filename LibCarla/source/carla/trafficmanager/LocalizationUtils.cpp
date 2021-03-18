@@ -35,7 +35,7 @@ float DeviationDotProduct(const cg::Location &reference_location,
 }
 
 void PushWaypoint(ActorId actor_id, TrackTraffic &track_traffic,
-                  Buffer &buffer, SimpleWaypointPtr &waypoint) {
+                  Buffer &buffer, WaypointPtr &waypoint) {
 
   const uint64_t waypoint_id = waypoint->GetId();
   buffer.push_back(waypoint);
@@ -45,7 +45,7 @@ void PushWaypoint(ActorId actor_id, TrackTraffic &track_traffic,
 void PopWaypoint(ActorId actor_id, TrackTraffic &track_traffic,
                  Buffer &buffer, bool front_or_back) {
 
-  SimpleWaypointPtr removed_waypoint = front_or_back ? buffer.front() : buffer.back();
+  WaypointPtr removed_waypoint = front_or_back ? buffer.front() : buffer.back();
   const uint64_t removed_waypoint_id = removed_waypoint->GetId();
   if (front_or_back) {
     buffer.pop_front();
@@ -57,8 +57,8 @@ void PopWaypoint(ActorId actor_id, TrackTraffic &track_traffic,
 
 TargetWPInfo GetTargetWaypoint(const Buffer &waypoint_buffer, const float &target_point_distance) {
 
-  SimpleWaypointPtr target_waypoint = waypoint_buffer.front();
-  const SimpleWaypointPtr &buffer_front = waypoint_buffer.front();
+  WaypointPtr target_waypoint = waypoint_buffer.front();
+  const WaypointPtr &buffer_front = waypoint_buffer.front();
   uint64_t startPosn = static_cast<uint64_t>(std::fabs(target_point_distance * INV_MAP_RESOLUTION));
   uint64_t index = 0;
   /// Condition to determine forward or backward scanning of  WayPoint Buffer.
@@ -66,20 +66,20 @@ TargetWPInfo GetTargetWaypoint(const Buffer &waypoint_buffer, const float &targe
   if (startPosn < waypoint_buffer.size()) {
     bool mScanForward = false;
     const float target_point_dist_power = target_point_distance * target_point_distance;
-    if (buffer_front->DistanceSquared(target_waypoint) < target_point_dist_power) {
+    if (cg::Math::DistanceSquared(buffer_front->GetTransform().location, target_waypoint->GetTransform().location) < target_point_dist_power) {
       mScanForward = true;
     }
 
     if (mScanForward) {
       for (uint64_t i = startPosn;
-           (i < waypoint_buffer.size()) && (buffer_front->DistanceSquared(target_waypoint) < target_point_dist_power);
+           (i < waypoint_buffer.size()) && (cg::Math::DistanceSquared(buffer_front->GetTransform().location, target_waypoint->GetTransform().location) < target_point_dist_power);
            ++i) {
         target_waypoint = waypoint_buffer.at(i);
         index = i;
       }
     } else {
       for (uint64_t i = startPosn;
-           (buffer_front->DistanceSquared(target_waypoint) > target_point_dist_power);
+           (cg::Math::DistanceSquared(buffer_front->GetTransform().location, target_waypoint->GetTransform().location) > target_point_dist_power);
            --i) {
         target_waypoint = waypoint_buffer.at(i);
         index = i;

@@ -20,7 +20,7 @@ namespace traffic_manager {
 
   namespace cc = carla::client;
   namespace cg = carla::geom;
-  using WaypointPtr = carla::SharedPtr<cc::Waypoint>;
+  using WaypointPtr = boost::shared_ptr<cc::Waypoint>;
   using GeoGridId = carla::road::JuncId;
 
   /// This is a simple wrapper class on Carla's waypoint object.

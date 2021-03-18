@@ -31,9 +31,9 @@ void TrafficLightStage::Update(const unsigned long index) {
 
   const ActorId ego_actor_id = vehicle_id_list.at(index);
   const Buffer &waypoint_buffer = buffer_map.at(ego_actor_id);
-  const SimpleWaypointPtr look_ahead_point = GetTargetWaypoint(waypoint_buffer, JUNCTION_LOOK_AHEAD).first;
+  const WaypointPtr look_ahead_point = GetTargetWaypoint(waypoint_buffer, JUNCTION_LOOK_AHEAD).first;
 
-  const JunctionID junction_id = look_ahead_point->GetWaypoint()->GetJunctionId();
+  const JunctionID junction_id = look_ahead_point->GetJunctionId();
   current_timestamp = world.GetSnapshot().GetTimestamp();
 
   const TrafficLightState tl_state = simulation_state.GetTLS(ego_actor_id);
@@ -50,7 +50,7 @@ void TrafficLightStage::Update(const unsigned long index) {
     traffic_light_hazard = true;
   }
   // Handle entry negotiation at non-signalised junction.
-  else if (look_ahead_point->CheckJunction() &&
+  else if (look_ahead_point->IsJunction() &&
           !is_at_traffic_light &&
           traffic_light_state != TLS::Green &&
           traffic_light_state != TLS::Off &&

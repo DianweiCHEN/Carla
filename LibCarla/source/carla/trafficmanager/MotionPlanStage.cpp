@@ -58,8 +58,8 @@ void MotionPlanStage::Update(const unsigned long index) {
 
   const float target_point_distance = std::max(ego_speed * TARGET_WAYPOINT_TIME_HORIZON,
                                                TARGET_WAYPOINT_HORIZON_LENGTH);
-  const SimpleWaypointPtr &target_waypoint = GetTargetWaypoint(waypoint_buffer, target_point_distance).first;
-  const cg::Location target_location = target_waypoint->GetLocation();
+  const WaypointPtr &target_waypoint = GetTargetWaypoint(waypoint_buffer, target_point_distance).first;
+  const cg::Location target_location = target_waypoint->GetTransform().location;
   float dot_product = DeviationDotProduct(ego_location, ego_heading, target_location);
   float cross_product = DeviationCrossProduct(ego_location, ego_heading, target_location);
   dot_product = 1.0f - dot_product;
@@ -149,11 +149,12 @@ void MotionPlanStage::Update(const unsigned long index) {
 
       // Target displacement magnitude to achieve target velocity.
       const float target_displacement = dynamic_target_velocity * HYBRID_MODE_DT_FL;
-      const SimpleWaypointPtr teleport_target_waypoint = GetTargetWaypoint(waypoint_buffer, target_displacement).first;
+      const WaypointPtr teleport_target_waypoint = GetTargetWaypoint(waypoint_buffer, target_displacement).first;
 
       // Construct target transform to accurately achieve desired velocity.
       float missing_displacement = 0.0f;
-      const float base_displacement = teleport_target_waypoint->Distance(ego_location);
+      const float base_displacement = teleport_target_waypoint->GetTransform().location.Distance(ego_location);
+      // const float base_displacement = teleport_target_waypoint->Distance(ego_location);
       if (base_displacement < target_displacement) {
         missing_displacement = target_displacement - base_displacement;
       }
@@ -191,25 +192,25 @@ bool MotionPlanStage::SafeAfterJunction(const LocalizationData &localization,
                                         const bool tl_hazard,
                                         const bool collision_emergency_stop) {
 
-  SimpleWaypointPtr junction_end_point = localization.junction_end_point;
-  SimpleWaypointPtr safe_point = localization.safe_point;
+  WaypointPtr junction_end_point = localization.junction_end_point;
+  WaypointPtr safe_point = localization.safe_point;
 
   bool safe_after_junction = true;
 
   if (!tl_hazard && !collision_emergency_stop
       && localization.is_at_junction_entrance
       && junction_end_point != nullptr && safe_point != nullptr
-      && junction_end_point->DistanceSquared(safe_point) > SQUARE(MIN_SAFE_INTERVAL_LENGTH)) {
+      && cg::Math::DistanceSquared(junction_end_point->GetTransform().location, safe_point->GetTransform().location) > SQUARE(MIN_SAFE_INTERVAL_LENGTH)) {
 
     ActorIdSet initial_set = track_traffic.GetPassingVehicles(junction_end_point->GetId());
-    float safe_interval_length_squared = junction_end_point->DistanceSquared(safe_point);
-    cg::Location mid_point = (junction_end_point->GetLocation() + safe_point->GetLocation())/2.0f;
+    float safe_interval_length_squared = cg::Math::DistanceSquared(junction_end_point->GetTransform().location, safe_point->GetTransform().location);
+    cg::Location mid_point = (junction_end_point->GetTransform().location + safe_point->GetTransform().location)/2.0f;
 
     // Scan through the safe interval and find if any vehicles are present in it
     // by finding their occupied waypoints.
-    for (SimpleWaypointPtr current_waypoint = junction_end_point;
-         current_waypoint->DistanceSquared(junction_end_point) < safe_interval_length_squared && safe_after_junction;
-         current_waypoint = current_waypoint->GetNextWaypoint().front()) {
+    for (WaypointPtr current_waypoint = junction_end_point;
+        cg::Math::DistanceSquared(current_waypoint->GetTransform().location, junction_end_point->GetTransform().location) < safe_interval_length_squared && safe_after_junction;
+         current_waypoint = current_waypoint->GetNext(MAP_RESOLUTION).front()) {
 
       ActorIdSet current_set = track_traffic.GetPassingVehicles(current_waypoint->GetId());
       ActorIdSet difference;

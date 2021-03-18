@@ -32,7 +32,7 @@ namespace crd = carla::road;
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
-  using WaypointPtr = carla::SharedPtr<cc::Waypoint>;
+  using WaypointPtr = boost::shared_ptr<cc::Waypoint>;
   using SimpleWaypointPtr = std::shared_ptr<SimpleWaypoint>;
   using NodeList = std::vector<SimpleWaypointPtr>;
   using GeoGridId = crd::JuncId;

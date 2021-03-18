@@ -12,7 +12,7 @@ using constants::TrackTraffic::INV_BUFFER_STEP_THROUGH;
 TrackTraffic::TrackTraffic() {}
 
 void TrackTraffic::UpdateUnregisteredGridPosition(const ActorId actor_id,
-                                                  const std::vector<SimpleWaypointPtr> waypoints) {
+                                                  const std::vector<WaypointPtr> waypoints) {
 
     DeleteActor(actor_id);
 
@@ -21,7 +21,7 @@ void TrackTraffic::UpdateUnregisteredGridPosition(const ActorId actor_id,
     for (auto &waypoint : waypoints) {
         UpdatePassingVehicle(waypoint->GetId(), actor_id);
 
-        GeoGridId ggid = waypoint->GetGeodesicGridId();
+        GeoGridId ggid = GetGeodesicGridId(waypoint);
         current_grids.insert(ggid);
 
         if (grid_to_actors.find(ggid) != grid_to_actors.end()) {
@@ -58,7 +58,7 @@ void TrackTraffic::UpdateGridPosition(const ActorId actor_id, const Buffer &buff
         uint64_t buffer_size = buffer.size();
         uint64_t step_size = static_cast<uint64_t>(static_cast<float>(buffer_size) * INV_BUFFER_STEP_THROUGH);
         for (uint64_t i = 0u; i <= BUFFER_STEP_THROUGH; ++i) {
-            GeoGridId ggid = buffer.at(std::min(i * step_size, buffer_size - 1u))->GetGeodesicGridId();
+            GeoGridId ggid = GetGeodesicGridId(buffer.at(std::min(i * step_size, buffer_size - 1u)));
             current_grids.insert(ggid);
 
             // Add grid entry if not present.
@@ -167,6 +167,19 @@ void TrackTraffic::Clear() {
     actor_to_grids.clear();
     grid_to_actors.clear();
 }
+
+GeoGridId TrackTraffic::GetGeodesicGridId(WaypointPtr waypoint) {
+    GeoGridId grid_id;
+    if (waypoint->IsJunction()) {
+        grid_id = waypoint->GetJunctionId();
+    } else {
+        int32_t lane_id = waypoint->GetLaneId();
+        int32_t lane_sign = (lane_id > 0) ? 1 : ((lane_id < 0) ? -1 : 0);
+        grid_id = static_cast<int32_t>(waypoint->GetRoadId()) * lane_sign;
+    }
+    return grid_id;
+}
+
 
 } // namespace traffic_manager
 } // namespace carla

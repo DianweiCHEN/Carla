@@ -182,24 +182,25 @@ LocationVector CollisionStage::GetGeodesicBoundary(const ActorId actor_id) {
 
       const Buffer &waypoint_buffer = buffer_map.at(actor_id);
       const TargetWPInfo target_wp_info = GetTargetWaypoint(waypoint_buffer, length);
-      const SimpleWaypointPtr boundary_start = target_wp_info.first;
+      const WaypointPtr boundary_start = target_wp_info.first;
       const uint64_t boundary_start_index = target_wp_info.second;
 
       // At non-signalized junctions, we extend the boundary across the junction
       // and in all other situations, boundary length is velocity-dependent.
-      SimpleWaypointPtr boundary_end = nullptr;
-      SimpleWaypointPtr current_point = waypoint_buffer.at(boundary_start_index);
+      WaypointPtr boundary_end = nullptr;
+      WaypointPtr current_point = waypoint_buffer.at(boundary_start_index);
       bool reached_distance = false;
       for (uint64_t j = boundary_start_index; !reached_distance && (j < waypoint_buffer.size()); ++j) {
-        if (boundary_start->DistanceSquared(current_point) > bbox_extension_square || j == waypoint_buffer.size() - 1) {
+        if (cg::Math::DistanceSquared(boundary_start->GetTransform().location, current_point->GetTransform().location) > bbox_extension_square || j == waypoint_buffer.size() - 1) {
           reached_distance = true;
         }
         if (boundary_end == nullptr
-            || cg::Math::Dot(boundary_end->GetForwardVector(), current_point->GetForwardVector()) < COS_10_DEGREES
+            || cg::Math::Dot(boundary_end->GetTransform().rotation.GetForwardVector(), current_point->GetTransform().rotation.GetForwardVector()) < COS_10_DEGREES
             || reached_distance) {
 
-          const cg::Vector3D heading_vector = current_point->GetForwardVector();
-          const cg::Location location = current_point->GetLocation();
+
+          const cg::Vector3D heading_vector = current_point->GetTransform().rotation.GetForwardVector();
+          const cg::Location location = current_point->GetTransform().location;
           cg::Vector3D perpendicular_vector = cg::Vector3D(-heading_vector.y, heading_vector.x, 0.0f);
           perpendicular_vector = perpendicular_vector.MakeSafeUnitVector(EPSILON);
           // Direction determined for the left-handed system.
@@ -332,13 +333,13 @@ std::pair<bool, float> CollisionStage::NegotiateCollision(const ActorId referenc
   float reference_heading_to_other_dot = cg::Math::Dot(reference_heading, reference_to_other);
   bool other_vehicle_in_front = reference_heading_to_other_dot > 0;
   const Buffer &reference_vehicle_buffer = buffer_map.at(reference_vehicle_id);
-  SimpleWaypointPtr closest_point = reference_vehicle_buffer.front();
-  bool ego_inside_junction = closest_point->CheckJunction();
+  WaypointPtr closest_point = reference_vehicle_buffer.front();
+  bool ego_inside_junction = closest_point->IsJunction();
   TrafficLightState reference_tl_state = simulation_state.GetTLS(reference_vehicle_id);
   bool ego_at_traffic_light = reference_tl_state.at_traffic_light;
   bool ego_stopped_by_light = reference_tl_state.tl_state != TLS::Green && reference_tl_state.tl_state != TLS::Off;
-  SimpleWaypointPtr look_ahead_point = reference_vehicle_buffer.at(reference_junction_look_ahead_index);
-  bool ego_at_junction_entrance = !closest_point->CheckJunction() && look_ahead_point->CheckJunction();
+  WaypointPtr look_ahead_point = reference_vehicle_buffer.at(reference_junction_look_ahead_index);
+  bool ego_at_junction_entrance = !closest_point->IsJunction() && look_ahead_point->IsJunction();
 
   // Conditions to consider collision negotiation.
   if (!(ego_at_junction_entrance && ego_at_traffic_light && ego_stopped_by_light)

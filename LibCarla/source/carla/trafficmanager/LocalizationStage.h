@@ -4,9 +4,11 @@
 #include <memory>
 
 #include "carla/client/DebugHelper.h"
+#include "carla/client/Map.h"
+#include "carla/road/Lane.h"
 
 #include "carla/trafficmanager/DataStructures.h"
-#include "carla/trafficmanager/InMemoryMap.h"
+// #include "carla/trafficmanager/InMemoryMap.h"
 #include "carla/trafficmanager/LocalizationUtils.h"
 #include "carla/trafficmanager/Parameters.h"
 #include "carla/trafficmanager/RandomGenerator.h"
@@ -19,8 +21,12 @@ namespace traffic_manager {
 
 namespace cc = carla::client;
 
-using LocalMapPtr = std::shared_ptr<InMemoryMap>;
+// using LocalMapPtr = std::shared_ptr<InMemoryMap>;
 using LaneChangeLocationMap = std::unordered_map<ActorId, cg::Location>;
+using MapPtr = boost::shared_ptr<cc::Map>;
+using NodeList = std::vector<WaypointPtr>;
+using LaneType = road::Lane::LaneType;
+using LaneChangeType = road::element::LaneMarking::LaneChange;
 
 /// This class has functionality to maintain a horizon of waypoints ahead
 /// of the vehicle for it to follow.
@@ -32,7 +38,7 @@ private:
   BufferMap &buffer_map;
   const SimulationState &simulation_state;
   TrackTraffic &track_traffic;
-  const LocalMapPtr &local_map;
+  const MapPtr &world_map;
   Parameters &parameters;
   // Array of vehicles marked by stages for removal.
   std::vector<ActorId>& marked_for_removal;
@@ -40,11 +46,11 @@ private:
   cc::DebugHelper &debug_helper;
   LaneChangeLocationMap last_lane_change_location;
   ActorIdSet vehicles_at_junction;
-  using SimpleWaypointPair = std::pair<SimpleWaypointPtr, SimpleWaypointPtr>;
-  std::unordered_map<ActorId, SimpleWaypointPair> vehicles_at_junction_entrance;
+  using WaypointPair = std::pair<WaypointPtr, WaypointPtr>;
+  std::unordered_map<ActorId, WaypointPair> vehicles_at_junction_entrance;
   RandomGeneratorMap &random_devices;
 
-  SimpleWaypointPtr AssignLaneChange(const ActorId actor_id,
+  WaypointPtr AssignLaneChange(const ActorId actor_id,
                                      const cg::Location vehicle_location,
                                      const float vehicle_speed,
                                      bool force, bool direction);
@@ -60,7 +66,7 @@ public:
                     BufferMap &buffer_map,
                     const SimulationState &simulation_state,
                     TrackTraffic &track_traffic,
-                    const LocalMapPtr &local_map,
+                    const MapPtr &world_map,
                     Parameters &parameters,
                     std::vector<ActorId>& marked_for_removal,
                     LocalizationFrame &output_array,

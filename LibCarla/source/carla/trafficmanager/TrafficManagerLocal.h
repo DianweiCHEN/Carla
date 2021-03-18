@@ -16,11 +16,12 @@
 #include "carla/client/detail/EpisodeProxy.h"
 #include "carla/client/TrafficLight.h"
 #include "carla/client/World.h"
+#include "carla/client/Map.h"
 #include "carla/Memory.h"
 #include "carla/rpc/Command.h"
 
 #include "carla/trafficmanager/AtomicActorSet.h"
-#include "carla/trafficmanager/InMemoryMap.h"
+// #include "carla/trafficmanager/InMemoryMap.h"
 #include "carla/trafficmanager/Parameters.h"
 #include "carla/trafficmanager/RandomGenerator.h"
 #include "carla/trafficmanager/SimulationState.h"
@@ -43,7 +44,8 @@ using namespace std::chrono_literals;
 
 using TimePoint = chr::time_point<chr::system_clock, chr::nanoseconds>;
 using TLGroup = std::vector<carla::SharedPtr<carla::client::TrafficLight>>;
-using LocalMapPtr = std::shared_ptr<InMemoryMap>;
+// using LocalMapPtr = std::shared_ptr<InMemoryMap>;
+using MapPtr = boost::shared_ptr<cc::Map>;
 using constants::HybridMode::HYBRID_MODE_DT;
 
 /// The function of this class is to integrate all the various stages of
@@ -67,8 +69,8 @@ private:
   /// List of vehicles registered with the traffic manager in
   /// current update cycle.
   std::vector<ActorId> vehicle_id_list;
-  /// Pointer to local map cache.
-  LocalMapPtr local_map;
+  /// Pointer to world map.
+  MapPtr world_map;
   /// Structures to hold waypoint buffers for all vehicles.
   BufferMap buffer_map;
   /// Carla's debug helper object.

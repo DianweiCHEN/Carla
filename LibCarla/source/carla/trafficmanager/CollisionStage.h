@@ -36,7 +36,7 @@ using CollisionLockMap = std::unordered_map<ActorId, CollisionLock>;
 namespace cc = carla::client;
 namespace bg = boost::geometry;
 
-using Buffer = std::deque<std::shared_ptr<SimpleWaypoint>>;
+using Buffer = std::deque<WaypointPtr>;
 using BufferMap = std::unordered_map<carla::ActorId, Buffer>;
 using LocationVector = std::vector<cg::Location>;
 using GeodesicBoundaryMap = std::unordered_map<ActorId, LocationVector>;

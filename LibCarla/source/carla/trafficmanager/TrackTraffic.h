@@ -3,16 +3,19 @@
 
 #include "carla/road/RoadTypes.h"
 #include "carla/rpc/ActorId.h"
+#include "carla/client/Waypoint.h"
 
-#include "carla/trafficmanager/SimpleWaypoint.h"
+// #include "carla/trafficmanager/SimpleWaypoint.h"
 
 namespace carla {
 namespace traffic_manager {
 
+namespace cc = carla::client;
+
 using ActorId = carla::ActorId;
 using ActorIdSet = std::unordered_set<ActorId>;
-using SimpleWaypointPtr = std::shared_ptr<SimpleWaypoint>;
-using Buffer = std::deque<SimpleWaypointPtr>;
+using WaypointPtr = boost::shared_ptr<cc::Waypoint>;
+using Buffer = std::deque<WaypointPtr>;
 using GeoGridId = carla::road::JuncId;
 
 // This class is used to track the waypoint occupancy of all the actors.
@@ -43,13 +46,15 @@ public:
 
     void UpdateGridPosition(const ActorId actor_id, const Buffer &buffer);
     void UpdateUnregisteredGridPosition(const ActorId actor_id,
-                                        const std::vector<SimpleWaypointPtr> waypoints);
+                                        const std::vector<WaypointPtr> waypoints);
 
     ActorIdSet GetOverlappingVehicles(ActorId actor_id) const;
     /// Method to delete actor data from tracking.
     void DeleteActor(ActorId actor_id);
 
     void Clear();
+
+    GeoGridId GetGeodesicGridId(WaypointPtr waypoint);
 };
 
 } // namespace traffic_manager

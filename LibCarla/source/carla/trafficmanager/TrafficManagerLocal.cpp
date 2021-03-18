@@ -5,6 +5,7 @@
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
 #include <algorithm>
+#include "boost/pointer_cast.hpp"
 
 #include "carla/client/detail/Simulator.h"
 
@@ -28,7 +29,6 @@ TrafficManagerLocal::TrafficManagerLocal(
     longitudinal_highway_PID_parameters(longitudinal_highway_PID_parameters),
     lateral_PID_parameters(lateral_PID_parameters),
     lateral_highway_PID_parameters(lateral_highway_PID_parameters),
-
     episode_proxy(episode_proxy),
     world(cc::World(episode_proxy)),
     debug_helper(world.MakeDebugHelper()),
@@ -37,7 +37,7 @@ TrafficManagerLocal::TrafficManagerLocal(
                                          buffer_map,
                                          simulation_state,
                                          track_traffic,
-                                         local_map,
+                                         world_map,
                                          parameters,
                                          marked_for_removal,
                                          localization_frame,
@@ -82,7 +82,7 @@ TrafficManagerLocal::TrafficManagerLocal(
               marked_for_removal,
               parameters,
               world,
-              local_map,
+              world_map,
               simulation_state,
               localization_stage,
               collision_stage,
@@ -90,14 +90,17 @@ TrafficManagerLocal::TrafficManagerLocal(
               motion_plan_stage,
               random_devices)),
 
-    server(TrafficManagerServer(RPCportTM, static_cast<carla::traffic_manager::TrafficManagerBase *>(this))) {
+    server(TrafficManagerServer(RPCportTM,
+                                static_cast<carla::traffic_manager::TrafficManagerBase *>(this))) {
 
   parameters.SetGlobalPercentageSpeedDifference(perc_difference_from_limit);
 
   registered_vehicles_state = -1;
-
+  auto start = std::chrono::high_resolution_clock::now();
   SetupLocalMap();
-
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> diff = end-start;
+  std::cout << "SetupLocalMap(): "<<  diff.count() << " s\n";
   Start();
 }
 
@@ -107,9 +110,7 @@ TrafficManagerLocal::~TrafficManagerLocal() {
 }
 
 void TrafficManagerLocal::SetupLocalMap() {
-  const carla::SharedPtr<cc::Map> world_map = world.GetMap();
-  local_map = std::make_shared<InMemoryMap>(world_map);
-  local_map->SetUp();
+  world_map = world.GetMap();
 }
 
 void TrafficManagerLocal::Start() {
@@ -118,7 +119,6 @@ void TrafficManagerLocal::Start() {
 }
 
 void TrafficManagerLocal::Run() {
-
   localization_frame.reserve(INITIAL_SIZE);
   collision_frame.reserve(INITIAL_SIZE);
   tl_frame.reserve(INITIAL_SIZE);
@@ -127,7 +127,6 @@ void TrafficManagerLocal::Run() {
 
   size_t last_frame = 0;
   while (run_traffic_manger.load()) {
-
     bool synchronous_mode = parameters.GetSynchronousMode();
     bool hybrid_physics_mode = parameters.GetHybridPhysicsMode();
 
@@ -160,7 +159,11 @@ void TrafficManagerLocal::Run() {
 
     std::unique_lock<std::mutex> registration_lock(registration_mutex);
     // Updating simulation state, actor life cycle and performing necessary cleanup.
+    auto start1 = std::chrono::high_resolution_clock::now();
     alsm.Update();
+    auto end1 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff1 = end1-start1;
+    std::cout << "ALSM Stage: "<<  diff1.count() << " s\n";
 
     // Re-allocating inter-stage communication frames based on changed number of registered vehicles.
     int current_registered_vehicles_state = registered_vehicles.GetState();
@@ -197,18 +200,31 @@ void TrafficManagerLocal::Run() {
     control_frame.resize(number_of_vehicles);
 
     // Run core operation stages.
+    auto start2 = std::chrono::high_resolution_clock::now();
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       localization_stage.Update(index);
     }
+    auto end2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff2 = end2-start2;
+    std::cout << "Localization Stage: "<<  diff2.count() << " s\n";
+
+    auto start3 = std::chrono::high_resolution_clock::now();
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       collision_stage.Update(index);
     }
     collision_stage.ClearCycleCache();
+    auto end3 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff3 = end3-start3;
+    std::cout << "Collision Stage: "<<  diff3.count() << " s\n";
 
+    auto start4 = std::chrono::high_resolution_clock::now();
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       traffic_light_stage.Update(index);
       motion_plan_stage.Update(index);
     }
+    auto end4 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff4 = end4-start4;
+    std::cout << "TL and MP Stage: "<<  diff4.count() << " s\n";
 
     registration_lock.unlock();
 
@@ -280,7 +296,7 @@ void TrafficManagerLocal::Release() {
 
   Stop();
 
-  local_map.reset();
+  world_map.reset();
 }
 
 void TrafficManagerLocal::Reset() {

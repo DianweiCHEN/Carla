@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "carla/client/Actor.h"
+#include "carla/client/Waypoint.h"
 #include "carla/geom/Location.h"
 #include "carla/geom/Rotation.h"
 #include "carla/geom/Vector3D.h"
@@ -15,7 +16,7 @@
 #include "carla/rpc/Command.h"
 #include "carla/rpc/TrafficLightState.h"
 
-#include "carla/trafficmanager/SimpleWaypoint.h"
+// #include "carla/trafficmanager/SimpleWaypoint.h"
 
 namespace carla {
 namespace traffic_manager {
@@ -27,15 +28,15 @@ namespace cg = carla::geom;
 using ActorId = carla::ActorId;
 using ActorPtr = carla::SharedPtr<cc::Actor>;
 using JunctionID = carla::road::JuncId;
-using SimpleWaypointPtr = std::shared_ptr<SimpleWaypoint>;
-using Buffer = std::deque<SimpleWaypointPtr>;
+using WaypointPtr = boost::shared_ptr<cc::Waypoint>;
+using Buffer = std::deque<WaypointPtr>;
 using BufferMap = std::unordered_map<carla::ActorId, Buffer>;
 using TimeInstance = chr::time_point<chr::system_clock, chr::nanoseconds>;
 using TLS = carla::rpc::TrafficLightState;
 
 struct LocalizationData {
-  SimpleWaypointPtr junction_end_point;
-  SimpleWaypointPtr safe_point;
+  WaypointPtr junction_end_point;
+  WaypointPtr safe_point;
   bool is_at_junction_entrance;
 };
 using LocalizationFrame = std::vector<LocalizationData>;

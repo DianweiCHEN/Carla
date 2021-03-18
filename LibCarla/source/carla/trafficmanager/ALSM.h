@@ -11,7 +11,7 @@
 #include "carla/trafficmanager/AtomicActorSet.h"
 #include "carla/trafficmanager/CollisionStage.h"
 #include "carla/trafficmanager/DataStructures.h"
-#include "carla/trafficmanager/InMemoryMap.h"
+//#include "carla/trafficmanager/InMemoryMap.h"
 #include "carla/trafficmanager/LocalizationStage.h"
 #include "carla/trafficmanager/MotionPlanStage.h"
 #include "carla/trafficmanager/Parameters.h"
@@ -32,7 +32,9 @@ namespace cc = carla::client;
 using ActorList = carla::SharedPtr<cc::ActorList>;
 using ActorMap = std::unordered_map<ActorId, ActorPtr>;
 using IdleTimeMap = std::unordered_map<ActorId, double>;
-using LocalMapPtr = std::shared_ptr<InMemoryMap>;
+//using LocalMapPtr = std::shared_ptr<InMemoryMap>;
+using MapPtr = boost::shared_ptr<cc::Map>;
+using WaypointPtr = boost::shared_ptr<cc::Waypoint>;
 
 /// ALSM: Agent Lifecycle and State Managerment
 /// This class has functionality to update the local cache of kinematic states
@@ -53,7 +55,7 @@ private:
   std::vector<ActorId>& marked_for_removal;
   const Parameters &parameters;
   const cc::World &world;
-  const LocalMapPtr &local_map;
+  const MapPtr &world_map;
   SimulationState &simulation_state;
   LocalizationStage &localization_stage;
   CollisionStage &collision_stage;
@@ -75,10 +77,10 @@ private:
   // Method to identify actors newly spawned in the simulation since last tick.
   ActorVector IdentifyNewActors(const ActorList &actor_list);
 
-  using DestroyeddActors = std::pair<ActorIdSet, ActorIdSet>;
+  using DestroyedActors = std::pair<ActorIdSet, ActorIdSet>;
   // Method to identify actors deleted in the last frame.
   // Arrays of registered and unregistered actors are returned separately.
-  DestroyeddActors IdentifyDestroyedActors(const ActorList &actor_list);
+  DestroyedActors IdentifyDestroyedActors(const ActorList &actor_list);
 
   using IdleInfo = std::pair<ActorId, double>;
   void UpdateRegisteredActorsData(const bool hybrid_physics_mode, IdleInfo &max_idle_time);
@@ -92,7 +94,7 @@ public:
        std::vector<ActorId>& marked_for_removal,
        const Parameters &parameters,
        const cc::World &world,
-       const LocalMapPtr &local_map,
+       const MapPtr &world_map,
        SimulationState &simulation_state,
        LocalizationStage &localization_stage,
        CollisionStage &collision_stage,
