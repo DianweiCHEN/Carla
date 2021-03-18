@@ -47,13 +47,11 @@ public:
   // -- Load a new episode -----------------------------------------------------
   // ===========================================================================
 
-public:
-
   /// Load a new map and start a new episode.
   ///
   /// If @a MapString is empty, the current map is reloaded.
   UFUNCTION(BlueprintCallable)
-  bool LoadNewEpisode(const FString &MapString, bool reset_settings = true);
+  bool LoadNewEpisode(const FString &MapString, bool ResetSettings = true);
 
   /// Load a new map generating the mesh from OpenDRIVE data and
   /// start a new episode.
@@ -67,8 +65,6 @@ public:
   // -- Episode settings -------------------------------------------------------
   // ===========================================================================
 
-public:
-
   UFUNCTION(BlueprintCallable)
   const FEpisodeSettings &GetSettings() const
   {
@@ -81,8 +77,6 @@ public:
   // ===========================================================================
   // -- Retrieve info about this episode ---------------------------------------
   // ===========================================================================
-
-public:
 
   /// Return the unique id of this episode.
   auto GetId() const
@@ -125,8 +119,6 @@ public:
   // -- Retrieve special actors ------------------------------------------------
   // ===========================================================================
 
-public:
-
   UFUNCTION(BlueprintCallable)
   APawn *GetSpectatorPawn() const
   {
@@ -147,8 +139,6 @@ public:
   // ===========================================================================
   // -- Actor look up methods --------------------------------------------------
   // ===========================================================================
-
-public:
 
   /// Find a Carla actor by id.
   ///
@@ -182,8 +172,6 @@ public:
   // -- Actor handling methods -------------------------------------------------
   // ===========================================================================
 
-public:
-
   /// Spawns an actor based on @a ActorDescription at @a Transform. To properly
   /// despawn an actor created with this function call DestroyActor.
   ///
@@ -195,7 +183,9 @@ public:
       FActorDescription thisActorDescription,
       FActorView::IdType DesiredId = 0)
   {
-    auto result = ActorDispatcher->SpawnActor(Transform, thisActorDescription, DesiredId);
+    FTransform NewTransform = Transform;
+    NewTransform.AddToTranslation(-1.0f * FVector(CurrentMapOrigin));
+    auto result = ActorDispatcher->SpawnActor(NewTransform, thisActorDescription, DesiredId);
     if (Recorder->IsEnabled())
     {
       if (result.Key == EActorSpawnResultStatus::Success)
@@ -203,7 +193,7 @@ public:
         Recorder->CreateRecorderEventAdd(
           result.Value.GetActorId(),
           static_cast<uint8_t>(result.Value.GetActorType()),
-          Transform,
+          NewTransform,
           std::move(thisActorDescription)
         );
       }
@@ -256,8 +246,6 @@ public:
   // -- Other methods ----------------------------------------------------------
   // ===========================================================================
 
-public:
-
   /// Create a serializable object describing the actor.
   carla::rpc::Actor SerializeActor(FActorView ActorView) const;
 
@@ -281,6 +269,10 @@ public:
   }
 
   std::string StartRecorder(std::string name, bool AdditionalData);
+
+  FIntVector GetCurrentMapOrigin() const { return CurrentMapOrigin; }
+
+  void SetCurrentMapOrigin(const FIntVector& NewOrigin) { CurrentMapOrigin = NewOrigin; }
 
 private:
 
@@ -331,4 +323,6 @@ private:
   ACarlaRecorder *Recorder = nullptr;
 
   carla::geom::GeoLocation MapGeoReference;
+
+  FIntVector CurrentMapOrigin;
 };

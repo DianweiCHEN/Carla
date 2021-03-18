@@ -463,6 +463,18 @@ void FCarlaServer::FPimpl::BindActions()
     {
       RESPOND_ERROR("internal error: actor could not be spawned");
     }
+
+    ACarlaGameModeBase* GameMode = UCarlaStatics::GetGameMode(Episode->GetWorld());
+    if (!GameMode)
+    {
+      RESPOND_ERROR("unable to find CARLA game mode");
+    }
+    ALargeMapManager* LargeMap = GameMode->GetLMManager();
+    if(LargeMap)
+    {
+      LargeMap->OnActorSpawned(Result.Value);
+    }
+
     return Episode->SerializeActor(Result.Value);
   };
 
