@@ -93,11 +93,11 @@ if not exist "%ZLIB_SRC_DIR%build" (
 
 cd "%ZLIB_SRC_DIR%build"
 
-rem -DCMAKE_BUILD_TYPE=Release^
-rem -DCMAKE_CONFIGURATION_TYPES=Release^
+rem -DCMAKE_BUILD_TYPE=Debug^
+rem -DCMAKE_CONFIGURATION_TYPES=Debug^
 cmake -G "NMake Makefiles"^
  -DCMAKE_INSTALL_PREFIX="%ZLIB_INSTALL_DIR:\=/%"^
- -DCMAKE_BUILD_TYPE=Release^
+ -DCMAKE_BUILD_TYPE=Debug^
  "%ZLIB_SRC_DIR%"
 if %errorlevel% neq 0 goto error_cmake
 

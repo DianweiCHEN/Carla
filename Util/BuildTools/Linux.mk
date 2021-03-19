@@ -3,7 +3,7 @@ default: help
 help:
 	@less ${CARLA_BUILD_TOOLS_FOLDER}/Linux.mk.help
 
-launch: LibCarla.server.release
+launch: LibCarla.server.debug
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildCarlaUE4.sh --build --launch $(ARGS)
 
 launch-only:
@@ -49,7 +49,7 @@ check: LibCarla PythonAPI
 	@${CARLA_BUILD_TOOLS_FOLDER}/Check.sh --all $(ARGS)
 
 check.LibCarla: LibCarla
-	@${CARLA_BUILD_TOOLS_FOLDER}/Check.sh --libcarla-debug --libcarla-release $(ARGS)
+	@${CARLA_BUILD_TOOLS_FOLDER}/Check.sh --libcarla-debug --libcarla-debug $(ARGS)
 
 check.LibCarla.debug: LibCarla.debug
 	@${CARLA_BUILD_TOOLS_FOLDER}/Check.sh --libcarla-debug $(ARGS)
@@ -79,26 +79,26 @@ examples:
 run-examples:
 	@for D in ${CARLA_EXAMPLES_FOLDER}/*; do [ -d "$${D}" ] && make -C $${D} run.only; done
 
-CarlaUE4Editor: LibCarla.server.release
+CarlaUE4Editor: LibCarla.server.debug
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildCarlaUE4.sh --build $(ARGS)
 
 .PHONY: PythonAPI
-PythonAPI: LibCarla.client.release osm2odr
+PythonAPI: LibCarla.client.debug osm2odr
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.sh $(ARGS)
 
-PythonAPI.2: LibCarla.client.release osm2odr
+PythonAPI.2: LibCarla.client.debug osm2odr
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.sh --python-version=2
 
-PythonAPI.3: LibCarla.client.release osm2odr
+PythonAPI.3: LibCarla.client.debug osm2odr
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.sh --python-version=3
 
-PythonAPI.rebuild: LibCarla.client.release osm2odr
+PythonAPI.rebuild: LibCarla.client.debug osm2odr
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.sh --rebuild $(ARGS)
 
-PythonAPI.rss: LibCarla.client.rss.release osm2odr
+PythonAPI.rss: LibCarla.client.rss.debug osm2odr
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.sh --rss $(ARGS)
 
-PythonAPI.rss.rebuild: LibCarla.client.rss.release osm2odr
+PythonAPI.rss.rebuild: LibCarla.client.rss.debug osm2odr
 	@${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.sh --rebuild --rss $(ARGS)
 
 PythonAPI.docs:
