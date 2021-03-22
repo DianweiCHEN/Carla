@@ -22,6 +22,7 @@
 #include "DynamicRHI.h"
 
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 namespace cr = carla::road;
@@ -171,6 +172,8 @@ void ACarlaGameModeBase::BeginPlay()
   {
     RegisterEnvironmentObjects();
   }
+
+  EnableCarSimChronoOverlapEvents();
 }
 
 void ACarlaGameModeBase::Tick(float DeltaSeconds)
@@ -253,6 +256,39 @@ ATrafficLightManager* ACarlaGameModeBase::GetTrafficLightManager()
     }
   }
   return TrafficLightManager;
+}
+
+void ACarlaGameModeBase::CheckForEmptyMeshes()
+{
+  TArray<AActor*> WorldActors;
+  UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStaticMeshActor::StaticClass(), WorldActors);
+  
+  for(AActor *Actor : WorldActors)
+  {
+  	AStaticMeshActor *MeshActor = CastChecked<AStaticMeshActor>(Actor);
+  	if(MeshActor->GetStaticMeshComponent()->GetStaticMesh() == NULL)
+  	{
+  		UE_LOG(LogTemp, Error, TEXT("The object : %s has no mesh"), *MeshActor->GetFullName());
+  	}
+  }
+}
+
+void ACarlaGameModeBase::EnableCarSimChronoOverlapEvents()
+{
+  TArray<AActor*> WorldActors;
+  UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStaticMeshActor::StaticClass(), WorldActors);
+  
+  for(AActor *Actor : WorldActors)
+  {
+    AStaticMeshActor *MeshActor = CastChecked<AStaticMeshActor>(Actor);
+    if(MeshActor->GetStaticMeshComponent()->GetStaticMesh() != NULL)
+    {
+      if (MeshActor->GetStaticMeshComponent()->GetGenerateOverlapEvents() == false)
+      {
+        MeshActor->GetStaticMeshComponent()->SetGenerateOverlapEvents(true);
+      }
+    }
+  }
 }
 
 void ACarlaGameModeBase::DebugShowSignals(bool enable)
