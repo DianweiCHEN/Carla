@@ -96,11 +96,7 @@ TrafficManagerLocal::TrafficManagerLocal(
   parameters.SetGlobalPercentageSpeedDifference(perc_difference_from_limit);
 
   registered_vehicles_state = -1;
-  auto start = std::chrono::high_resolution_clock::now();
   SetupLocalMap();
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> diff = end-start;
-  std::cout << "SetupLocalMap(): "<<  diff.count() << " s\n";
   Start();
 }
 
@@ -159,11 +155,7 @@ void TrafficManagerLocal::Run() {
 
     std::unique_lock<std::mutex> registration_lock(registration_mutex);
     // Updating simulation state, actor life cycle and performing necessary cleanup.
-    auto start1 = std::chrono::high_resolution_clock::now();
     alsm.Update();
-    auto end1 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff1 = end1-start1;
-    std::cout << "ALSM Stage: "<<  diff1.count() << " s\n";
 
     // Re-allocating inter-stage communication frames based on changed number of registered vehicles.
     int current_registered_vehicles_state = registered_vehicles.GetState();
@@ -200,32 +192,18 @@ void TrafficManagerLocal::Run() {
     control_frame.resize(number_of_vehicles);
 
     // Run core operation stages.
-    auto start2 = std::chrono::high_resolution_clock::now();
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       localization_stage.Update(index);
     }
-    auto end2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff2 = end2-start2;
-    std::cout << "Localization Stage: "<<  diff2.count() << " s\n";
-
-    auto start3 = std::chrono::high_resolution_clock::now();
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       collision_stage.Update(index);
     }
     collision_stage.ClearCycleCache();
-    auto end3 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff3 = end3-start3;
-    std::cout << "Collision Stage: "<<  diff3.count() << " s\n";
 
-    auto start4 = std::chrono::high_resolution_clock::now();
     for (unsigned long index = 0u; index < vehicle_id_list.size(); ++index) {
       traffic_light_stage.Update(index);
       motion_plan_stage.Update(index);
     }
-    auto end4 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff4 = end4-start4;
-    std::cout << "TL and MP Stage: "<<  diff4.count() << " s\n";
-
     registration_lock.unlock();
 
     // Sending the current cycle's batch command to the simulator.
