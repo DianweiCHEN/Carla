@@ -235,7 +235,8 @@ def synchronization_loop(args):
     """
     sumo_simulation = SumoSimulation(args.sumo_cfg_file, args.step_length, args.sumo_host,
                                      args.sumo_port, args.sumo_gui, args.client_order)
-    carla_simulation = CarlaSimulation(args.carla_host, args.carla_port, args.step_length)
+    carla_simulation = CarlaSimulation(args.carla_host, args.carla_port, args.step_length,
+                                       args.unload_all_map_layers)
 
     synchronization = SimulationSynchronization(sumo_simulation, carla_simulation, args.tls_manager,
                                                 args.sync_vehicle_color, args.sync_vehicle_lights)
@@ -246,9 +247,10 @@ def synchronization_loop(args):
             synchronization.tick()
 
             end = time.time()
-            elapsed = end - start
-            if elapsed < args.step_length:
-                time.sleep(args.step_length - elapsed)
+            if args.real_time:
+                elapsed = end - start
+                if elapsed < args.step_length:
+                    time.sleep(args.step_length - elapsed)
 
     except KeyboardInterrupt:
         logging.info('Cancelled by user.')
@@ -304,6 +306,12 @@ if __name__ == '__main__':
                            choices=['none', 'sumo', 'carla'],
                            help="select traffic light manager (default: none)",
                            default='none')
+    argparser.add_argument('--real-time',
+                           action='store_true',
+                           help='tries to keep real time sleeping when the simulation is faster than real time (default: False)')
+    argparser.add_argument('--unload-all-map-layers',
+                           action='store_true',
+                           help='unloads all the leyers of the level (default: False)')
     argparser.add_argument('--debug', action='store_true', help='enable debug messages')
     arguments = argparser.parse_args()
 

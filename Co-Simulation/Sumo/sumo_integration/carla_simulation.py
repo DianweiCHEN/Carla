@@ -26,13 +26,16 @@ class CarlaSimulation(object):
     """
     CarlaSimulation is responsible for the management of the carla simulation.
     """
-    def __init__(self, host, port, step_length):
+    def __init__(self, host, port, step_length, unload_all_map_layers=False):
         self.client = carla.Client(host, port)
         self.client.set_timeout(2.0)
 
         self.world = self.client.get_world()
         self.blueprint_library = self.world.get_blueprint_library()
         self.step_length = step_length
+
+        if unload_all_map_layers:
+            self.world.unload_map_layer(carla.MapLayer.All)
 
         # The following sets contain updated information for the current frame.
         self._active_actors = set()

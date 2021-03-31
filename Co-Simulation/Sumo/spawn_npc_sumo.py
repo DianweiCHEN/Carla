@@ -93,7 +93,8 @@ def main(args):
     # ----------------
     # carla simulation
     # ----------------
-    carla_simulation = CarlaSimulation(args.host, args.port, args.step_length)
+    carla_simulation = CarlaSimulation(args.host, args.port, args.step_length,
+                                       args.unload_all_map_layers)
 
     world = carla_simulation.client.get_world()
     current_map = world.get_map()
@@ -191,9 +192,10 @@ def main(args):
                         traci.vehicle.setRoute(vehicle_id, new_route)
 
             end = time.time()
-            elapsed = end - start
-            if elapsed < args.step_length:
-                time.sleep(args.step_length - elapsed)
+            if args.real_time:
+                elapsed = end - start
+                if elapsed < args.step_length:
+                    time.sleep(args.step_length - elapsed)
 
     except KeyboardInterrupt:
         logging.info('Cancelled by user.')
@@ -277,6 +279,12 @@ if __name__ == '__main__':
                            choices=['none', 'sumo', 'carla'],
                            help="select traffic light manager (default: none)",
                            default='none')
+    argparser.add_argument('--real-time',
+                           action='store_true',
+                           help='tries to keep real time sleeping when the simulation is faster than real time (default: False)')
+    argparser.add_argument('--unload-all-map-layers',
+                           action='store_true',
+                           help='unloads all the leyers of the level (default: False)')
     argparser.add_argument('--debug', action='store_true', help='enable debug messages')
     args = argparser.parse_args()
 
