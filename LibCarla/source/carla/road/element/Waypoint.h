@@ -17,13 +17,13 @@ namespace element {
 
   struct Waypoint {
 
+    double s = 0.0;
+
     RoadId road_id = 0u;
 
     SectionId section_id = 0u;
 
     LaneId lane_id = 0;
-
-    double s = 0.0;
   };
 
 } // namespace element
