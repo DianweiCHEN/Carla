@@ -377,13 +377,14 @@ WaypointPtr LocalizationStage::AssignLaneChange(const ActorId actor_id,
       for (auto &candidate_lane_wp : other_neighbouring_lanes) {
         if (candidate_lane_wp != nullptr) {
           LaneType candidate_lane_type = candidate_lane_wp->GetType();
-          LaneChangeType candidate_lane_change = candidate_lane_wp->GetLaneChange();
-          if (track_traffic.GetPassingVehicles(candidate_lane_wp->GetId()).size() == 0 &&
-              ((candidate_lane_type == LaneType::Driving) || (candidate_lane_type == LaneType::Parking))) {
-            if (left_right && (candidate_lane_change == LaneChangeType::Both || candidate_lane_change == LaneChangeType::Left))
-              distant_left_lane_free = true;
-            else if (candidate_lane_change == LaneChangeType::Both || candidate_lane_change == LaneChangeType::Right)
-              distant_right_lane_free = true;
+          LaneChangeType candidate_lane_change = other_current_waypoint->GetLaneChange();
+          if (candidate_lane_wp->GetLaneId() * current_waypoint->GetLaneId() > 0) {
+            if (track_traffic.GetPassingVehicles(candidate_lane_wp->GetId()).size() == 0 && candidate_lane_type == LaneType::Driving) {
+              if (left_right && (candidate_lane_change == LaneChangeType::Both || candidate_lane_change == LaneChangeType::Left))
+                distant_left_lane_free = true;
+              else if (candidate_lane_change == LaneChangeType::Both || candidate_lane_change == LaneChangeType::Right)
+                distant_right_lane_free = true;
+            }
           }
         }
         left_right = !left_right;
