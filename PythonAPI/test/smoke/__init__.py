@@ -30,7 +30,7 @@ class SmokeTest(unittest.TestCase):
         self.client.set_timeout(120.0)
 
     def tearDown(self):
-        self.client.load_world("BaseMap")
+        # self.client.load_world("BaseMap")
         self.client = None
 
 
