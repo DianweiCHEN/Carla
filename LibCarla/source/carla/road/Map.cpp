@@ -209,12 +209,12 @@ namespace road {
       return w;
     }
 
-    const auto dist = geom::Math::Distance2D(ComputeTransform(*w).location, pos);
+    const auto dist = geom::Math::DistanceSquared2D(ComputeTransform(*w).location, pos);
     const auto lane_width_info = GetLane(*w).GetInfo<RoadInfoLaneWidth>(w->s);
     const auto half_lane_width =
         lane_width_info->GetPolynomial().Evaluate(w->s) * 0.5;
 
-    if (dist < half_lane_width) {
+    if (dist < (half_lane_width * half_lane_width) ) {
       return w;
     }
 

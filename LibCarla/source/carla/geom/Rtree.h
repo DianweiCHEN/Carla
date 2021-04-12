@@ -78,6 +78,7 @@ namespace geom {
   class SegmentCloudRtree {
   public:
 
+    // TODO: use double
     typedef boost::geometry::model::point<float, Dimension, boost::geometry::cs::cartesian> BPoint;
     typedef boost::geometry::model::segment<BPoint> BSegment;
     typedef std::pair<BSegment, std::pair<T, T>> TreeElement;
@@ -138,7 +139,7 @@ namespace geom {
 
   private:
 
-    boost::geometry::index::rtree<TreeElement, boost::geometry::index::linear<16>> _rtree;
+    boost::geometry::index::rtree<TreeElement, boost::geometry::index::rstar<16>> _rtree;
 
   };
 
