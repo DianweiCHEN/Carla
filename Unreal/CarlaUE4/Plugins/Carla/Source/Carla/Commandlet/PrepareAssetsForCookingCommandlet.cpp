@@ -157,6 +157,23 @@ TArray<AStaticMeshActor *> UPrepareAssetsForCookingCommandlet::SpawnMeshesToWorl
   FString AssetName;
   for (auto MapAsset : MapContents)
   {
+    // Rename asset
+    MapAsset.AssetName.ToString(AssetName);
+    int32 FindIndex1 = AssetName.Find("Road_", ESearchCase::IgnoreCase, ESearchDir::FromStart, 0);
+    int32 FindIndex2 = AssetName.Find("Roads_", ESearchCase::IgnoreCase, ESearchDir::FromStart, 0);
+    if (FindIndex1 >= 0)
+    {
+      MapName = AssetName.Left(FindIndex1);
+      break;
+    } else if (FindIndex2 >= 0)
+    {
+      MapName = AssetName.Left(FindIndex2);
+      break;
+    }
+  }
+    
+  for (auto MapAsset : MapContents)
+  {
     // Spawn Static Mesh
     MeshAsset = Cast<UStaticMesh>(MapAsset.GetAsset());
     if (MeshAsset && ValidateStaticMesh(MeshAsset))
