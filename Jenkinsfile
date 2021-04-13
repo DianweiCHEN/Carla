@@ -92,8 +92,8 @@ pipeline
                         {
                             steps
                             {
-                                sh 'make package ARGS="--python-version=3.7,2 --chrono"'
-                                sh 'make package ARGS="--packages=AdditionalMaps,Town06_Opt,Town07_Opt,Town10HD_Opt --target-archive=AdditionalMaps --clean-intermediate --python-version=3.7,2"'
+                                sh 'make package ARGS="--python-version=3.7,2 --chrono --config=Development"'
+                                sh 'make package ARGS="--packages=AdditionalMaps,Town06_Opt,Town07_Opt,Town10HD_Opt --target-archive=AdditionalMaps --clean-intermediate --python-version=3.7,2 --config=Development"'
                                 sh 'make examples ARGS="localhost 3654"'
                             }
                             post
@@ -288,11 +288,11 @@ pipeline
                             {
                                 bat """
                                     call ../setEnv64.bat
-                                    make package ARGS="--chrono"
+                                    make package ARGS="--chrono --config=Development"
                                 """
                                 bat """
                                     call ../setEnv64.bat
-                                    make package ARGS="--packages=AdditionalMaps,Town06_Opt,Town07_Opt,Town10HD_Opt --target-archive=AdditionalMaps --clean-intermediate"
+                                    make package ARGS="--packages=AdditionalMaps,Town06_Opt,Town07_Opt,Town10HD_Opt --target-archive=AdditionalMaps --clean-intermediate --config=Development"
                                 """
                             }
                             post {
