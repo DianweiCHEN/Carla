@@ -78,6 +78,20 @@ static carla::geom::GeoLocation ToGeolocation(
   return self.GetGeoReference().Transform(location);
 }
 
+static auto GetWaypoints(const carla::client::Map& self, const boost::python::list& in_queries) {
+  boost::python::list result;
+
+  std::vector<carla::client::Map::WaypointQuery> queries{
+      boost::python::stl_input_iterator<carla::client::Map::WaypointQuery>(in_queries),
+      boost::python::stl_input_iterator<carla::client::Map::WaypointQuery>()};
+
+  for (const auto &object : self.GetWaypoints(queries)) {
+    result.append(object);
+  }
+
+  return result;
+}
+
 void export_map() {
   using namespace boost::python;
   namespace cc = carla::client;
@@ -154,11 +168,19 @@ void export_map() {
   // -- Map --------------------------------------------------------------------
   // ===========================================================================
 
+  class_<cc::Map::WaypointQuery>("WaypointQuery", 
+      init<cg::Location, bool, int32_t>((arg("location"), arg("project_to_road")=true, arg("lane_type")=cr::Lane::LaneType::Driving) ))
+    .add_property("location", &cc::Map::WaypointQuery::location)
+    .def_readwrite("lane_type", &cc::Map::WaypointQuery::lane_type)
+    .def_readwrite("project_to_road", &cc::Map::WaypointQuery::project_to_road)
+  ;
+
   class_<cc::Map, boost::noncopyable, boost::shared_ptr<cc::Map>>("Map", no_init)
     .def(init<std::string, std::string>((arg("name"), arg("xodr_content"))))
     .add_property("name", CALL_RETURNING_COPY(cc::Map, GetName))
     .def("get_spawn_points", CALL_RETURNING_LIST(cc::Map, GetRecommendedSpawnPoints))
     .def("get_waypoint", &cc::Map::GetWaypoint, (arg("location"), arg("project_to_road")=true, arg("lane_type")=cr::Lane::LaneType::Driving))
+    .def("get_waypoints", &GetWaypoints, (arg("queries")))
     .def("get_waypoint_xodr", &cc::Map::GetWaypointXODR, (arg("road_id"), arg("lane_id"), arg("s")))
     .def("get_topology", &GetTopology)
     .def("generate_waypoints", CALL_RETURNING_LIST_1(cc::Map, GenerateWaypoints, double), (args("distance")))

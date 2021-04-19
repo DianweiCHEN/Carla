@@ -12,7 +12,9 @@
 #include "carla/road/Map.h"
 #include "carla/road/RoadTypes.h"
 
+#include <algorithm>
 #include <sstream>
+#include <thread>
 
 namespace carla {
 namespace client {
@@ -52,6 +54,44 @@ namespace client {
     SharedPtr<Waypoint>(new Waypoint{shared_from_this(), *waypoint}) :
     nullptr;
   }
+
+  std::vector<SharedPtr<Waypoint>> Map::GetWaypoints(
+    const std::vector<WaypointQuery>& queries) const {
+
+    std::vector<std::thread> _workers;
+    const uint32_t num_workers = std::thread::hardware_concurrency() >> 1;
+    const uint32_t num_queries = static_cast<uint32_t>(queries.size());
+    uint32_t num_tasks_per_thread = std::max(1u, num_queries / num_workers);
+
+    std::vector<SharedPtr<Waypoint>> result(num_queries);
+
+    auto work = [&] (uint32_t start, uint32_t end) {
+      // Calculate waypoints
+      for(uint32_t j = start; j < end; j++) {
+        result[j] = GetWaypoint(queries[j].location, queries[j].project_to_road, queries[j].lane_type);
+      }
+    };
+
+    for(uint32_t i = 0, current_queries = 0;
+        i < num_workers && current_queries < num_queries;
+        i++, current_queries += num_tasks_per_thread) {
+
+      if((current_queries + num_tasks_per_thread) > num_queries) {
+        num_tasks_per_thread = num_queries - current_queries;
+      }
+
+      uint32_t start = current_queries;
+      uint32_t end = start + num_tasks_per_thread;
+
+      _workers.emplace_back(std::thread(work , start, end));
+    }
+    for(std::thread& w : _workers) {
+      w.join();
+    }
+
+    return result;
+  }
+
 
   SharedPtr<Waypoint> Map::GetWaypointXODR(
       carla::road::RoadId road_id,

@@ -29,6 +29,21 @@ namespace client {
       private NonCopyable {
   public:
 
+    struct WaypointQuery {
+      WaypointQuery () {}
+      WaypointQuery (
+        const geom::Location& in_location,
+        bool in_project_to_road,
+        int32_t in_lane_type)
+        : location(in_location),
+        lane_type(in_lane_type),
+        project_to_road(in_project_to_road) {}
+
+      const geom::Location location;
+      int32_t lane_type = static_cast<int32_t>(road::Lane::LaneType::Driving);
+      bool project_to_road = true;
+    };
+
     explicit Map(rpc::MapInfo description);
 
     explicit Map(std::string name, std::string xodr_content);
@@ -54,7 +69,9 @@ namespace client {
     SharedPtr<Waypoint> GetWaypoint(
         const geom::Location &location,
         bool project_to_road = true,
-        int32_t lane_type = static_cast<uint32_t>(road::Lane::LaneType::Driving)) const;
+        int32_t lane_type = static_cast<int32_t>(road::Lane::LaneType::Driving)) const;
+
+    std::vector<SharedPtr<Waypoint>> GetWaypoints(const std::vector<WaypointQuery>& queries) const;
 
     SharedPtr<Waypoint> GetWaypointXODR(
       carla::road::RoadId road_id,
