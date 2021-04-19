@@ -76,10 +76,10 @@ namespace road {
       }
       if ((static_cast<uint32_t>(lane.GetType()) & static_cast<uint32_t>(Lane::LaneType::Driving)) > 0) {
         std::forward<FuncT>(func)(Waypoint{
+            distance < 0.0 ? GetDistanceAtStartOfLane(lane) : distance,
             road_id,
             lane_section.GetId(),
-            lane.GetId(),
-            distance < 0.0 ? GetDistanceAtStartOfLane(lane) : distance});
+            lane.GetId()});
       }
     }
   }
@@ -98,10 +98,10 @@ namespace road {
       }
       if ((static_cast<int32_t>(lane.GetType()) & static_cast<int32_t>(lane_type)) > 0) {
         std::forward<FuncT>(func)(Waypoint{
+            distance < 0.0 ? GetDistanceAtStartOfLane(lane) : distance,
             road_id,
             lane_section.GetId(),
-            lane.GetId(),
-            distance < 0.0 ? GetDistanceAtStartOfLane(lane) : distance});
+            lane.GetId()});
       }
     }
   }
@@ -495,7 +495,7 @@ namespace road {
       const auto *road = next_lane->GetRoad();
       RELEASE_ASSERT(road != nullptr);
       const auto distance = GetDistanceAtStartOfLane(*next_lane);
-      result.emplace_back(Waypoint{road->GetId(), section->GetId(), lane_id, distance});
+      result.emplace_back(Waypoint{distance, road->GetId(), section->GetId(), lane_id});
     }
     return result;
   }
@@ -513,7 +513,7 @@ namespace road {
       const auto *road = next_lane->GetRoad();
       RELEASE_ASSERT(road != nullptr);
       const auto distance = GetDistanceAtEndOfLane(*next_lane);
-      result.emplace_back(Waypoint{road->GetId(), section->GetId(), lane_id, distance});
+      result.emplace_back(Waypoint{distance, road->GetId(), section->GetId(), lane_id});
     }
     return result;
   }
@@ -630,7 +630,7 @@ namespace road {
           // add only the right (negative) lanes
           if (lane.first < 0 &&
               static_cast<int32_t>(lane.second.GetType()) & static_cast<int32_t>(lane_type)) {
-            result.emplace_back(Waypoint{ road.GetId(), lane_section.GetId(), lane.second.GetId(), 0.0 });
+            result.emplace_back(Waypoint{ 0.0, road.GetId(), lane_section.GetId(), lane.second.GetId() });
           }
         }
       }
@@ -642,7 +642,7 @@ namespace road {
           if (lane.first > 0 &&
               static_cast<int32_t>(lane.second.GetType()) & static_cast<int32_t>(lane_type)) {
             result.emplace_back(
-              Waypoint{ road.GetId(), lane_section.GetId(), lane.second.GetId(), road_len });
+              Waypoint{ road_len, road.GetId(), lane_section.GetId(), lane.second.GetId() });
           }
         }
       }
@@ -662,7 +662,7 @@ namespace road {
           // add only the right (negative) lanes
           if (lane.first < 0 &&
               static_cast<int32_t>(lane.second.GetType()) & static_cast<int32_t>(lane_type)) {
-            result.emplace_back(Waypoint{ road.GetId(), lane_section.GetId(), lane.second.GetId(), 0.0 });
+            result.emplace_back(Waypoint{ 0.0, road.GetId(), lane_section.GetId(), lane.second.GetId() });
           }
         }
       }
@@ -674,7 +674,7 @@ namespace road {
           if (lane.first > 0 &&
               static_cast<int32_t>(lane.second.GetType()) & static_cast<int32_t>(lane_type)) {
             result.emplace_back(
-              Waypoint{ road.GetId(), lane_section.GetId(), lane.second.GetId(), road_len });
+              Waypoint{ road_len, road.GetId(), lane_section.GetId(), lane.second.GetId() });
           }
         }
       }
