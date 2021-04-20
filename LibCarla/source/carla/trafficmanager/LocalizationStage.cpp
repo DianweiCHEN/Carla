@@ -154,21 +154,8 @@ void LocalizationStage::Update(const unsigned long index) {
     uint64_t selection_index = 0u;
     // Pseudo-randomized path selection if found more than one choice.
     if (next_waypoints.size() > 1) {
-      // Arranging selection points from right to left.
-      std::sort(next_waypoints.begin(), next_waypoints.end(),
-                [&furthest_waypoint](const WaypointPtr &a, const WaypointPtr &b) {
-                  auto furthest_wpt_transform = furthest_waypoint->GetTransform();
-                  float a_x_product = DeviationCrossProduct(furthest_wpt_transform.location,
-                                                            furthest_wpt_transform.rotation.GetForwardVector(),
-                                                            a->GetTransform().location);
-                  float b_x_product = DeviationCrossProduct(furthest_wpt_transform.location,
-                                                            furthest_wpt_transform.rotation.GetForwardVector(),
-                                                            b->GetTransform().location);
-                  return a_x_product < b_x_product;
-                });
       double r_sample = random_devices.at(actor_id).next();
-      double s_bucket = 100.0 / next_waypoints.size();
-      selection_index = static_cast<uint64_t>(std::floor(r_sample/s_bucket));
+      selection_index = static_cast<uint64_t>(r_sample/next_waypoints.size()*0.001);
     } else if (next_waypoints.size() == 0) {
       if (!parameters.GetOSMMode()) {
         std::cout << "This map has dead-end roads, please change the set_open_street_map parameter to true" << std::endl;
@@ -413,7 +400,7 @@ WaypointPtr LocalizationStage::AssignLaneChange(const ActorId actor_id,
 
       while (cg::Math::DistanceSquared(change_over_point->GetTransform().location, starting_point->GetTransform().location) < SQUARE(change_over_distance) &&
              !change_over_point->IsJunction()) {
-        NodeList list_of_wpts = change_over_point->GetNext(0.1);
+        NodeList list_of_wpts = change_over_point->GetNext(MAP_RESOLUTION);
         change_over_point = list_of_wpts.at(0);
       }
     }
