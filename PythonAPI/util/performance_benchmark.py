@@ -116,7 +116,7 @@ def define_sensors():
                   'pts_per_sec': '100000', 'label': '4. LIDAR: 100k'}]
 
     sensors04 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
-                  'pts_per_sec': '1000000', 'label': '6. LIDAR: 1M'}]
+                  'pts_per_sec': '1000000', 'label': '5. LIDAR: 1M'}]
 
     list_sensor_specs.append(sensors00)
     list_sensor_specs.append(sensors01)
