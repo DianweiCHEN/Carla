@@ -90,32 +90,32 @@ def define_sensors():
 
   if args.tm:
     sensors00 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                'width': 300, 'height': 200, 'fov': 100, 'label': '0. cam-300x200'}]
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '1. cam-1900x1080'}]
 
     list_sensor_specs.append(sensors00)
 
   else:
     sensors00 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 300, 'height': 200, 'fov': 100, 'label': '0. cam-300x200'}]
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '1. cam-1900x1080'}]
 
-    sensors01 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 800, 'height': 600, 'fov': 100, 'label': '1. cam-800x600'}]
+    sensors01 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '2. cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': +90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'}]
 
-    sensors02 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '2. cam-1900x1080'}]
+    sensors02 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '3. cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': +00.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': +90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 180.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'}]
 
-    sensors03 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 300, 'height': 200, 'fov': 100, 'label': '3. cam-300x200'},
-                 {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.4, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 300, 'height': 200, 'fov': 100, 'label': 'cam-300x200'}]
-
-    sensors04 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
+    sensors03 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
                   'pts_per_sec': '100000', 'label': '4. LIDAR: 100k'}]
 
-    sensors05 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
-                  'pts_per_sec': '500000', 'label': '5. LIDAR: 500k'}]
-
-    sensors06 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
+    sensors04 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
                   'pts_per_sec': '1000000', 'label': '6. LIDAR: 1M'}]
 
     list_sensor_specs.append(sensors00)
@@ -123,8 +123,6 @@ def define_sensors():
     list_sensor_specs.append(sensors02)
     list_sensor_specs.append(sensors03)
     list_sensor_specs.append(sensors04)
-    list_sensor_specs.append(sensors05)
-    list_sensor_specs.append(sensors06)
 
     if args.sensors is not None:
       try:
