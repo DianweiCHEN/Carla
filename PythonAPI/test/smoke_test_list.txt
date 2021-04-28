@@ -1,1 +1,1 @@
-smoke.test_client smoke.test_world smoke.test_props_loading smoke.test_map smoke.test_blueprint
+smoke.test_client smoke.test_props_loading smoke.test_blueprint
