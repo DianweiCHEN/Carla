@@ -89,42 +89,40 @@ def define_sensors():
   list_sensor_specs = []
 
   if args.tm:
-    sensors00 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                'width': 300, 'height': 200, 'fov': 100, 'label': '0. cam-300x200'}]
+    sensors00 = [{'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '0. cam-1900x1080'}]
 
     list_sensor_specs.append(sensors00)
 
   else:
-    sensors00 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 300, 'height': 200, 'fov': 100, 'label': '0. cam-300x200'}]
+    sensors00 = [{'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '0. cam-1900x1080'}]
 
-    sensors01 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 800, 'height': 600, 'fov': 100, 'label': '1. cam-800x600'}]
+    sensors01 = [{'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '1. cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': +90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'}]
 
-    sensors02 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '2. cam-1900x1080'}]
+    sensors02 = [{'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': '2. cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': +00.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': +90.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'},
+                 {'type': 'sensor.camera.rgb', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'roll': 0.0, 'pitch': 0.0, 'yaw': 180.0,
+                  'width': 1900, 'height': 1080, 'fov': 100, 'label': 'cam-1900x1080'}]
 
-    sensors03 = [{'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 300, 'height': 200, 'fov': 100, 'label': '3. cam-300x200'},
-                 {'type': 'sensor.camera.rgb', 'x': 0.7, 'y': 0.4, 'z': 1.60, 'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                  'width': 300, 'height': 200, 'fov': 100, 'label': 'cam-300x200'}]
+    sensors03 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
+                  'pts_per_sec': '100000', 'label': '3. LIDAR: 100k'}]
 
-    sensors04 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
-                  'pts_per_sec': '100000', 'label': '4. LIDAR: 100k'}]
-
-    sensors05 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
-                  'pts_per_sec': '500000', 'label': '5. LIDAR: 500k'}]
-
-    sensors06 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.7, 'y': 0.0, 'z': 1.60, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
-                  'pts_per_sec': '1000000', 'label': '6. LIDAR: 1M'}]
+    sensors04 = [{'type': 'sensor.lidar.ray_cast', 'x': 0.0, 'y': 0.0, 'z': 2.00, 'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0,
+                  'pts_per_sec': '1000000', 'label': '4. LIDAR: 1M'}]
 
     list_sensor_specs.append(sensors00)
     list_sensor_specs.append(sensors01)
     list_sensor_specs.append(sensors02)
     list_sensor_specs.append(sensors03)
     list_sensor_specs.append(sensors04)
-    list_sensor_specs.append(sensors05)
-    list_sensor_specs.append(sensors06)
 
     if args.sensors is not None:
       try:
@@ -186,7 +184,35 @@ class CallBack(object):
 def create_environment(world, sensors, n_vehicles, n_walkers, spawn_points, client):
   global sensors_callback
   sensors_ret = []
+  vehicles_list = []
+  walkers_list = []
+  all_id = []
+
   blueprint_library = world.get_blueprint_library()
+
+
+  # @todo cannot import these directly.
+  SpawnActor = carla.command.SpawnActor
+  SetAutopilot = carla.command.SetAutopilot
+  FutureActor = carla.command.FutureActor
+
+  # --------------
+  # Spawn vehicles
+  # --------------
+  batch = []
+  blueprint = world.get_blueprint_library().filter('vehicle.audi.a2')[0]
+  for num, transform in enumerate(spawn_points):
+    if num >= n_vehicles:
+      break
+    blueprint.set_attribute('role_name', 'autopilot')
+    batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, False)))
+
+  for response in client.apply_batch_sync(batch, False):
+    if response.error:
+      logging.error(response.error)
+    else:
+      vehicles_list.append(response.actor_id)
+
 
   # setup sensors
   for sensor_spec in sensors:
@@ -226,8 +252,11 @@ def create_environment(world, sensors, n_vehicles, n_walkers, spawn_points, clie
       sensor_rotation = carla.Rotation()
 
     # create sensor
+    veh_to_attach = world.get_actors([vehicles_list[0]])[0] if n_vehicles > 0 else None
+    world.get_actors([vehicles_list[0]])[0]
+
     sensor_transform = carla.Transform(sensor_location, sensor_rotation)
-    sensor = world.spawn_actor(bp, sensor_transform)
+    sensor = world.spawn_actor(bp, sensor_transform, attach_to=veh_to_attach)
 
     # add callbacks
     sc = CallBack()
@@ -235,34 +264,6 @@ def create_environment(world, sensors, n_vehicles, n_walkers, spawn_points, clie
 
     sensors_callback.append(sc)
     sensors_ret.append(sensor)
-
-  vehicles_list = []
-  walkers_list = []
-  all_id = []
-
-  blueprint = world.get_blueprint_library().filter('vehicle.audi.a2')[0]
-  walker_bp = world.get_blueprint_library().filter("walker.pedestrian.0001")[0]
-
-  # @todo cannot import these directly.
-  SpawnActor = carla.command.SpawnActor
-  SetAutopilot = carla.command.SetAutopilot
-  FutureActor = carla.command.FutureActor
-
-  # --------------
-  # Spawn vehicles
-  # --------------
-  batch = []
-  for num, transform in enumerate(spawn_points):
-    if num >= n_vehicles:
-      break
-    blueprint.set_attribute('role_name', 'autopilot')
-    batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-
-  for response in client.apply_batch_sync(batch, False):
-    if response.error:
-      logging.error(response.error)
-    else:
-      vehicles_list.append(response.actor_id)
 
   # -------------
   # Spawn Walkers
@@ -272,6 +273,7 @@ def create_environment(world, sensors, n_vehicles, n_walkers, spawn_points, clie
   percentagePedestriansCrossing = 0.0     # how many pedestrians will walk through the road
   # 1. take all the random locations to spawn
   spawn_points = []
+  walker_bp = world.get_blueprint_library().filter("walker.pedestrian.0001")[0]
   for i in range(n_walkers):
     spawn_point = carla.Transform()
     loc = world.get_random_location_from_navigation()
@@ -381,6 +383,7 @@ def run_benchmark(world, sensors, n_vehicles, n_walkers, client, debug=False):
   ticks = 0
   while ticks < int(args.ticks):
     _ = tick()
+
     if debug:
       print("== Samples {} / {}".format(ticks + 1, args.ticks))
 
@@ -579,4 +582,3 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   main(args)
-
