@@ -212,6 +212,7 @@ static auto MakeCallback(boost::python::object callback) {
 #include "Snapshot.cpp"
 #include "Weather.cpp"
 #include "World.cpp"
+#include "PedNav.cpp"
 #include "Commands.cpp"
 #include "TrafficManager.cpp"
 #include "LightManager.cpp"
@@ -237,6 +238,7 @@ BOOST_PYTHON_MODULE(libcarla) {
   export_weather();
   export_world();
   export_map();
+  export_pednav();
   export_client();
   export_exception();
   export_commands();

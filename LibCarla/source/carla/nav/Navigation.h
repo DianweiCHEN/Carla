@@ -66,10 +66,13 @@ namespace nav {
     /// load navigation data from memory
     bool Load(std::vector<uint8_t> content);
     /// return the path points to go from one position to another
-    bool GetPath(carla::geom::Location from, carla::geom::Location to, dtQueryFilter * filter,
+    bool GetPath(carla::geom::Location from, carla::geom::Location to, const dtQueryFilter * filter,
     std::vector<carla::geom::Location> &path, std::vector<unsigned char> &area);
     bool GetAgentRoute(ActorId id, carla::geom::Location from, carla::geom::Location to,
     std::vector<carla::geom::Location> &path, std::vector<unsigned char> &area);
+    
+    /// return true if the location can be reachable by a pedestrian
+    bool IsLocationReachable(carla::geom::Location from, carla::geom::Location to, float max_distance);
 
     /// create the crowd object
     void CreateCrowd(void);

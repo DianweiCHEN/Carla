@@ -30,8 +30,8 @@ namespace nav {
 
   // these settings are the same than in RecastBuilder, so if you change the height of the agent, 
   // you should do the same in RecastBuilder
-  static const int   MAX_POLYS = 256;
-  static const int   MAX_AGENTS = 500;
+  static const int   MAX_POLYS = 1000;
+  static const int   MAX_AGENTS = 1500;
   static const int   MAX_QUERY_SEARCH_NODES = 2048;
   static const float AGENT_HEIGHT = 1.8f;
   static const float AGENT_RADIUS = 0.3f;
@@ -70,14 +70,21 @@ namespace nav {
   // load navigation data
   bool Navigation::Load(const std::string &filename) {
     std::ifstream f;
-    std::istream_iterator<uint8_t> start(f), end;
 
     // read the whole file
     f.open(filename, std::ios::binary);
     if (!f.is_open()) {
       return false;
     }
-    std::vector<uint8_t> content(start, end);
+    // size
+    std::streampos file_size;
+    f.seekg(0, std::ios::end);
+    file_size = f.tellg();
+    f.seekg(0, std::ios::beg);
+    // reserve capacity and read
+    std::vector<uint8_t> content;
+    content.resize(file_size);
+    f.read(reinterpret_cast<char *>(&(content[0])), file_size);
     f.close();
 
     // parse the content
@@ -104,7 +111,7 @@ namespace nav {
 
     // check size for header
     if (content.size() < sizeof(header)) {
-      logging::log("Nav: failed loading binary");
+      logging::log("Nav: failed loading binary (size was ", content.size(), ")");
       return false;
     }
 
@@ -251,12 +258,39 @@ namespace nav {
     _crowd->setObstacleAvoidanceParams(3, &params);
   }
 
+  // return if an agent can reach a specific point
+  bool Navigation::IsLocationReachable(carla::geom::Location from, carla::geom::Location to, float max_distance) {
+    // check if all is ready
+    if (!_ready) {
+      return false;
+    }
+
+    std::vector<carla::geom::Location> path;
+    std::vector<unsigned char> area;
+
+    if (GetPath(from, to, nullptr, path, area)) {
+      // check the distance to the target point
+      if (path.size() > 0)
+      {
+        return (path[path.size() - 1].Distance(to) <= max_distance);
+      }
+    }
+    return false;
+  }
+
   // return the path points to go from one position to another
   bool Navigation::GetPath(carla::geom::Location from,
                            carla::geom::Location to,
-                           dtQueryFilter * filter,
+                           const dtQueryFilter * filter,
                            std::vector<carla::geom::Location> &path,
                            std::vector<unsigned char> &area) {
+    // check if all is ready
+    if (!_ready) {
+      return false;
+    }
+
+    DEBUG_ASSERT(_nav_query != nullptr);
+
     // path found
     float straight_path[MAX_POLYS * 3];
     unsigned char straight_path_flags[MAX_POLYS];
@@ -268,18 +302,8 @@ namespace nav {
     dtPolyRef polys[MAX_POLYS];
     int num_polys;
 
-    // check if all is ready
-    if (!_ready) {
-      return false;
-    }
-
-    DEBUG_ASSERT(_nav_query != nullptr);
-
     // point extension
-    float poly_pick_ext[3];
-    poly_pick_ext[0] = 2;
-    poly_pick_ext[1] = 4;
-    poly_pick_ext[2] = 2;
+    float poly_pick_ext[3] = {2,4,2};
 
     // filter
     dtQueryFilter filter2;
@@ -357,28 +381,17 @@ namespace nav {
     return true;
   }
 
-  bool Navigation::GetAgentRoute(ActorId id, carla::geom::Location from, carla::geom::Location to,
-  std::vector<carla::geom::Location> &path, std::vector<unsigned char> &area) {
-    // path found
-    float straight_path[MAX_POLYS * 3];
-    unsigned char straight_path_flags[MAX_POLYS];
-    dtPolyRef straight_path_polys[MAX_POLYS];
-    int num_straight_path = 0;
-    int straight_path_options = DT_STRAIGHTPATH_AREA_CROSSINGS;
-
-    // polys in path
-    dtPolyRef polys[MAX_POLYS];
-    int num_polys;
-
+  bool Navigation::GetAgentRoute(ActorId id, 
+                                 carla::geom::Location from, 
+                                 carla::geom::Location to,
+                                 std::vector<carla::geom::Location> &path, 
+                                 std::vector<unsigned char> &area) {
     // check if all is ready
     if (!_ready) {
       return false;
     }
 
     DEBUG_ASSERT(_nav_query != nullptr);
-
-    // point extension
-    float poly_pick_ext[3] = {2,4,2};
 
     // get current filter from agent
     auto it = _mapped_walkers_id.find(id);
@@ -392,69 +405,7 @@ namespace nav {
       filter = _crowd->getFilter(_crowd->getAgent(it->second)->params.queryFilterType);
     }
 
-    // set the points
-    dtPolyRef start_ref = 0;
-    dtPolyRef end_ref = 0;
-    float start_pos[3] = { from.x, from.z, from.y };
-    float end_pos[3] = { to.x, to.z, to.y };
-    {
-      // critical section, force single thread running this
-      std::lock_guard<std::mutex> lock(_mutex);
-      _nav_query->findNearestPoly(start_pos, poly_pick_ext, filter, &start_ref, 0);
-      _nav_query->findNearestPoly(end_pos, poly_pick_ext, filter, &end_ref, 0);
-    }
-    if (!start_ref || !end_ref) {
-      return false;
-    }
-
-    // get the path of nodes
-    {
-      // critical section, force single thread running this
-      std::lock_guard<std::mutex> lock(_mutex);
-      _nav_query->findPath(start_ref, end_ref, start_pos, end_pos, filter, polys, &num_polys, MAX_POLYS);
-    }
-
-    // get the path of points
-    if (num_polys == 0) {
-      return false;
-    }
-
-    // in case of partial path, make sure the end point is clamped to the last
-    // polygon
-    float end_pos2[3];
-    dtVcopy(end_pos2, end_pos);
-    if (polys[num_polys - 1] != end_ref) {
-      // critical section, force single thread running this
-      std::lock_guard<std::mutex> lock(_mutex);
-      _nav_query->closestPointOnPoly(polys[num_polys - 1], end_pos, end_pos2, 0);
-    }
-
-    // get the points
-    {
-      // critical section, force single thread running this
-      std::lock_guard<std::mutex> lock(_mutex);
-      _nav_query->findStraightPath(start_pos, end_pos2, polys, num_polys,
-      straight_path, straight_path_flags,
-      straight_path_polys, &num_straight_path, MAX_POLYS, straight_path_options);
-    }
-
-    // copy the path to the output buffer
-    path.clear();
-    path.reserve(static_cast<unsigned long>(num_straight_path));
-    unsigned char area_type;
-    for (int i = 0, j = 0; j < num_straight_path; i += 3, ++j) {
-      // save coordinate for Unreal axis (x, z, y)
-      path.emplace_back(straight_path[i], straight_path[i + 2], straight_path[i + 1]);
-      // save area type
-      {
-        // critical section, force single thread running this
-        std::lock_guard<std::mutex> lock(_mutex);
-        _nav_mesh->getPolyArea(straight_path_polys[j], &area_type);
-      }
-      area.emplace_back(area_type);
-    }
-
-    return true;
+    return GetPath(from, to, filter, path, area);
   }
 
   // create a new walker in crowd
