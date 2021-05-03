@@ -55,17 +55,17 @@ REPOSITORY_TAG=$(get_git_repository_version)
 LATEST_PACKAGE=CARLA_${REPOSITORY_TAG}.tar.gz
 LATEST_PACKAGE_PATH=${CARLA_DIST_FOLDER}/${LATEST_PACKAGE}
 
-S3_PREFIX=s3://carla-releases/Linux/TAD
+S3_PREFIX=s3://carla-releases/Linux/TDA
 
-LATEST_DEPLOY_URI=${S3_PREFIX}/Dev/TAD_Latest.tar.gz
+LATEST_DEPLOY_URI=${S3_PREFIX}/Dev/TDA_Latest.tar.gz
 
 if [[ ${REPOSITORY_TAG} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   log "Detected tag ${REPOSITORY_TAG}."
-  DEPLOY_NAME=TAD_${REPOSITORY_TAG}.tar.gz
+  DEPLOY_NAME=TDA_${REPOSITORY_TAG}.tar.gz
   DOCKER_TAG=${REPOSITORY_TAG}
 elif [[ ${REPOSITORY_TAG} =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   log "Detected tag ${REPOSITORY_TAG}."
-  DEPLOY_NAME=TAD_${REPOSITORY_TAG}.tar.gz
+  DEPLOY_NAME=TDA_${REPOSITORY_TAG}.tar.gz
   DOCKER_TAG=${REPOSITORY_TAG}
 else
   S3_PREFIX=${S3_PREFIX}/Dev

@@ -46,15 +46,15 @@ set CARLA_DIST_FOLDER=%~dp0%\Build\UE4Carla
 set LATEST_PACKAGE=CARLA_%REPOSITORY_TAG%.zip
 set LATEST_PACKAGE_PATH=%CARLA_DIST_FOLDER%\%LATEST_PACKAGE%
 
-set S3_PREFIX=s3://carla-releases/Windows/TAD
+set S3_PREFIX=s3://carla-releases/Windows/TDA
 
-set LATEST_DEPLOY_URI=!S3_PREFIX!/Dev/TAD_Latest.zip
+set LATEST_DEPLOY_URI=!S3_PREFIX!/Dev/TDA_Latest.zip
 
 rem Check for TAG version
 echo %REPOSITORY_TAG% | findstr /R /C:"^[0-9]*\.[0-9]*\.[0-9]*.$" 1>nul
 if %errorlevel% == 0 (
   echo Detected tag %REPOSITORY_TAG%
-  set DEPLOY_NAME=TAD_%REPOSITORY_TAG%.zip
+  set DEPLOY_NAME=TDA_%REPOSITORY_TAG%.zip
 ) else (
   set S3_PREFIX=!S3_PREFIX!/Dev
   git log --pretty=format:%%cd_%%h --date=format:%%Y%%m%%d -n 1 > tempo1234
