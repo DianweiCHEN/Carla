@@ -120,7 +120,7 @@ void ASceneCaptureSensor::ComputeRenderParameters()
 void ASceneCaptureSensor::SetFOVAngle(const float FOVAngle, const float FOVAngleRender)
 {
   check(CaptureComponent2D != nullptr);
-  
+
   FOV_Target = FOVAngle;
   FOV_Render = FOVAngleRender;
 }
@@ -502,11 +502,6 @@ void ASceneCaptureSensor::BeginPlay()
   ComputeRenderParameters();
 
   CaptureRenderTarget->InitCustomFormat(ImageWidthRender, ImageHeightRender, PF_B8G8R8A8, bInForceLinearGamma);
-  //DisplacementTexture->InitCustomFormat(ImageWidth, ImageHeight, PF_B8G8R8A8, bInForceLinearGamma);
-
-  UE_LOG(LogCarla, Warning, TEXT("Init DisplacementTexture"));
-
-  DisplacementTexture->InitAutoFormat(ImageWidthRender, ImageHeightRender);
 
   if (bEnablePostProcessingEffects)
   {
@@ -544,9 +539,6 @@ void ASceneCaptureSensor::BeginPlay()
 void ASceneCaptureSensor::PrePhysTick(float DeltaSeconds)
 {
   Super::PrePhysTick(DeltaSeconds);
-
-  if (ChangeDistortMap)
-    ChangeDistortionMap();
 
   // Add the view information every tick. It's only used for one tick and then
   // removed by the streamer.
