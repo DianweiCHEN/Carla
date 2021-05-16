@@ -96,7 +96,8 @@ def change_physics_control(vehicle, tire_friction = None, drag = None, wheel_swe
         gear = carla.GearPhysicsControl(1.0, 0.00, 0.00)
         physics_control.forward_gears = [gear]
 
-    physics_control.damping_rate_full_throttle = 0.01
+    #El frenado que hace el motor
+    #physics_control.damping_rate_full_throttle = 0.01
 
     front_left_wheel = physics_control.wheels[0]
     front_right_wheel = physics_control.wheels[1]
@@ -146,6 +147,15 @@ def wait(world, frames=100):
 
 def norm(vec):
     return np.sqrt(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z)
+
+class CarlaCar:
+    def __init__(self, vehicle_filter=None, vehicle_name=None, longitudinal_stiffness=None, clutch_strength=None, max_rpm=None):
+        self.vehicle_filter = vehicle_filter
+        self.vehicle_name = vehicle_name
+        self.longitudinal_stiffness = longitudinal_stiffness
+        self.clutch_strength = clutch_strength
+        self.max_rpm = max_rpm
+        self.blueprint = None
 
 class TelemetryPoint:
     def __init__(self, curr_time=None, location=None, rotation=None, velocity=None):
@@ -251,7 +261,7 @@ def run_scenario(world, bp_veh, init_loc, init_speed = 0.0, init_frames=10,
 
     return data
 
-def brake_scenario(world, bp_veh, speed, friction, longstiff):
+def brake_scenario(world, bp_veh, speed, friction, longstiff, vehicle_name = "Car"):
 
     spectator_transform = carla.Transform(carla.Location(20, -190, 10), carla.Rotation(yaw=67, pitch=-13))
     try:
@@ -268,12 +278,12 @@ def brake_scenario(world, bp_veh, speed, friction, longstiff):
     
     data = run_scenario(world, bp_veh, init_loc, init_speed=speed/3.6, controls=controls, apply_phys_control=phys_control)
 
-    print("Prius: Brake from %.0f km/h at friction [%f, %f]" % (speed, friction, longstiff))
+    print(vehicle_name + " : Brake from %.0f km/h at friction [%f, %f]" % (speed, friction, longstiff))
     delta = data.get_scalar_delta(1)
     end_vel = 3.6*norm(data.get_telemetry(2).velocity)
     print("    :  Time: %.1f:  Distance: %.1f: EndSpeed: %.1f" % (delta[0], delta[1], end_vel))
 
-def accel_scenario(world, bp_veh, max_vel, longstiff, clutch_strength = None, max_rpm = None):
+def accel_scenario(world, bp_veh, max_vel, longstiff, clutch_strength = None, max_rpm = None, vehicle_name = "Car"):
 
     spectator_transform = carla.Transform(carla.Location(20, -190, 10), carla.Rotation(yaw=67, pitch=-13))
     try:
@@ -290,7 +300,7 @@ def accel_scenario(world, bp_veh, max_vel, longstiff, clutch_strength = None, ma
 
     data = run_scenario(world, bp_veh, init_loc=init_loc, controls=controls, apply_phys_control=phys_control)
 
-    print("Prius: Accel from 0 to %.0f km/h with LongStiff %.0f, ClutchStrength %.0f, MaxRPM %.0f" % (max_vel, longstiff, clutch_strength, max_rpm))
+    print(vehicle_name + " : Accel from 0 to %.0f km/h with LongStiff %.0f, ClutchStrength %.0f, MaxRPM %.0f" % (max_vel, longstiff, clutch_strength, max_rpm))
     delta = data.get_scalar_delta(1)
     end_vel = 3.6*norm(data.get_telemetry(2).velocity)
     print("    :  Time: %.1f:  Distance: %.1f: EndSpeed: %.1f" % (delta[0], delta[1], end_vel))
@@ -335,7 +345,7 @@ def highspeed_turn_scenario(world, bp_veh, steer, longstiff=3000, latstiff=13, l
 
     phys_control = lambda veh: veh.apply_physics_control(change_physics_control(veh, wheel_sweep=True, long_stiff=longstiff, lat_stiff=latstiff, lat_load=latload))
 
-    init_pos = carla.Transform(carla.Location(50, -204, 0.1), carla.Rotation(yaw=0))
+    init_pos = carla.Transform(carla.Location(50, -204, 0.5), carla.Rotation(yaw=0))
     init_frames = 2
     init_speed = 100 / 3.6
     controls = [(100, carla.VehicleControl(throttle=0.5), VehicleControlStop(x_max=100)),
@@ -347,7 +357,36 @@ def highspeed_turn_scenario(world, bp_veh, steer, longstiff=3000, latstiff=13, l
 
     time.sleep(1)
 
+# WARNING! Do not use 0 value in log_stiffness, or the car will keep disappearing for good. Don't know why this happens
 
+coupe_vehicles = [CarlaCar("TT", "Audi TT", 3700, 10, 6200), #Ok
+                  CarlaCar("mkz2017", "Lincoln mkz2017", 7500, 10, 10000), #Algo le pasa a este coche a la hora de frenar y aceleracion
+                  CarlaCar("Coupe", "Mercedes-Benz Coupe", 3500, 10, 5000), #Ok
+                  CarlaCar("Leon", "Seat Leon", 3500, 10, 5000), #Ok
+                  CarlaCar("Model3", "Tesla Model3", 3500, 50, 20000) #Creo que esta ok, lo que parece es que el tiempo no se esta calculando bien? Al mover la cámara parece que va más rápido
+]
+
+off_road_vehicles = [CarlaCar("Etron", "Audi", 30000, 10, 15000), #Ok
+                     CarlaCar("Wrangler_Rubicon", "Jeep Wrangler Rubicon", 3000, 10, 6000), #Ok
+                     CarlaCar("Patrol", "Nissan Patrol", 3500, 10, 6000), #Ok, puede que en la frenada resbale un poco, pero es un coche grande
+                     CarlaCar("Cybertruck", "Tesla Cybertruck", 2500, 10, 20000) #Revisar
+]
+
+truck_vehicles = [CarlaCar("CarlaCola", "CarlaMotors CarlaCola", 6000, 10, 10000)] #Bastante Ok
+
+urban_vehicles = [CarlaCar("A2", "Audi A2", 3500, 10, 5000), #Revisar
+                  CarlaCar("GrandTourer", "BMW GrandTourer", 4000, 10, 6000), #Ok
+                  CarlaCar("Impala", "Chevrolet Impala", 1500, 10, 6000), #Ok, revisar los turn?
+                  CarlaCar("C3", "Citroen C3", 1000, 10, 5000), #Ok
+                  CarlaCar("Police", "Dodge Charger Police", 200, 10, 15000), #Este coche policial va de 0 a 100 en 6 segundos (podriamos dejarlo en 8 - 9), por eso tantas revoluciones
+                                                                            #En los turn parece que es poco realista incluso con muy poco stifness
+                  CarlaCar("CooperST", "Mini CooperST", 1200, 10, 6500), #Ok, puede que el stifness no sea un valor logico?
+                  CarlaCar("Mustang", "Mustang", 3000, 10, 7000), #No encuentro especificaciones para este modelo, pero parece Ok
+                  CarlaCar("Micra", "Nissan Micra", 3500, 10, 4000), #Tal vez este turn no este bien del todo
+                  CarlaCar("Prius", "Toyota Prius", 7000, 10, 7000) #Ok
+]
+
+van_vehicles = [CarlaCar("T2", "VolksWagen T2", 3000, 10, 2500)] #Revisar, este es bastante diferente
 
 def main(arg):
     """Main function of the script"""
@@ -367,31 +406,101 @@ def main(arg):
         if world.get_map().name != "Town05":
             client.load_world("Town05", False)
 
-        bp_veh = world.get_blueprint_library().filter(args.filter)[0]
+        vehicle_list = []
 
-        veh_transf = carla.Transform()
-        veh_transf.location.z = 100
-        vehicle = world.spawn_actor(bp_veh, veh_transf)
-        print(vehicle.get_physics_control())
-        print("Id: %s  BlueprintWheels %s PhysicsControlWheels: %d" % (bp_veh.id, bp_veh.get_attribute('number_of_wheels'), len(vehicle.get_physics_control().wheels)))
-        wait(world, 4)
-        vehicle.destroy()
+        if args.filter == "Coupe":
+            for carla_car in coupe_vehicles:      
+                carla_car.blueprint = world.get_blueprint_library().filter(carla_car.vehicle_filter)[0]
+            
+            vehicle_list = coupe_vehicles.copy()
+
+        if args.filter == "Off-road":
+            for carla_car in off_road_vehicles:      
+                carla_car.blueprint = world.get_blueprint_library().filter(carla_car.vehicle_filter)[0]
+
+            vehicle_list = off_road_vehicles.copy()
         
-        if args.basics:
-            accel_scenario(world, bp_veh, 50, 3000, 10, 5500)
-            accel_scenario(world, bp_veh, 100, 3000, 10, 5500)
+        if args.filter == "Truck":
+            for carla_car in truck_vehicles:      
+                carla_car.blueprint = world.get_blueprint_library().filter(carla_car.vehicle_filter)[0]
+
+            vehicle_list = truck_vehicles.copy()
+
+        if args.filter == "Urban":
+            for carla_car in urban_vehicles:      
+                carla_car.blueprint = world.get_blueprint_library().filter(carla_car.vehicle_filter)[0]
+
+            vehicle_list = urban_vehicles.copy()
+
+        if args.filter == "Van":
+            for carla_car in van_vehicles:      
+                carla_car.blueprint = world.get_blueprint_library().filter(carla_car.vehicle_filter)[0]
+
+            vehicle_list = van_vehicles.copy()
+
+        for carla_car in vehicle_list:
+            if args.basics:
+                #veh_transf = carla.Transform()
+                #veh_transf.location.z = 100
+                #vehicle = world.spawn_actor(carla_car.blueprint, veh_transf)
+                #print(vehicle.get_physics_control())
+                #print("Id: %s  BlueprintWheels %s PhysicsControlWheels: %d" % (bp_veh.id, bp_veh.get_attribute('number_of_wheels'), len(vehicle.get_physics_control().wheels)))
+                #wait(world, 4)
+                #vehicle.destroy()
+
+                #Bajando y subiendo las revoluciones para alcanzar la velocidad
+                #Un tiempo que no sea muy raro
+                accel_scenario(world, carla_car.blueprint, 50, carla_car.longitudinal_stiffness, carla_car.clutch_strength, carla_car.max_rpm, carla_car.vehicle_name)
+                accel_scenario(world, carla_car.blueprint, 100, carla_car.longitudinal_stiffness, carla_car.clutch_strength, carla_car.max_rpm, carla_car.vehicle_name)
+                #Crear mapa vacio para ver la velocidad maxima del coche
+                #accel_scenario(world, bp_veh, 180, 3000, 10, 5500)
+
+                #Distancia de frenado (un poco mas complicado de ver)
+                #Debe ser entre 20 y 30
+                #Para los trucks, la braking distance sera mas grande
+                brake_scenario(world, carla_car.blueprint, 80, 3.5, carla_car.longitudinal_stiffness, carla_car.vehicle_name)
+                brake_scenario(world, carla_car.blueprint, 100, 3.5, carla_car.longitudinal_stiffness, carla_car.vehicle_name)
+
+                #Este no preocupa mucho
+                #uturn_scenario(world, carla_car.blueprint, carla_car.longitudinal_stiffness, 10, 10)
+
+            if args.turn:
+                highspeed_turn_scenario(world, carla_car.blueprint, 0.2, carla_car.longitudinal_stiffness, 17, 2)  # Default
+                highspeed_turn_scenario(world, carla_car.blueprint, 0.2, carla_car.longitudinal_stiffness, 5, 10)  # Proposal 1
+                highspeed_turn_scenario(world, carla_car.blueprint, 0.2, carla_car.longitudinal_stiffness, 5, 4)   # Proposal 2
+                highspeed_turn_scenario(world, carla_car.blueprint, 0.2, carla_car.longitudinal_stiffness, 13, 10) # New parameters
+        #bp_veh = world.get_blueprint_library().filter(args.filter)[0]
+
+        #veh_transf = carla.Transform()
+        #veh_transf.location.z = 100
+        #vehicle = world.spawn_actor(bp_veh, veh_transf)
+        #print(vehicle.get_physics_control())
+        #print("Id: %s  BlueprintWheels %s PhysicsControlWheels: %d" % (bp_veh.id, bp_veh.get_attribute('number_of_wheels'), len(vehicle.get_physics_control().wheels)))
+        #wait(world, 4)
+        #vehicle.destroy()
+        
+        #if args.basics:
+
+            #Bajando y subiendo las revoluciones para alcanzar la velocidad
+            #Un tiempo que no sea muy raro
+            #accel_scenario(world, bp_veh, 50, 3000, 10, 5500)
+            #accel_scenario(world, bp_veh, 100, 3000, 10, 5500)
+            #Crear mapa vacio para ver la velocidad maxima del coche
             #accel_scenario(world, bp_veh, 180, 3000, 10, 5500)
 
-            brake_scenario(world, bp_veh, 80, 3.5, 3000)
-            brake_scenario(world, bp_veh, 100, 3.5, 3000)
+            #Distancia de frenado (un poco mas complicado de ver)
+            #Debe ser entre 20 y 30
+            #Para los trucks, la  braking distance sera mas grande
+            #brake_scenario(world, bp_veh, 80, 3.5, 3000)
+            #brake_scenario(world, bp_veh, 100, 3.5, 3000)
+#
+            #uturn_scenario(world, bp_veh, 3000, 10, 10)
 
-            uturn_scenario(world, bp_veh, 3000, 10, 10)
-
-        if args.turn:
-            highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 17, 2)  # Default
-            highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 5, 10)  # Proposal 1
-            highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 5, 4)   # Proposal 2
-            highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 13, 10) # New parameters
+        #if args.turn:
+        #   highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 17, 2)  # Default
+        #    highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 5, 10)  # Proposal 1
+        #    highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 5, 4)   # Proposal 2
+        #   highspeed_turn_scenario(world, bp_veh, 0.2, 3000, 13, 10) # New parameters
 
 
     finally:
@@ -417,8 +526,8 @@ if __name__ == "__main__":
     argparser.add_argument(
         '--filter',
         metavar='PATTERN',
-        default='model3',
-        help='actor filter (default: "vehicle.*prius*")')
+        default='Coupe',
+        help='actor filter (default: "Vehicle Suspension Type : Coupe")')
     argparser.add_argument(
         '--basics',
         dest='basics',
