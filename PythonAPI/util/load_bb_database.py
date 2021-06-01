@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2020 Computer Vision Center (CVC) at the Universitat Autonoma de
+# Copyright (c) 2021 Computer Vision Center (CVC) at the Universitat Autonoma de
 # Barcelona (UAB).
 #
 # This work is licensed under the terms of the MIT license.
@@ -209,8 +209,9 @@ def main():
         bounding_boxes[_i].location.x, bounding_boxes[_i].location.y, bounding_boxes[_i].location.z, 
         bounding_boxes[_i].rotation.roll, bounding_boxes[_i].rotation.pitch, bounding_boxes[_i].rotation.yaw, 
         bounding_boxes[_i].extent.x, bounding_boxes[_i].extent.y, bounding_boxes[_i].extent.z))
-    print("Saved carla.CityObjectLabel.Terrain bounding boxes data")
+    print("Saved carla.CityObjectLabel.Terrain bounding boxes data\n")
     connection.commit()
+    print("Generated bounding boxes database succesfully!")
 
 if __name__ == "__main__":
     try:

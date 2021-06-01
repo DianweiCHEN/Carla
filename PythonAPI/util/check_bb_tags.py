@@ -28,10 +28,13 @@ def main():
     client.set_timeout(5.0)
     world = client.get_world()
 
+    print("Loading bounding boxes database...")
     connection = sqlite3.connect('carla_bbs.db')
     c = connection.cursor()
     #Check buildings bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Buildings)
+
+    print("Comparing BUILDINGS BBS data with simulation\n\n")
     for _i in range(0, len(world_bbs)) :
         db_data = c.execute('''SELECT * FROM Buildings WHERE id = ''' + str(_i)).fetchall()
         db_data_list = []
@@ -55,8 +58,10 @@ def main():
             print("[TAG = Buildings] BB ExtentY -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.y) + " [DB Data] : " + str(db_data_list[0][8]))
         if(world_bbs[_i].extent.z != db_data_list[0][9]):
             print("[TAG = Buildings] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
+
     #Check fences bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Fences)
+    print("Comparing FENCES BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Fences WHERE id = ''' + str(_i)).fetchall()
@@ -81,9 +86,10 @@ def main():
                 print("[TAG = Fences] BB ExtentY -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.y) + " [DB Data] : " + str(db_data_list[0][8]))
             if(world_bbs[_i].extent.z != db_data_list[0][9]):
                 print("[TAG = Fences] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
-    #TODO : Arreglar espacios de DB Data
+
     #Check other bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Other)
+    print("Comparing OTHER BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Other WHERE id = ''' + str(_i)).fetchall()
@@ -110,6 +116,7 @@ def main():
                 print("[TAG = Other] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check pedestrians bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Pedestrians)
+    print("Comparing PEDESTRIANS BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Pedestrians WHERE id = ''' + str(_i)).fetchall()
@@ -136,6 +143,7 @@ def main():
                 print("[TAG = Pedestrians] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check poles bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Poles)
+    print("Comparing POLES BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Poles WHERE id = ''' + str(_i)).fetchall()
@@ -162,6 +170,7 @@ def main():
                 print("[TAG = Poles] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check roadlines bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.RoadLines)
+    print("Comparing ROADLINES BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM RoadLines WHERE id = ''' + str(_i)).fetchall()
@@ -188,6 +197,7 @@ def main():
                 print("[TAG = RoadLines] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check roads bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Roads)
+    print("Comparing ROADS BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Roads WHERE id = ''' + str(_i)).fetchall()
@@ -214,6 +224,7 @@ def main():
                 print("[TAG = Roads] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check sidewalks bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Sidewalks)
+    print("Comparing SIDEWALKS BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Sidewalks WHERE id = ''' + str(_i)).fetchall()
@@ -241,6 +252,7 @@ def main():
                 print("[TAG = Sidewalks] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check trafficsigns bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.TrafficSigns)
+    print("Comparing TRAFFIC SIGNS BBS data with simulation\n\n")
     if len(world_bbs) != 0 :  
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM TrafficSigns WHERE id = ''' + str(_i)).fetchall()
@@ -267,6 +279,7 @@ def main():
                 print("[TAG = TrafficSigns] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check vegetation bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Vegetation)
+    print("Comparing VEGETATION BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Vegetation WHERE id = ''' + str(_i)).fetchall()
@@ -293,6 +306,7 @@ def main():
                 print("[TAG = Vegetation] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check vehicles bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Vehicles)
+    print("Comparing VEHICLES BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Vehicles WHERE id = ''' + str(_i)).fetchall()
@@ -319,6 +333,7 @@ def main():
                 print("[TAG = Vehicles] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check walls bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Walls)
+    print("Comparing WALLS BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Walls WHERE id = ''' + str(_i)).fetchall()
@@ -345,6 +360,7 @@ def main():
                 print("[TAG = Walls] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check sky bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Sky)
+    print("Comparing SKY BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Sky WHERE id = ''' + str(_i)).fetchall()
@@ -371,6 +387,7 @@ def main():
                 print("[TAG = Sky] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check ground bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Ground)
+    print("Comparing GROUND BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Ground WHERE id = ''' + str(_i)).fetchall()
@@ -398,6 +415,7 @@ def main():
         
     #Check bridge bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Bridge)
+    print("Comparing BRIDGE BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Bridge WHERE id = ''' + str(_i)).fetchall()
@@ -424,6 +442,7 @@ def main():
                 print("[TAG = Bridge] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check railtrack bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.RailTrack)
+    print("Comparing RAILTRACK BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM RailTrack WHERE id = ''' + str(_i)).fetchall()
@@ -450,6 +469,7 @@ def main():
                 print("[TAG = RailTrack] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check guardrail bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.GuardRail)
+    print("Comparing GUARDRAIL BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM GuardRail WHERE id = ''' + str(_i)).fetchall()
@@ -476,6 +496,7 @@ def main():
                 print("[TAG = GuardRail] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check trafficlight bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.TrafficLight)
+    print("Comparing TRAFFIC LIGHT BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM TrafficLight WHERE id = ''' + str(_i)).fetchall()
@@ -502,6 +523,7 @@ def main():
                 print("[TAG = TrafficLight] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check static bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Static)
+    print("Comparing STATIC BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Static WHERE id = ''' + str(_i)).fetchall()
@@ -528,6 +550,7 @@ def main():
                 print("[TAG = Static] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check dynamic bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Dynamic)
+    print("Comparing DYNAMIC BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Dynamic WHERE id = ''' + str(_i)).fetchall()
@@ -554,6 +577,7 @@ def main():
                 print("[TAG = Dynamic] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check water bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Water)
+    print("Comparing WATER BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Water WHERE id = ''' + str(_i)).fetchall()
@@ -580,6 +604,7 @@ def main():
                 print("[TAG = Water] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     #Check terrain bounding boxes
     world_bbs = world.get_level_bbs(carla.CityObjectLabel.Terrain)
+    print("Comparing TERRAIN BBS data with simulation\n\n")
     if len(world_bbs) != 0 :
         for _i in range(0, len(world_bbs)) :
             db_data = c.execute('''SELECT * FROM Terrain WHERE id = ''' + str(_i)).fetchall()
@@ -605,6 +630,7 @@ def main():
             if(world_bbs[_i].extent.z != db_data_list[0][9]):
                 print("[TAG = Terrain] BB ExtentZ -> ID : " + str(_i) + " | [World Data] " + str(world_bbs[_i].extent.z) + " [DB Data] : " + str(db_data_list[0][9]))
     
+    print("Phew! That's it! I hope everything went ok! :)\n\n")
     connection.close()
 
 if __name__ == "__main__":
