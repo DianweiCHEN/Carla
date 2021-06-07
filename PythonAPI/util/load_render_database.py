@@ -22,6 +22,8 @@ except IndexError:
 
 import carla
 
+from carla import ColorConverter as cc
+
 def main():
     # We start creating the client
     client = carla.Client('localhost', 2000)
@@ -30,6 +32,8 @@ def main():
 
     weather = world.get_weather()
     light_manager = world.get_lightmanager()
+    rgb_camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
+    rgb_camera_actor = world.spawn_actor(rgb_camera_bp, carla.Transform(carla.Location(x=0.0, y=0.0, z=0.0)))
 
     connection = sqlite3.connect('carla_render.db')
     c = connection.cursor()
@@ -37,7 +41,13 @@ def main():
     c.execute('''CREATE TABLE StreetLights(id INT, colorR REAL, colorG REAL, colorB REAL, colorA REAL, intensity REAL, is_on BOOL, locationX REAL, locationY REAL, locationZ REAL)''')
     c.execute('''CREATE TABLE BuildingLights(id INT, colorR REAL, colorG REAL, colorB REAL, colorA REAL, intensity REAL, is_on BOOL, locationX REAL, locationY REAL, locationZ REAL)''')
     c.execute('''CREATE TABLE OtherLights(id INT, colorR REAL, colorG REAL, colorB REAL, colorA REAL, intensity REAL, is_on BOOL, locationX REAL, locationY REAL, locationZ REAL)''')
-
+    c.execute('''CREATE TABLE RGBCamera(chromatic_aberration_offset REAL, sensor_tick REAL, fstop REAL, image_size_x REAL, image_size_y REAL, fov REAL, lens_circle_falloff REAL,
+                lens_circle_multiplier REAL, exposure_compensation REAL, lens_y_size REAL, lens_k REAL, exposure_mode TEXT, lens_kcube REAL, lens_x_size REAL, exposure_max_bright REAL,
+                shutter_speed REAL, bloom_intensity REAL, iso REAL, enable_postprocess_effects INT, gamma REAL, motion_blur_intensity REAL, motion_blur_max_distortion REAL,
+                lens_flare_intensity REAL, motion_blur_min_object_screen_size REAL, exposure_min_bright REAL, exposure_speed_up REAL, exposure_speed_down REAL, tint REAL,
+                calibration_constant REAL, focal_distance REAL, min_fstop REAL, blade_count INT, blur_amount REAL, blur_radius REAL, slope REAL, toe REAL, white_clip REAL, shoulder REAL,
+                black_clip REAL, temp REAL, chromatic_aberration_intensity REAL)''')
+    
     #Store weather parameters
     c.execute('''INSERT INTO WeatherParameters VALUES(?,?,?,?,?,?,?,?,?,?)''', (weather.cloudiness,
     weather.precipitation, weather.precipitation_deposits, weather.wind_intensity, weather.sun_azimuth_angle,
@@ -62,7 +72,21 @@ def main():
     for light in lightlist_other:
         c.execute('''INSERT INTO OtherLights VALUES(?,?,?,?,?,?,?,?,?,?)''', (light.id,
         light.color.r, light.color.g, light.color.b, light.color.a, light.intensity, light.is_on, light.location.x, light.location.y, light.location.z))
-    print("Saved carla.LightGroup.Other data\n")
+    print("Saved carla.LightGroup.Other data")
+
+    c.execute('''INSERT INTO RGBCamera VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (rgb_camera_actor.attributes["chromatic_aberration_offset"], rgb_camera_actor.attributes["sensor_tick"],
+    rgb_camera_actor.attributes["fstop"], rgb_camera_actor.attributes["image_size_x"], rgb_camera_actor.attributes["image_size_y"], rgb_camera_actor.attributes["fov"],
+    rgb_camera_actor.attributes["lens_circle_falloff"], rgb_camera_actor.attributes["lens_circle_multiplier"], rgb_camera_actor.attributes["exposure_compensation"],
+    rgb_camera_actor.attributes["lens_y_size"], rgb_camera_actor.attributes["lens_k"], rgb_camera_actor.attributes["exposure_mode"], rgb_camera_actor.attributes["lens_kcube"],
+    rgb_camera_actor.attributes["lens_x_size"], rgb_camera_actor.attributes["exposure_max_bright"], rgb_camera_actor.attributes["shutter_speed"], rgb_camera_actor.attributes["bloom_intensity"],
+    rgb_camera_actor.attributes["iso"], rgb_camera_actor.attributes["enable_postprocess_effects"], rgb_camera_actor.attributes["gamma"], rgb_camera_actor.attributes["motion_blur_intensity"],
+    rgb_camera_actor.attributes["motion_blur_max_distortion"], rgb_camera_actor.attributes["lens_flare_intensity"], rgb_camera_actor.attributes["motion_blur_min_object_screen_size"],
+    rgb_camera_actor.attributes["exposure_min_bright"], rgb_camera_actor.attributes["exposure_speed_up"], rgb_camera_actor.attributes["exposure_speed_down"], rgb_camera_actor.attributes["tint"],
+    rgb_camera_actor.attributes["calibration_constant"], rgb_camera_actor.attributes["focal_distance"],  rgb_camera_actor.attributes["min_fstop"], rgb_camera_actor.attributes["blade_count"],
+    rgb_camera_actor.attributes["blur_amount"], rgb_camera_actor.attributes["blur_radius"], rgb_camera_actor.attributes["slope"], rgb_camera_actor.attributes["toe"],
+    rgb_camera_actor.attributes["white_clip"], rgb_camera_actor.attributes["shoulder"], rgb_camera_actor.attributes["black_clip"], rgb_camera_actor.attributes["temp"],
+    rgb_camera_actor.attributes["chromatic_aberration_intensity"]))
+    print("Saved carla.RGBCamera data\n")
 
     connection.commit()
     print("Generated render database succesfully!")
