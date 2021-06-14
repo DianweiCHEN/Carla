@@ -17,6 +17,7 @@ OPTS=`getopt -o h --long help,config:,rebuild,clean,rss,carsim,python-version:,p
 eval set -- "$OPTS"
 
 PY_VERSION_LIST=3
+WHEEL_PLATFORM=manylinux_2_27_x86_64
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -82,11 +83,16 @@ if ${BUILD_RSS_VARIANT} ; then
 fi
 
 if ${BUILD_PYTHONAPI} ; then
+  # Add patchelf to the path. Auditwheel relies on patchelf to repair ELF files.
+  export PATH="${LIBCARLA_INSTALL_CLIENT_FOLDER}/bin:${PATH}"
 
   for PY_VERSION in ${PY_VERSION_LIST[@]} ; do
     log "Building Python API for Python ${PY_VERSION}."
 
-    /usr/bin/env python${PY_VERSION} setup.py bdist_egg
+    /usr/bin/env python${PY_VERSION} setup.py bdist_egg bdist_wheel --dist-dir dist/.tmp
+
+    auditwheel repair --plat ${WHEEL_PLATFORM} --wheel-dir dist dist/.tmp/$(ls dist/.tmp | grep .whl)
+    rm -rf dist/.tmp
   done
 
 fi
