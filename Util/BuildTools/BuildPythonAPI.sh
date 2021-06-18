@@ -67,7 +67,7 @@ if ${REMOVE_INTERMEDIATE} ; then
 
   log "Cleaning intermediate files and folders."
 
-  rm -Rf build dist carla.egg-info source/carla.egg-info
+  rm -Rf build dist source/carla.egg-info
 
   find source -name "*.so" -delete
   find source -name "__pycache__" -type d -exec rm -r "{}" \;
@@ -89,10 +89,15 @@ if ${BUILD_PYTHONAPI} ; then
   for PY_VERSION in ${PY_VERSION_LIST[@]} ; do
     log "Building Python API for Python ${PY_VERSION}."
 
-    /usr/bin/env python${PY_VERSION} setup.py bdist_egg bdist_wheel --dist-dir dist/.tmp
+    /usr/bin/env python${PY_VERSION} setup.py bdist_wheel --dist-dir dist/.tmp --plat ${WHEEL_PLATFORM}
 
-    auditwheel repair --plat ${WHEEL_PLATFORM} --wheel-dir dist dist/.tmp/$(ls dist/.tmp | grep .whl)
+    WHEEL_NAME=$(ls dist/.tmp | grep .whl)
+    auditwheel repair --plat ${WHEEL_PLATFORM} --wheel-dir dist dist/.tmp/${WHEEL_NAME}
+
+    /usr/bin/env python${PY_VERSION} -m pip install --user --upgrade --force-reinstall dist/${WHEEL_NAME}
+
     rm -rf dist/.tmp
+
   done
 
 fi
