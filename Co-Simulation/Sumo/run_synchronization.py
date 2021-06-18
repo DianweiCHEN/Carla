@@ -18,24 +18,11 @@ import logging
 import time
 
 # ==================================================================================================
-# -- find carla module -----------------------------------------------------------------------------
-# ==================================================================================================
-
-import glob
-import os
-import sys
-
-try:
-    sys.path.append(
-        glob.glob('../../PythonAPI/carla/dist/carla-*%d.%d-%s.egg' %
-                  (sys.version_info.major, sys.version_info.minor,
-                   'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-except IndexError:
-    pass
-
-# ==================================================================================================
 # -- find traci module -----------------------------------------------------------------------------
 # ==================================================================================================
+
+import os
+import sys
 
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
