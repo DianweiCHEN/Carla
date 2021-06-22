@@ -15,11 +15,12 @@ rem -- Parse arguments ---------------------------------------------------------
 rem ============================================================================
 
 set DOC_STRING=Build and package CARLA Python API.
-set "USAGE_STRING=Usage: %FILE_N% [-h^|--help] [--rebuild]  [--clean]"
+set "USAGE_STRING=Usage: %FILE_N% [-h^|--help] [--rebuild] [--no-install-wheel] [--clean]"
 
 set REMOVE_INTERMEDIATE=false
 set BUILD_FOR_PYTHON2=false
 set BUILD_FOR_PYTHON3=false
+set INSTALL_WHEEL=true
 
 :arg-parse
 if not "%1"=="" (
@@ -38,6 +39,9 @@ if not "%1"=="" (
         set BUILD_FOR_PYTHON3=true
     )
 
+    if "%1"=="--no-install-wheel" (
+        set INSTALL_WHEEL=false
+    )
 
     if "%1"=="--clean" (
         set REMOVE_INTERMEDIATE=true
@@ -109,8 +113,14 @@ rem Build for Python 3
 rem
 if %BUILD_FOR_PYTHON3%==true (
     echo Building Python API for Python 3.
-    py -3 setup.py bdist_wheel
+    py -3 setup.py bdist_wheel --dist-dir dist\.tmp
+    copy dist\.tmp\* dist\
     if %errorlevel% neq 0 goto error_build_wheel
+    if %INSTALL_WHEEL%==true (
+        py -3 -m pip install --user --force-reinstall --no-index --find-links dist\.tmp carla
+        if %errorlevel% neq 0 goto error_install_wheel
+    )
+    rd /s /q dist\.tmp
 )
 
 goto success
@@ -144,8 +154,15 @@ rem ============================================================================
     goto bad_exit
 
 :error_build_wheel
+    if exist dist\.tmp rd /s /q dist\.tmp
     echo.
     echo %FILE_N% [ERROR] An error occurred while building the wheel file.
+    goto bad_exit
+
+:error_install_wheel
+    if exist dist\.tmp rd /s /q dist\.tmp
+    echo.
+    echo %FILE_N% [ERROR] An error occurred while installing the wheel file.
     goto bad_exit
 
 :good_exit

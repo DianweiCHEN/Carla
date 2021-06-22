@@ -58,7 +58,7 @@ benchmark: LibCarla
 
 .PHONY: PythonAPI
 PythonAPI: LibCarla osm2odr
-	@"${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.bat" --py3
+	@"${CARLA_BUILD_TOOLS_FOLDER}/BuildPythonAPI.bat" --py3 $(ARGS)
 
 server: setup
 	@"${CARLA_BUILD_TOOLS_FOLDER}/BuildLibCarla.bat" --server
