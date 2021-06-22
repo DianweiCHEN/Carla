@@ -6,7 +6,7 @@
 
 DOC_STRING="Build and package CARLA Python API."
 
-USAGE_STRING="Usage: $0 [-h|--help] [--rebuild] [--clean] [--python-version=VERSION]"
+USAGE_STRING="Usage: $0 [-h|--help] [--rebuild] [--clean] [--python-version=VERSION] [--no-install-wheel] [--target-wheel-platform=PLATFORM]"
 
 REMOVE_INTERMEDIATE=false
 BUILD_RSS_VARIANT=false
