@@ -14,13 +14,21 @@ static void SubscribeToStream(carla::client::Sensor &self, boost::python::object
   self.Listen(MakeCallback(std::move(callback)));
 }
 
+static void SubscribeToStreamPasive(carla::client::Sensor &self) {
+  self.ListenPasive();
+}
+
 void export_sensor() {
   using namespace boost::python;
   namespace cc = carla::client;
 
   class_<cc::Sensor, bases<cc::Actor>, boost::noncopyable, boost::shared_ptr<cc::Sensor>>("Sensor", no_init)
     .add_property("is_listening", &cc::Sensor::IsListening)
+    .add_property("has_data_ready", &cc::Sensor::HasDataReady)
     .def("listen", &SubscribeToStream, (arg("callback")))
+    .def("listen_pasive", &SubscribeToStreamPasive)
+    .def("get_data", &cc::Sensor::GetData)
+    .def("pop_data", &cc::Sensor::PopData)
     .def("stop", &cc::Sensor::Stop)
     .def(self_ns::str(self_ns::self))
   ;

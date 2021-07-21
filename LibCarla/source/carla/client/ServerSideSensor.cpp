@@ -36,6 +36,16 @@ namespace client {
     _is_listening = true;
   }
 
+  void ServerSideSensor::ListenPasive() {
+    log_debug(GetDisplayId(), ": subscribing to stream in pasive mode");
+    std::function<void(SharedPtr<sensor::SensorData>)> callback = [this](auto data) {
+      _last_data = data;
+    };
+    GetEpisode().Lock()->SubscribeToSensor(*this, callback);
+    _is_pasive = true;
+    _is_listening = true;
+  }
+
   void ServerSideSensor::Stop() {
     if (!_is_listening) {
       log_warning(

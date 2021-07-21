@@ -24,12 +24,24 @@ namespace client {
     /// Register a @a callback to be executed each time a new measurement is
     /// received.
     virtual void Listen(CallbackFunctionType callback) = 0;
+    virtual void ListenPasive() { };
 
     /// Stop listening for new measurements.
     virtual void Stop() = 0;
 
     /// Return whether this Sensor instance is currently listening to new data.
     virtual bool IsListening() const = 0;
+
+    /// Pasive mode
+    virtual bool IsPasive() const { return false; };
+    virtual bool HasDataReady() const { return false; };
+    virtual SharedPtr<sensor::SensorData> GetData() const { return _last_data; };
+    virtual SharedPtr<sensor::SensorData> PopData() { auto t = std::move(_last_data); return t; };
+
+    protected:
+
+    SharedPtr<sensor::SensorData> _last_data;
+
   };
 
 } // namespace client

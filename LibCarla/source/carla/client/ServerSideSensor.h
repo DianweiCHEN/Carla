@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "carla/client/detail/Simulator.h"
 #include "carla/client/Sensor.h"
 
 namespace carla {
@@ -26,6 +27,7 @@ namespace client {
     /// several instances of Sensor (even in different processes) may point to
     /// the same sensor in the simulator.
     void Listen(CallbackFunctionType callback) override;
+    void ListenPasive() override;
 
     /// Stop listening for new measurements.
     void Stop() override;
@@ -36,6 +38,19 @@ namespace client {
       return _is_listening;
     }
 
+    bool IsPasive() const override {
+      return _is_pasive;
+    }
+
+    bool HasDataReady() const override {
+      if (!_last_data) return false;
+      
+      SharedPtr<sensor::SensorData> data = _last_data;
+      if (data && data->GetFrame() == GetEpisode().Lock()->GetWorldSnapshot().GetFrame())
+        return true;
+      return false;
+    }
+
     /// @copydoc Actor::Destroy()
     ///
     /// Additionally stop listening.
@@ -43,6 +58,7 @@ namespace client {
 
   private:
 
+    bool _is_pasive = false;
     bool _is_listening = false;
   };
 
