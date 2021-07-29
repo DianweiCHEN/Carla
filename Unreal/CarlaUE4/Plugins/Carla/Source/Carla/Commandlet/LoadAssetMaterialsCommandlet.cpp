@@ -129,7 +129,16 @@ void ULoadAssetMaterialsCommandlet::ApplyRoadPainterMaterials(const FString &Loa
 
       // As the OpenDrive file has the same name as level, build the path to the
       // xodr file using the label name and the game content directory.
-      const FString XodrContent = UOpenDrive::LoadXODR(LoadedMapName);
+      FString MapName = LoadedMapName;
+      if (IsInTiles)
+      {
+        int32 idx = MapName.Find("_Tile_");
+        if(idx > -1)
+        {
+          MapName = MapName.Mid(0, idx);
+        }
+      }
+      const FString XodrContent = UOpenDrive::LoadXODR(MapName);
       XODRMap = carla::opendrive::OpenDriveParser::Load(carla::rpc::FromLongFString(XodrContent));
 
       // Acquire the TilesInfo.txt file for storing the tile data (offset and size)
@@ -300,7 +309,7 @@ FDecalsProperties ULoadAssetMaterialsCommandlet::ReadDecalsConfigurationFile() {
       {
         const auto DecalJsonObject = DecalJsonValue->AsObject();
 
-        // With the decal name array we created earlier, we traverse it 
+        // With the decal name array we created earlier, we traverse it
         // and look up it's name in the .json file
         for (const TPair<FString, FString>& Pair : DecalNamesMap) {
           if (DecalJsonObject->HasField(Pair.Key) == true) {
