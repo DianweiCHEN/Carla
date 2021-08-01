@@ -259,7 +259,7 @@ def main():
         # -------------
         # some settings
         percentagePedestriansRunning = 0.0      # how many pedestrians will run
-        percentagePedestriansCrossing = 0.0     # how many pedestrians will walk through the road
+        percentagePedestriansCrossing = 1.0     # how many pedestrians will walk through the road
         # 1. take all the random locations to spawn
         spawn_points = []
         for i in range(args.number_of_walkers):
