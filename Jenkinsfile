@@ -158,7 +158,7 @@ pipeline
                                 }
                             }
                         }
-                        stage('ubuntu deploy dev')
+                        stage('ubuntu deploy')
                         {
                             steps
                             {
