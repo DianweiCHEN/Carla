@@ -124,7 +124,7 @@ fi
 if ${DOCKER_PUSH} ; then
 
   DOCKER_BUILD_FOLDER=${CARLA_BUILD_FOLDER}/${REPOSITORY_TAG}.Docker
-  DOCKER_NAME=carlasim/carlaTDA:${DOCKER_TAG}
+  DOCKER_NAME=carlasim/carlatda:${DOCKER_TAG}
 
   mkdir -p ${DOCKER_BUILD_FOLDER}
 
