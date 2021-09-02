@@ -10,6 +10,7 @@
 #include "MapGen/RoadMap.h"
 #include "Traffic/RoutePlanner.h"
 #include "Vehicle/CarlaWheeledVehicle.h"
+#include "Vehicle/CarlaSimpleVehicle.h"
 #include "Carla/CityMapGenerator.h"
 #include "Carla/Util/RandomEngine.h"
 
@@ -109,6 +110,12 @@ void AWheeledVehicleAIController::OnPossess(APawn *aPawn)
     return;
   }
   Vehicle = Cast<ACarlaWheeledVehicle>(aPawn);
+
+  auto SimpleVehicle = Cast<ACarlaSimpleVehicle>(aPawn);
+  if (SimpleVehicle)
+    return;
+
+
   check(Vehicle != nullptr);
   MaximumSteerAngle = Vehicle->GetMaximumSteerAngle();
   check(MaximumSteerAngle > 0.0f);
