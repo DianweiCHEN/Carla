@@ -19,7 +19,7 @@ for /F "delims=" %%a in (%CONTENT_VERSIONS%) do (
    set "lastLine=%%a"
 )
 set CONTENT_ID=%lastLine:~-16,16%
-set CONTENT_LINK=http://carla-assets.s3.amazonaws.com/%CONTENT_ID%.tar.gz
+set CONTENT_LINK=s3://carla-internal/TDA/%CONTENT_ID%.tar.gz
 if "%CONTENT_ID:~0,2%"=="20" (
   set CONTENT_FILE=%CONTENT_FOLDER%/%CONTENT_ID%.tar.gz
   set CONTENT_FILE_TAR=%CONTENT_FOLDER%/%CONTENT_ID%.tar
@@ -35,7 +35,7 @@ rem -- Download the content ----------------------------------------------------
 rem ============================================================================
 
 echo Downloading "%CONTENT_LINK%"...
-powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%CONTENT_LINK%', '%CONTENT_FILE%')"
+aws s3 cp %CONTENT_LINK% %CONTENT_FILE%
 if %errorlevel% neq 0 goto error_download
 
 echo %FILE_N% Extracting content from "%CONTENT_FILE%", this can take a while...
