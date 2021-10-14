@@ -279,6 +279,7 @@ void ACarlaGameModeBase::SpawnActorFactories()
 
 void ACarlaGameModeBase::StoreSpawnPoints()
 {
+  // vehicle spawn points
   for (TActorIterator<AVehicleSpawnPoint> It(GetWorld()); It; ++It)
   {
     SpawnPointsTransforms.Add(It->GetActorTransform());
@@ -289,7 +290,13 @@ void ACarlaGameModeBase::StoreSpawnPoints()
     GenerateSpawnPoints();
   }
 
-  UE_LOG(LogCarla, Log, TEXT("There are %d SpawnPoints in the map"), SpawnPointsTransforms.Num());
+  // parked vehicle spawn points
+  for (TActorIterator<AParkedVehicleSpawnPoint> It(GetWorld()); It; ++It)
+  {
+    ParkedSpawnPointsTransforms.Add(It->GetActorTransform());
+  }
+
+  UE_LOG(LogCarla, Log, TEXT("There are %d SpawnPoints and %d ParkedSpawnPoints in the map"), SpawnPointsTransforms.Num(), ParkedSpawnPointsTransforms.Num());
 }
 
 void ACarlaGameModeBase::GenerateSpawnPoints()

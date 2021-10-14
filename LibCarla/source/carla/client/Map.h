@@ -51,6 +51,9 @@ namespace client {
       return _description.recommended_spawn_points;
     }
 
+    const std::vector<geom::Transform> &GetRecommendedParkedSpawnPoints() const {
+      return _description.recommended_parked_spawn_points;
+    }
     SharedPtr<Waypoint> GetWaypoint(
         const geom::Location &location,
         bool project_to_road = true,

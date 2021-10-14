@@ -109,6 +109,10 @@ public:
   UFUNCTION(BlueprintCallable)
   TArray<FTransform> GetRecommendedSpawnPoints() const;
 
+  /// Return the list of recommended parked spawn points for vehicles.
+  UFUNCTION(BlueprintCallable)
+  TArray<FTransform> GetRecommendedParkedSpawnPoints() const;
+
   /// Return the GeoLocation point of the map loaded
   const carla::geom::GeoLocation &GetGeoReference() const
   {

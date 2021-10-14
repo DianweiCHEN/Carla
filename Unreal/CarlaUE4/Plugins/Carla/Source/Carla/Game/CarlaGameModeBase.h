@@ -64,6 +64,11 @@ public:
     return SpawnPointsTransforms;
   }
 
+  UFUNCTION(Category = "Carla Game Mode", BlueprintCallable)
+  const TArray<FTransform>& GetParkedSpawnPointsTransforms() const{
+    return ParkedSpawnPointsTransforms;
+  }
+
   UFUNCTION(Category = "Carla Game Mode", BlueprintCallable, CallInEditor, Exec)
   TArray<FBoundingBox> GetAllBBsOfLevel(uint8 TagQueried = 0xFF) const;
 
@@ -155,6 +160,9 @@ private:
 
   UPROPERTY()
   TArray<FTransform> SpawnPointsTransforms;
+
+  UPROPERTY()
+  TArray<FTransform> ParkedSpawnPointsTransforms;
 
   UPROPERTY()
   TArray<ACarlaActorFactory *> ActorFactoryInstances;
