@@ -35,6 +35,7 @@ namespace client {
   Map::Map(std::string name, std::string xodr_content)
     : Map(rpc::MapInfo{
     std::move(name),
+    std::vector<geom::Transform>{},
     std::vector<geom::Transform>{}}, xodr_content) {
     open_drive_file = xodr_content;
   }
