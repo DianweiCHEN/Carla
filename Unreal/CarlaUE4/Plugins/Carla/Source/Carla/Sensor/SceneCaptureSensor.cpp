@@ -576,6 +576,8 @@ namespace SceneCaptureSensor_local_ns {
     PostProcessSettings.bOverride_WhiteTemp = true;
     PostProcessSettings.bOverride_WhiteTint = true;
     PostProcessSettings.bOverride_ColorContrast = true;
+    PostProcessSettings.bOverride_ToneCurveAmount = true;
+    PostProcessSettings.ToneCurveAmount = 1.0f;
 #if PLATFORM_LINUX
   // Looks like Windows and Linux have different outputs with the
   // same exposure compensation, this fixes it.
